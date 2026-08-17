@@ -1,0 +1,1 @@
+import type{ApiClient}from'./ApiClient';import{http}from'./httpClient';export class HttpApiClient implements ApiClient{async get<T>(u:string){return(await http.get<T>(u)).data}async post<A,B>(u:string,b:A){return(await http.post<B>(u,b)).data}async put<A,B>(u:string,b:A){return(await http.put<B>(u,b)).data}async delete<T>(u:string){return(await http.delete<T>(u)).data}}

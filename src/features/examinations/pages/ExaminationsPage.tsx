@@ -1,0 +1,1 @@
+import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function ExaminationsPage(){return <ModulePlaceholder title="Examinations"/>}

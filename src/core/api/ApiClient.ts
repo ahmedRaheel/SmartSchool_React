@@ -1,0 +1,1 @@
+export interface ApiClient{get<T>(url:string):Promise<T>;post<TReq,TRes>(url:string,body:TReq):Promise<TRes>;put<TReq,TRes>(url:string,body:TReq):Promise<TRes>;delete<T>(url:string):Promise<T>}

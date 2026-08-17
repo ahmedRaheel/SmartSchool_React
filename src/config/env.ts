@@ -1,0 +1,1 @@
+export const env={apiBaseUrl:import.meta.env.VITE_API_BASE_URL??'/api',useMocks:(import.meta.env.VITE_USE_MOCKS??'true')==='true',identityAuthority:import.meta.env.VITE_IDENTITY_AUTHORITY??'',identityClientId:import.meta.env.VITE_IDENTITY_CLIENT_ID??'smartschool-web'} as const;

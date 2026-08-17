@@ -1,0 +1,1 @@
+import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function HrPage(){return <ModulePlaceholder title="HR & Payroll"/>}

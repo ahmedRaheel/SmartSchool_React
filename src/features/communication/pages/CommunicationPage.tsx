@@ -1,0 +1,1 @@
+import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function CommunicationPage(){return <ModulePlaceholder title="Communication"/>}

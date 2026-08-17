@@ -1,0 +1,1 @@
+import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function LibraryPage(){return <ModulePlaceholder title="Library"/>}

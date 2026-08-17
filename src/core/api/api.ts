@@ -1,0 +1,1 @@
+import{env}from'../../config/env';import{HttpApiClient}from'./HttpApiClient';import{MockApiClient}from'../../mocks/MockApiClient';export const api=env.useMocks?new MockApiClient():new HttpApiClient();

@@ -1,0 +1,1 @@
+import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function AiPage(){return <ModulePlaceholder title="AI Assistant"/>}

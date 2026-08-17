@@ -1,0 +1,1 @@
+import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function TransportPage(){return <ModulePlaceholder title="Transport"/>}
