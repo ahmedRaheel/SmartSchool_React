@@ -1,76 +1,26 @@
-import { useEffect, useRef, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import {
-  Bell,
-  ChevronDown,
-  LogOut,
-  Menu,
-  MessageSquare,
-  Moon,
-  Search,
-  Settings,
-  Sun,
-  UserRound,
-} from "lucide-react";
-import { useAuth } from "../../features/auth/auth";
-import { Sidebar } from "./Sidebar";
-
-export function AppShell() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [dark, setDark] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = dark ? "dark" : "light";
-  }, [dark]);
-
-  useEffect(() => {
-    function close(event: MouseEvent) {
-      if (!profileRef.current?.contains(event.target as Node)) setProfileOpen(false);
-    }
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, []);
-
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
-
-  return (
-    <div className="app">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="main">
-        <header className="topbar">
-          <button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Menu size={21} /></button>
-          <label className="global-search"><Search size={18} /><input placeholder="Search students, classes, invoices..." /><kbd>⌘ K</kbd></label>
-          <div className="top-actions">
-            <button className="top-icon" title="Messages"><MessageSquare size={19} /><span className="notification-dot" /></button>
-            <button className="top-icon" title="Notifications"><Bell size={19} /><span className="notification-count">3</span></button>
-            <button className="top-icon" onClick={() => setDark((value) => !value)} title="Toggle theme">{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
-            <div className="profile-menu" ref={profileRef}>
-              <button className="profile-trigger" onClick={() => setProfileOpen((value) => !value)}>
-                <span className="avatar">{user?.initials}</span>
-                <span className="profile-copy"><b>{user?.name}</b><small>{user?.role}</small></span>
-                <ChevronDown size={15} />
-              </button>
-              {profileOpen && (
-                <div className="profile-popover">
-                  <div className="profile-summary"><span className="avatar large">{user?.initials}</span><div><b>{user?.name}</b><small>{user?.email}</small></div></div>
-                  <button><UserRound size={17} /> My profile</button>
-                  <button onClick={() => navigate("/settings")}><Settings size={17} /> Account settings</button>
-                  <hr />
-                  <button className="logout-item" onClick={handleLogout}><LogOut size={17} /> Log out</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-        <div className="content"><Outlet /></div>
-      </main>
-    </div>
-  );
+import {useEffect,useMemo,useRef,useState} from "react";
+import {Outlet,useNavigate} from "react-router-dom";
+import {Bell,ChevronDown,LogOut,Menu,MessageSquare,Moon,Search,Settings,Sun,UserRound} from "lucide-react";
+import {useAuth} from "../../features/auth/auth";import {modules} from "../../mocks/moduleData";import {Modal,useUi} from "../ui/InteractiveUi";import {Sidebar} from "./Sidebar";
+const notes=[{title:"Attendance alert",body:"Grade 7 C is below target.",path:"/attendance"},{title:"Fee follow-up",body:"12 overdue accounts need attention.",path:"/finance"},{title:"AI prediction",body:"34 students have grade-risk signals.",path:"/ai"}];
+const messages=[{title:"Mrs. Yusuf",body:"Assignment clarification for Amina",path:"/communication"},{title:"Sadia Iqbal",body:"Grade 10 timetable review",path:"/academics"},{title:"Finance Office",body:"August collection summary ready",path:"/finance"}];
+export function AppShell(){
+ const{user,logout}=useAuth();const{notify}=useUi();const nav=useNavigate();const[sidebarOpen,setSidebarOpen]=useState(false);const[profileOpen,setProfileOpen]=useState(false);
+ const[notesOpen,setNotesOpen]=useState(false);const[msgOpen,setMsgOpen]=useState(false);const[searchOpen,setSearchOpen]=useState(false);const[q,setQ]=useState("");
+ const[dark,setDark]=useState(()=>localStorage.getItem("smartschool.theme")==="dark");const profileRef=useRef<HTMLDivElement>(null);
+ useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";localStorage.setItem("smartschool.theme",dark?"dark":"light")},[dark]);
+ useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();setSearchOpen(true)}};document.addEventListener("keydown",key);return()=>document.removeEventListener("keydown",key)},[]);
+ useEffect(()=>{const close=(e:MouseEvent)=>{if(!profileRef.current?.contains(e.target as Node))setProfileOpen(false)};document.addEventListener("mousedown",close);return()=>document.removeEventListener("mousedown",close)},[]);
+ const results=useMemo(()=>!q?[]:Object.entries(modules).flatMap(([path,m])=>m.records.map(r=>({...r,module:m.title,path:`/${path}`}))).filter(x=>`${x.title} ${x.subtitle} ${x.meta} ${x.module}`.toLowerCase().includes(q.toLowerCase())).slice(0,10),[q]);
+ const go=(path:string)=>{setNotesOpen(false);setMsgOpen(false);setSearchOpen(false);nav(path)};
+ return <div className="app"><Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)}/><main className="main"><header className="topbar">
+  <button className="mobile-menu" onClick={()=>setSidebarOpen(true)}><Menu size={21}/></button><button className="global-search global-search-button" onClick={()=>setSearchOpen(true)}><Search size={18}/><span>Search students, classes, invoices...</span><kbd>⌘ K</kbd></button>
+  <div className="top-actions"><button className="top-icon" onClick={()=>setMsgOpen(true)}><MessageSquare size={19}/><span className="notification-dot"/></button><button className="top-icon" onClick={()=>setNotesOpen(true)}><Bell size={19}/><span className="notification-count">{notes.length}</span></button><button className="top-icon" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={19}/>:<Moon size={19}/>}</button>
+   <div className="profile-menu" ref={profileRef}><button className="profile-trigger" onClick={()=>setProfileOpen(v=>!v)}><span className="avatar">{user?.initials}</span><span className="profile-copy"><b>{user?.name}</b><small>{user?.role}</small></span><ChevronDown size={15}/></button>
+   {profileOpen&&<div className="profile-popover"><div className="profile-summary"><span className="avatar large">{user?.initials}</span><div><b>{user?.name}</b><small>{user?.email}</small></div></div><button onClick={()=>notify("Profile mock ready for IdentityServer.")}><UserRound size={17}/> My profile</button><button onClick={()=>nav("/settings")}><Settings size={17}/> Account settings</button><hr/><button className="logout-item" onClick={()=>{logout();nav("/login",{replace:true})}}><LogOut size={17}/> Log out</button></div>}</div>
+  </div></header><div className="content"><Outlet/></div></main>
+  <Modal open={notesOpen} title="Notifications" onClose={()=>setNotesOpen(false)}><div className="notification-list">{notes.map(n=><button key={n.title} onClick={()=>go(n.path)}><span className="notification-bullet"/><div><b>{n.title}</b><p>{n.body}</p></div></button>)}</div><div className="modal-actions modal-padding"><button className="secondary" onClick={()=>notify("All notifications marked read.")}>Mark all read</button></div></Modal>
+  <Modal open={msgOpen} title="Recent messages" onClose={()=>setMsgOpen(false)}><div className="notification-list">{messages.map(m=><button key={m.title} onClick={()=>go(m.path)}><span className="avatar small">{m.title.slice(0,2)}</span><div><b>{m.title}</b><p>{m.body}</p></div></button>)}</div></Modal>
+  <Modal open={searchOpen} title="Search SmartSchool" onClose={()=>setSearchOpen(false)}><div className="command-search"><label className="search-box"><Search size={18}/><input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Search across all mock data..."/></label><div className="search-results">{q&&!results.length&&<div className="empty-state">No matching records.</div>}{results.map(x=><button key={`${x.path}-${x.id}`} onClick={()=>go(x.path)}><span className="search-result-icon"><Search size={15}/></span><div><b>{x.title}</b><small>{x.module} • {x.subtitle} • {x.meta}</small></div><span>Open</span></button>)}</div></div></Modal>
+ </div>;
 }

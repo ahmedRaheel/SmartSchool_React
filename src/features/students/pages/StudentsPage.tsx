@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Modal, useUi } from "../../../components/ui/InteractiveUi";
 import { Download, Filter, Search, UserPlus } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { students } from "../../../mocks/data";
@@ -16,6 +17,8 @@ const studentRows = [
 ];
 
 export function StudentsPage() {
+  const { notify } = useUi();
+  const [selected, setSelected] = useState<(typeof studentRows)[number] | null>(null);
   const [query, setQuery] = useState("");
   const filtered = useMemo(
     () => studentRows.filter((student) =>
@@ -28,7 +31,7 @@ export function StudentsPage() {
       <PageHeader
         title="Students"
         subtitle="Student lifecycle, academics, guardians and predicted progress."
-        action={<button className="primary"><UserPlus size={16} /> Add student</button>}
+        action={<button className="primary" onClick={() => notify("Add student form is ready for backend binding.")}><UserPlus size={16} /> Add student</button>}
       />
       <section className="metric-grid">
         <article className="metric-card"><div className="metric-label">Total Students</div><div className="metric-value">1,248</div><div className="metric-note up">+8.2% this year</div></article>
@@ -49,7 +52,7 @@ export function StudentsPage() {
           <table className="premium-table">
             <thead><tr><th>Student</th><th>Admission</th><th>Class</th><th>Guardian</th><th>Attendance</th><th>AI Prediction</th><th>Status</th></tr></thead>
             <tbody>{filtered.map((student) => (
-              <tr key={student.id}>
+              <tr key={student.id} onClick={() => setSelected(student)}>
                 <td><div className="person-cell"><span className="avatar small">{student.name.split(" ").map((x) => x[0]).join("").slice(0,2)}</span><span><b>{student.name}</b><small>Student profile</small></span></div></td>
                 <td>{student.admissionNo}</td><td>{student.className} • {student.section}</td><td>{student.guardian}</td>
                 <td><b>{student.attendance}</b></td><td><span className="prediction-chip">{student.prediction}</span></td>
@@ -59,6 +62,7 @@ export function StudentsPage() {
           </table>
         </div>
       </section>
+      <Modal open={Boolean(selected)} title={selected?.name ?? "Student"} onClose={() => setSelected(null)}>{selected && <div className="detail-body"><div className="detail-grid"><div><span>Admission</span><b>{selected.admissionNo}</b></div><div><span>Class</span><b>{selected.className} • {selected.section}</b></div><div><span>Guardian</span><b>{selected.guardian}</b></div><div><span>Attendance / Prediction</span><b>{selected.attendance} • {selected.prediction}</b></div></div><div className="detail-note">Student mock profile ready for backend DTO binding.</div></div>}</Modal>
     </>
   );
 }
