@@ -1,1 +1,6 @@
-import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function FinancePage(){return <ModulePlaceholder title="Finance"/>}
+import { ModulePage } from "../../../components/ui/ModulePage";
+import { modules } from "../../../mocks/moduleData";
+
+export function FinancePage() {
+  return <ModulePage data={modules.finance} />;
+}

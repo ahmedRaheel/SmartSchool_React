@@ -1,1 +1,6 @@
-import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function SettingsPage(){return <ModulePlaceholder title="Settings"/>}
+import { ModulePage } from "../../../components/ui/ModulePage";
+import { modules } from "../../../mocks/moduleData";
+
+export function SettingsPage() {
+  return <ModulePage data={modules.settings} />;
+}

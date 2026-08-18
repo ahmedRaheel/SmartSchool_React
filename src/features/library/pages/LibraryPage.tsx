@@ -1,1 +1,6 @@
-import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function LibraryPage(){return <ModulePlaceholder title="Library"/>}
+import { ModulePage } from "../../../components/ui/ModulePage";
+import { modules } from "../../../mocks/moduleData";
+
+export function LibraryPage() {
+  return <ModulePage data={modules.library} />;
+}

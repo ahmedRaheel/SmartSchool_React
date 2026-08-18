@@ -1,1 +1,6 @@
-import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function ExaminationsPage(){return <ModulePlaceholder title="Examinations"/>}
+import { ModulePage } from "../../../components/ui/ModulePage";
+import { modules } from "../../../mocks/moduleData";
+
+export function ExaminationsPage() {
+  return <ModulePage data={modules.examinations} />;
+}

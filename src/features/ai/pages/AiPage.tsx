@@ -1,1 +1,6 @@
-import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function AiPage(){return <ModulePlaceholder title="AI Assistant"/>}
+import { ModulePage } from "../../../components/ui/ModulePage";
+import { modules } from "../../../mocks/moduleData";
+
+export function AiPage() {
+  return <ModulePage data={modules.ai} />;
+}

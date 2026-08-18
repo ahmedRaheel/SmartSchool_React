@@ -1,1 +1,64 @@
-import{useQuery}from'@tanstack/react-query';import{api}from'../../../core/api/api';import{PageHeader}from'../../../components/ui/PageHeader';type Student={id:string;name:string;admissionNo:string;className:string;section:string;status:string};export function StudentsPage(){const{data=[]}=useQuery({queryKey:['students'],queryFn:()=>api.get<Student[]>('/students')});return <><PageHeader title="Students" subtitle="Manage and view all students." action={<button className="primary">+ Add Student</button>}/><section className="card table-card"><div className="toolbar"><input className="field" placeholder="Search students..."/><select className="field"><option>All Grades</option></select><select className="field"><option>All Sections</option></select></div><table className="table"><thead><tr><th>Student</th><th>Admission No.</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th></tr></thead><tbody>{data.map(s=><tr key={s.id}><td><b>{s.name}</b></td><td>{s.admissionNo}</td><td>{s.className}</td><td>{s.section}</td><td><span className="badge">{s.status}</span></td><td>View · Edit</td></tr>)}</tbody></table></section></>}
+import { useMemo, useState } from "react";
+import { Download, Filter, Search, UserPlus } from "lucide-react";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { students } from "../../../mocks/data";
+
+const studentRows = [
+  ...students.map((student, index) => ({
+    ...student,
+    guardian: ["Mrs. Khan", "Mr. Ali", "Mrs. Raza"][index],
+    attendance: ["96%", "91%", "94%"][index],
+    prediction: ["A+", "A", "A"][index],
+  })),
+  { id: "4", name: "Noor Fatima", admissionNo: "ADM-2026-004", className: "Grade 10", section: "B", status: "Active", guardian: "Mr. Fatima", attendance: "98%", prediction: "A+" },
+  { id: "5", name: "Zayan Ahmed", admissionNo: "ADM-2026-005", className: "Grade 7", section: "C", status: "Review", guardian: "Mrs. Ahmed", attendance: "84%", prediction: "B" },
+  { id: "6", name: "Amina Yusuf", admissionNo: "ADM-2026-006", className: "O Level", section: "Blue", status: "Active", guardian: "Mrs. Yusuf", attendance: "97%", prediction: "A*" },
+];
+
+export function StudentsPage() {
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(
+    () => studentRows.filter((student) =>
+      `${student.name} ${student.admissionNo} ${student.className} ${student.guardian}`.toLowerCase().includes(query.toLowerCase())),
+    [query],
+  );
+
+  return (
+    <>
+      <PageHeader
+        title="Students"
+        subtitle="Student lifecycle, academics, guardians and predicted progress."
+        action={<button className="primary"><UserPlus size={16} /> Add student</button>}
+      />
+      <section className="metric-grid">
+        <article className="metric-card"><div className="metric-label">Total Students</div><div className="metric-value">1,248</div><div className="metric-note up">+8.2% this year</div></article>
+        <article className="metric-card"><div className="metric-label">New Admissions</div><div className="metric-value">84</div><div className="metric-note up">Current session</div></article>
+        <article className="metric-card"><div className="metric-label">Avg. Attendance</div><div className="metric-value">92.6%</div><div className="metric-note up">+1.8% this month</div></article>
+        <article className="metric-card"><div className="metric-label">Needs Attention</div><div className="metric-value">34</div><div className="metric-note down">AI progress watchlist</div></article>
+      </section>
+      <section className="surface data-surface">
+        <div className="surface-head">
+          <div><h3>Student directory</h3><p>Search and manage enrolled students</p></div>
+          <button className="secondary"><Download size={16} /> Export</button>
+        </div>
+        <div className="data-toolbar">
+          <label className="search-box"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, admission no, class or guardian..." /></label>
+          <button className="secondary"><Filter size={16} /> Filters</button>
+        </div>
+        <div className="table-wrap">
+          <table className="premium-table">
+            <thead><tr><th>Student</th><th>Admission</th><th>Class</th><th>Guardian</th><th>Attendance</th><th>AI Prediction</th><th>Status</th></tr></thead>
+            <tbody>{filtered.map((student) => (
+              <tr key={student.id}>
+                <td><div className="person-cell"><span className="avatar small">{student.name.split(" ").map((x) => x[0]).join("").slice(0,2)}</span><span><b>{student.name}</b><small>Student profile</small></span></div></td>
+                <td>{student.admissionNo}</td><td>{student.className} • {student.section}</td><td>{student.guardian}</td>
+                <td><b>{student.attendance}</b></td><td><span className="prediction-chip">{student.prediction}</span></td>
+                <td><span className={`status-pill ${student.status.toLowerCase()}`}>{student.status}</span></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}

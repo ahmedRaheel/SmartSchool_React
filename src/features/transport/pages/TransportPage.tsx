@@ -1,1 +1,6 @@
-import{ModulePlaceholder}from'../../../components/ui/ModulePlaceholder';export function TransportPage(){return <ModulePlaceholder title="Transport"/>}
+import { ModulePage } from "../../../components/ui/ModulePage";
+import { modules } from "../../../mocks/moduleData";
+
+export function TransportPage() {
+  return <ModulePage data={modules.transport} />;
+}
