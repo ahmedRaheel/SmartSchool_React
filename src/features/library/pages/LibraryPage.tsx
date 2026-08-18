@@ -1,6 +1,6 @@
 import { ModulePage } from "../../../components/ui/ModulePage";
 import { modules } from "../../../mocks/moduleData";
-
 export function LibraryPage() {
-  return <ModulePage data={modules.library} />;
+    return <ModulePage data={modules.library}/>;
 }
+

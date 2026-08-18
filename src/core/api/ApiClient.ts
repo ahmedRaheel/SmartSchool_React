@@ -1,1 +1,15 @@
-export interface ApiClient{get<T>(url:string):Promise<T>;post<TReq,TRes>(url:string,body:TReq):Promise<TRes>;put<TReq,TRes>(url:string,body:TReq):Promise<TRes>;delete<T>(url:string):Promise<T>}
+export interface ApiClient {
+    get<TResponse>(url: string): Promise<TResponse>;
+
+    post<TRequest, TResponse>(
+        url: string,
+        body: TRequest,
+    ): Promise<TResponse>;
+
+    put<TRequest, TResponse>(
+        url: string,
+        body: TRequest,
+    ): Promise<TResponse>;
+
+    delete<TResponse>(url: string): Promise<TResponse>;
+}

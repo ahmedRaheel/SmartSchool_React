@@ -16,33 +16,32 @@ import { CommunicationPage } from "../../features/communication/pages/Communicat
 import { AiPage } from "../../features/ai/pages/AiPage";
 import { ReportsPage } from "../../features/reports/pages/ReportsPage";
 import { SettingsPage } from "../../features/settings/pages/SettingsPage";
-
 function ProtectedShell() {
-  const { user } = useAuth();
-  const location = useLocation();
-  return user ? <AppShell /> : <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    const { user } = useAuth();
+    const location = useLocation();
+    return user ? <AppShell /> : <Navigate to="/login" replace state={{ from: location.pathname }}/>;
 }
-
 export const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
-  {
-    path: "/",
-    element: <ProtectedShell />,
-    children: [
-      { index: true, element: <DashboardPage /> },
-      { path: "students", element: <StudentsPage /> },
-      { path: "teachers", element: <TeachersPage /> },
-      { path: "academics", element: <AcademicsPage /> },
-      { path: "examinations", element: <ExaminationsPage /> },
-      { path: "attendance", element: <AttendancePage /> },
-      { path: "finance", element: <FinancePage /> },
-      { path: "hr", element: <HrPage /> },
-      { path: "library", element: <LibraryPage /> },
-      { path: "transport", element: <TransportPage /> },
-      { path: "communication", element: <CommunicationPage /> },
-      { path: "ai", element: <AiPage /> },
-      { path: "reports", element: <ReportsPage /> },
-      { path: "settings", element: <SettingsPage /> },
-    ],
-  },
+    { path: "/login", element: <LoginPage /> },
+    {
+        path: "/",
+        element: <ProtectedShell />,
+        children: [
+            { index: true, element: <DashboardPage /> },
+            { path: "students", element: <StudentsPage /> },
+            { path: "teachers", element: <TeachersPage /> },
+            { path: "academics", element: <AcademicsPage /> },
+            { path: "examinations", element: <ExaminationsPage /> },
+            { path: "attendance", element: <AttendancePage /> },
+            { path: "finance", element: <FinancePage /> },
+            { path: "hr", element: <HrPage /> },
+            { path: "library", element: <LibraryPage /> },
+            { path: "transport", element: <TransportPage /> },
+            { path: "communication", element: <CommunicationPage /> },
+            { path: "ai", element: <AiPage /> },
+            { path: "reports", element: <ReportsPage /> },
+            { path: "settings", element: <SettingsPage /> },
+        ],
+    },
 ]);
+

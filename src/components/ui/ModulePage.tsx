@@ -1,24 +1,177 @@
-import {useMemo,useState,type FormEvent} from "react";
-import {ArrowUpRight,ChevronRight,Download,Filter,Lightbulb,Search,Sparkles,Trash2} from "lucide-react";
-import {modules,type ModuleData,type ModuleRecord} from "../../mocks/moduleData";
-import {useMockData} from "../../mocks/MockDataProvider";
-import {Modal,useUi} from "./InteractiveUi";import {PageHeader} from "./PageHeader";
-export function ModulePage({data}:{data:ModuleData}){
- const{notify}=useUi();const mock=useMockData();const key=Object.keys(modules).find(k=>modules[k]===data)??data.title.toLowerCase().replaceAll(" ","-");
- const records=mock.getRecords(key);const[query,setQuery]=useState("");const[status,setStatus]=useState("All");const[selectedId,setSelectedId]=useState<string|null>(null);const[edit,setEdit]=useState<ModuleRecord|null>(null);const[createOpen,setCreateOpen]=useState(false);const[insightsOpen,setInsightsOpen]=useState(false);
- const selected=records.find(x=>x.id===selectedId)??null;const statuses=useMemo(()=>["All",...Array.from(new Set(records.map(x=>x.status)))],[records]);const filtered=useMemo(()=>records.filter(x=>[x.title,x.subtitle,x.meta,x.status,x.value].join(" ").toLowerCase().includes(query.toLowerCase())&&(status==="All"||x.status===status)),[records,query,status]);
- function create(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const title=String(f.get("title"));mock.createRecord(key,{id:crypto.randomUUID(),title,subtitle:String(f.get("subtitle")),meta:String(f.get("meta")||`MOCK-${records.length+1}`),status:String(f.get("status")||"Active"),value:String(f.get("value")||"Ready")});setCreateOpen(false);notify(`${title} created in memory.`)}
- function save(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!edit)return;const f=new FormData(e.currentTarget);const r={...edit,title:String(f.get("title")),subtitle:String(f.get("subtitle")),meta:String(f.get("meta")),status:String(f.get("status")),value:String(f.get("value"))};mock.updateRecord(key,r);setEdit(null);setSelectedId(r.id);notify(`${r.title} updated in memory.`)}
- function remove(){if(!selected)return;mock.deleteRecord(key,selected.id);notify(`${selected.title} deleted.`);setSelectedId(null)}
- function exportCsv(){const csv=[data.columns.join(","),...filtered.map(x=>[x.title,x.subtitle,x.meta,x.status,x.value].map(v=>`"${String(v).replaceAll('"','""')}"`).join(","))].join("\n");const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));const a=document.createElement("a");a.href=url;a.download=`${data.title.replaceAll(" ","-")}.csv`;a.click();URL.revokeObjectURL(url);notify("Current view exported.")}
- return <><PageHeader title={data.title} subtitle={data.subtitle} action={<button className="primary" onClick={()=>setCreateOpen(true)}>+ {data.action}</button>}/>
- <section className="metric-grid">{data.metrics.map(m=><button className="metric-card metric-button" key={m.label} onClick={()=>notify(`${m.label}: ${m.value} — ${m.note}`)}><div className="metric-label">{m.label}</div><div className="metric-value">{m.value}</div><div className={`metric-note ${m.trend??"neutral"}`}>{m.trend==="up"&&<ArrowUpRight size={14}/>} {m.note}</div></button>)}</section>
- <section className="module-layout"><article className="surface data-surface"><div className="surface-head"><div><h3>Overview</h3><p>Create → open → edit → save → reopen → delete</p></div><button className="icon-button" onClick={exportCsv}><Download size={18}/></button></div>
- <div className="data-toolbar"><label className="search-box"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Search ${data.title.toLowerCase()}...`}/></label><label className="filter-select"><Filter size={16}/><select value={status} onChange={e=>setStatus(e.target.value)}>{statuses.map(x=><option key={x}>{x}</option>)}</select></label></div>
- <div className="table-wrap"><table className="premium-table clickable-table"><thead><tr>{data.columns.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{filtered.map(x=><tr key={x.id} tabIndex={0} onClick={()=>setSelectedId(x.id)}><td><b>{x.title}</b><small>{x.subtitle}</small></td><td>{x.subtitle}</td><td>{x.meta}</td><td><span className={`status-pill ${x.status.toLowerCase().replaceAll(" ","-")}`}>{x.status}</span></td><td><span className="table-value">{x.value}</span><ChevronRight size={15}/></td></tr>)}{!filtered.length&&<tr><td colSpan={5}><div className="empty-state">No records found.</div></td></tr>}</tbody></table></div><div className="table-footer"><span>{filtered.length} of {records.length} in-memory records</span><button className="text-button" onClick={exportCsv}>Export</button></div></article>
- <aside className="surface insight-panel"><div className="insight-icon"><Sparkles size={20}/></div><span className="eyebrow">Smart insights</span><h3>What needs attention</h3><div className="insight-list">{data.insights.map(i=><button className="insight-item insight-button" key={i} onClick={()=>notify(i)}><Lightbulb size={17}/><span>{i}</span></button>)}</div><button className="soft-button" onClick={()=>setInsightsOpen(true)}>View recommendations</button></aside></section>
- <Modal open={!!selected&&!edit} title={selected?.title??"Record"} onClose={()=>setSelectedId(null)}>{selected&&<div className="detail-body"><div className="detail-grid"><div><span>Detail</span><b>{selected.subtitle}</b></div><div><span>Reference</span><b>{selected.meta}</b></div><div><span>Status</span><b>{selected.status}</b></div><div><span>Value</span><b>{selected.value}</b></div></div><div className="detail-note">Changes are stored at app level and remain while navigating during this session.</div><div className="modal-actions"><button className="danger-button" onClick={remove}><Trash2 size={15}/> Delete</button><button className="secondary" onClick={()=>setEdit({...selected})}>Edit</button><button className="primary" onClick={()=>setSelectedId(null)}>Done</button></div></div>}</Modal>
- <Modal open={!!edit} title={`Edit ${edit?.title??"record"}`} onClose={()=>setEdit(null)}>{edit&&<form className="mock-form" onSubmit={save}><label>Title<input name="title" defaultValue={edit.title} required/></label><label>Detail<input name="subtitle" defaultValue={edit.subtitle} required/></label><div className="form-grid"><label>Reference<input name="meta" defaultValue={edit.meta} required/></label><label>Status<input name="status" defaultValue={edit.status} required/></label></div><label>Value<input name="value" defaultValue={edit.value} required/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setEdit(null)}>Cancel</button><button className="primary">Save changes</button></div></form>}</Modal>
- <Modal open={createOpen} title={data.action} onClose={()=>setCreateOpen(false)}><form className="mock-form" onSubmit={create}><label>Title<input name="title" required/></label><label>Detail<input name="subtitle" required/></label><div className="form-grid"><label>Reference<input name="meta"/></label><label>Status<input name="status" defaultValue="Active"/></label></div><label>Value<input name="value" defaultValue="Ready"/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setCreateOpen(false)}>Cancel</button><button className="primary">Save mock record</button></div></form></Modal>
- <Modal open={insightsOpen} title={`${data.title} recommendations`} onClose={()=>setInsightsOpen(false)}><div className="recommendation-list">{data.insights.map((i,n)=><div key={i}><span>{n+1}</span><div><b>{i}</b><p>Ready for backend workflow binding.</p></div></div>)}</div></Modal></>
+import { useMemo, useState, type FormEvent } from "react";
+import { ArrowUpRight, ChevronRight, Download, Filter, Lightbulb, Search, Sparkles, Trash2 } from "lucide-react";
+import { modules, type ModuleData, type ModuleRecord } from "../../mocks/moduleData";
+import { useMockData } from "../../mocks/MockDataProvider";
+import { Modal, useUi } from "./InteractiveUi";
+import { PageHeader } from "./PageHeader";
+export function ModulePage({ data }: {
+    data: ModuleData;
+}) {
+    const { notify } = useUi();
+    const mock = useMockData();
+    const key = Object.keys(modules).find(k => modules[k] === data) ?? data.title.toLowerCase().replaceAll(" ", "-");
+    const records = mock.getRecords(key);
+    const [query, setQuery] = useState("");
+    const [status, setStatus] = useState("All");
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [edit, setEdit] = useState<ModuleRecord | null>(null);
+    const [createOpen, setCreateOpen] = useState(false);
+    const [insightsOpen, setInsightsOpen] = useState(false);
+    const selected = records.find(x => x.id === selectedId) ?? null;
+    const statuses = useMemo(() => ["All", ...Array.from(new Set(records.map(x => x.status)))], [records]);
+    const filtered = useMemo(() => records.filter(x => [x.title, x.subtitle, x.meta, x.status, x.value].join(" ").toLowerCase().includes(query.toLowerCase()) && (status === "All" || x.status === status)), [records, query, status]);
+    function create(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const f = new FormData(e.currentTarget); const title = String(f.get("title")); mock.createRecord(key, { id: crypto.randomUUID(), title, subtitle: String(f.get("subtitle")), meta: String(f.get("meta") || `MOCK-${records.length + 1}`), status: String(f.get("status") || "Active"), value: String(f.get("value") || "Ready") }); setCreateOpen(false); notify(`${title} created in memory.`); }
+    function save(e: FormEvent<HTMLFormElement>) { e.preventDefault(); if (!edit)
+        return; const f = new FormData(e.currentTarget); const r = { ...edit, title: String(f.get("title")), subtitle: String(f.get("subtitle")), meta: String(f.get("meta")), status: String(f.get("status")), value: String(f.get("value")) }; mock.updateRecord(key, r); setEdit(null); setSelectedId(r.id); notify(`${r.title} updated in memory.`); }
+    function remove() { if (!selected)
+        return; mock.deleteRecord(key, selected.id); notify(`${selected.title} deleted.`); setSelectedId(null); }
+    function exportCsv() { const csv = [data.columns.join(","), ...filtered.map(x => [x.title, x.subtitle, x.meta, x.status, x.value].map(v => `"${String(v).replaceAll('"', '""')}"`).join(","))].join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const a = document.createElement("a"); a.href = url; a.download = `${data.title.replaceAll(" ", "-")}.csv`; a.click(); URL.revokeObjectURL(url); notify("Current view exported."); }
+    return <>
+<PageHeader title={data.title} subtitle={data.subtitle} action={<button className="primary" onClick={() => setCreateOpen(true)}>+ {data.action}</button>}/>
+ <section className="metric-grid">{data.metrics.map(m => <button className="metric-card metric-button" key={m.label} onClick={() => notify(`${m.label}: ${m.value} — ${m.note}`)}>
+<div className="metric-label">{m.label}</div>
+<div className="metric-value">{m.value}</div>
+<div className={`metric-note ${m.trend ?? "neutral"}`}>{m.trend === "up" && <ArrowUpRight size={14}/>} {m.note}</div>
+</button>)}</section>
+ <section className="module-layout">
+<article className="surface data-surface">
+<div className="surface-head">
+<div>
+<h3>Overview</h3>
+<p>Create → open → edit → save → reopen → delete</p>
+</div>
+<button className="icon-button" onClick={exportCsv}>
+<Download size={18}/>
+</button>
+</div>
+ <div className="data-toolbar">
+<label className="search-box">
+<Search size={17}/>
+<input value={query} onChange={e => setQuery(e.target.value)} placeholder={`Search ${data.title.toLowerCase()}...`}/>
+</label>
+<label className="filter-select">
+<Filter size={16}/>
+<select value={status} onChange={e => setStatus(e.target.value)}>{statuses.map(x => <option key={x}>{x}</option>)}</select>
+</label>
+</div>
+ <div className="table-wrap">
+<table className="premium-table clickable-table">
+<thead>
+<tr>{data.columns.map(c => <th key={c}>{c}</th>)}</tr>
+</thead>
+<tbody>{filtered.map(x => <tr key={x.id} tabIndex={0} onClick={() => setSelectedId(x.id)}>
+<td>
+<b>{x.title}</b>
+<small>{x.subtitle}</small>
+</td>
+<td>{x.subtitle}</td>
+<td>{x.meta}</td>
+<td>
+<span className={`status-pill ${x.status.toLowerCase().replaceAll(" ", "-")}`}>{x.status}</span>
+</td>
+<td>
+<span className="table-value">{x.value}</span>
+<ChevronRight size={15}/>
+</td>
+</tr>)}{!filtered.length && <tr>
+<td colSpan={5}>
+<div className="empty-state">No records found.</div>
+</td>
+</tr>}</tbody>
+</table>
+</div>
+<div className="table-footer">
+<span>{filtered.length} of {records.length} in-memory records</span>
+<button className="text-button" onClick={exportCsv}>Export</button>
+</div>
+</article>
+ <aside className="surface insight-panel">
+<div className="insight-icon">
+<Sparkles size={20}/>
+</div>
+<span className="eyebrow">Smart insights</span>
+<h3>What needs attention</h3>
+<div className="insight-list">{data.insights.map(i => <button className="insight-item insight-button" key={i} onClick={() => notify(i)}>
+<Lightbulb size={17}/>
+<span>{i}</span>
+</button>)}</div>
+<button className="soft-button" onClick={() => setInsightsOpen(true)}>View recommendations</button>
+</aside>
+</section>
+ <Modal open={!!selected && !edit} title={selected?.title ?? "Record"} onClose={() => setSelectedId(null)}>{selected && <div className="detail-body">
+<div className="detail-grid">
+<div>
+<span>Detail</span>
+<b>{selected.subtitle}</b>
+</div>
+<div>
+<span>Reference</span>
+<b>{selected.meta}</b>
+</div>
+<div>
+<span>Status</span>
+<b>{selected.status}</b>
+</div>
+<div>
+<span>Value</span>
+<b>{selected.value}</b>
+</div>
+</div>
+<div className="detail-note">Changes are stored at app level and remain while navigating during this session.</div>
+<div className="modal-actions">
+<button className="danger-button" onClick={remove}>
+<Trash2 size={15}/> Delete</button>
+<button className="secondary" onClick={() => setEdit({ ...selected })}>Edit</button>
+<button className="primary" onClick={() => setSelectedId(null)}>Done</button>
+</div>
+</div>}</Modal>
+ <Modal open={!!edit} title={`Edit ${edit?.title ?? "record"}`} onClose={() => setEdit(null)}>{edit && <form className="mock-form" onSubmit={save}>
+<label>Title<input name="title" defaultValue={edit.title} required/>
+</label>
+<label>Detail<input name="subtitle" defaultValue={edit.subtitle} required/>
+</label>
+<div className="form-grid">
+<label>Reference<input name="meta" defaultValue={edit.meta} required/>
+</label>
+<label>Status<input name="status" defaultValue={edit.status} required/>
+</label>
+</div>
+<label>Value<input name="value" defaultValue={edit.value} required/>
+</label>
+<div className="modal-actions">
+<button type="button" className="secondary" onClick={() => setEdit(null)}>Cancel</button>
+<button className="primary">Save changes</button>
+</div>
+</form>}</Modal>
+ <Modal open={createOpen} title={data.action} onClose={() => setCreateOpen(false)}>
+<form className="mock-form" onSubmit={create}>
+<label>Title<input name="title" required/>
+</label>
+<label>Detail<input name="subtitle" required/>
+</label>
+<div className="form-grid">
+<label>Reference<input name="meta"/>
+</label>
+<label>Status<input name="status" defaultValue="Active"/>
+</label>
+</div>
+<label>Value<input name="value" defaultValue="Ready"/>
+</label>
+<div className="modal-actions">
+<button type="button" className="secondary" onClick={() => setCreateOpen(false)}>Cancel</button>
+<button className="primary">Save mock record</button>
+</div>
+</form>
+</Modal>
+ <Modal open={insightsOpen} title={`${data.title} recommendations`} onClose={() => setInsightsOpen(false)}>
+<div className="recommendation-list">{data.insights.map((i, n) => <div key={i}>
+<span>{n + 1}</span>
+<div>
+<b>{i}</b>
+<p>Ready for backend workflow binding.</p>
+</div>
+</div>)}</div>
+</Modal>
+</>;
 }
+
