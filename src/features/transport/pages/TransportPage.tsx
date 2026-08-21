@@ -1,6 +1,2 @@
-import { ModulePage } from "../../../components/ui/ModulePage";
-import { modules } from "../../../mocks/moduleData";
-export function TransportPage() {
-    return <ModulePage data={modules.transport}/>;
-}
-
+import { RealModulePage } from "../../../components/ui/RealModulePage";
+export function TransportPage(){return <RealModulePage module="transport" />}

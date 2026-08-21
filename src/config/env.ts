@@ -1,7 +1,1 @@
-export const env = {
-    apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? "/api",
-    useMocks: (import.meta.env.VITE_USE_MOCKS ?? "true") === "true",
-    identityAuthority: import.meta.env.VITE_IDENTITY_AUTHORITY ?? "",
-    identityClientId:
-        import.meta.env.VITE_IDENTITY_CLIENT_ID ?? "smartschool-web",
-} as const;
+export const env={apiBaseUrl:import.meta.env.VITE_API_BASE_URL??"http://localhost:7001",identityBaseUrl:import.meta.env.VITE_IDENTITY_BASE_URL??"http://localhost:7101",useMocks:(import.meta.env.VITE_USE_MOCKS??"false")==="true",tenantId:import.meta.env.VITE_TENANT_ID??"11111111-1111-1111-1111-111111111111"} as const;

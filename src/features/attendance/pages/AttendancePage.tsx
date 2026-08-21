@@ -1,6 +1,2 @@
-import { ModulePage } from "../../../components/ui/ModulePage";
-import { modules } from "../../../mocks/moduleData";
-export function AttendancePage() {
-    return <ModulePage data={modules.attendance}/>;
-}
-
+import { RealModulePage } from "../../../components/ui/RealModulePage";
+export function AttendancePage(){return <RealModulePage module="students" />}

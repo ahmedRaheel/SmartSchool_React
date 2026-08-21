@@ -15,6 +15,7 @@ import { TransportPage } from "../../features/transport/pages/TransportPage";
 import { CommunicationPage } from "../../features/communication/pages/CommunicationPage";
 import { AiPage } from "../../features/ai/pages/AiPage";
 import { ReportsPage } from "../../features/reports/pages/ReportsPage";
+import { RealModulePage } from "../../components/ui/RealModulePage";
 import { SettingsPage } from "../../features/settings/pages/SettingsPage";
 function ProtectedShell() {
     const { user } = useAuth();
@@ -39,6 +40,15 @@ export const router = createBrowserRouter([
             { path: "transport", element: <TransportPage /> },
             { path: "communication", element: <CommunicationPage /> },
             { path: "ai", element: <AiPage /> },
+            { path: "admissions", element: <RealModulePage module="admissions" /> },
+            { path: "activities", element: <RealModulePage module="activities" /> },
+            { path: "inventory", element: <RealModulePage module="inventory" /> },
+            { path: "learning", element: <RealModulePage module="learning" /> },
+            { path: "organization", element: <RealModulePage module="organization" /> },
+            { path: "payroll", element: <RealModulePage module="payroll" /> },
+            { path: "documents", element: <RealModulePage module="documents" /> },
+            { path: "workflow", element: <RealModulePage module="workflow" /> },
+            { path: "tenancy", element: <RealModulePage module="tenancy" /> },
             { path: "reports", element: <ReportsPage /> },
             { path: "settings", element: <SettingsPage /> },
         ],

@@ -6,8 +6,8 @@ export function LoginPage() {
     const { user, login } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [email, setEmail] = useState("admin@smartschool.demo");
-    const [password, setPassword] = useState("SmartSchool@2026");
+    const [email, setEmail] = useState("superadmin@smartschool.local");
+    const [password, setPassword] = useState("ChangeMe@123456");
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
     if (user)
@@ -104,7 +104,7 @@ export function LoginPage() {
           </button>
           <div className="demo-credentials">
             <b>Demo access</b>
-            <span>Use the pre-filled credentials. Authentication is mocked for this UI build.</span>
+            <span>Connected to SmartSchool.Identity.Api.</span>
           </div>
         </form>
       </section>

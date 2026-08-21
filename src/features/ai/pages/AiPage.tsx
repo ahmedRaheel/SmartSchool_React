@@ -1,6 +1,2 @@
-import { ModulePage } from "../../../components/ui/ModulePage";
-import { modules } from "../../../mocks/moduleData";
-export function AiPage() {
-    return <ModulePage data={modules.ai}/>;
-}
-
+import { RealModulePage } from "../../../components/ui/RealModulePage";
+export function AiPage(){return <RealModulePage module="aicore" />}

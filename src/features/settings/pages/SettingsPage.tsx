@@ -1,6 +1,2 @@
-import { ModulePage } from "../../../components/ui/ModulePage";
-import { modules } from "../../../mocks/moduleData";
-export function SettingsPage() {
-    return <ModulePage data={modules.settings}/>;
-}
-
+import { RealModulePage } from "../../../components/ui/RealModulePage";
+export function SettingsPage(){return <RealModulePage module="reference" />}
