@@ -1,0 +1,2 @@
+# v45 real integration
+Portal mock mode defaults OFF. Login uses Identity `/api/account/login`, refresh uses `/api/account/refresh`, API calls carry Bearer token, tenant and correlation ID. Portal CRUD resources are discovered from SmartSchool.Api OpenAPI, so backend module resources are available without maintaining duplicate route lists. Added missing navigation for Admissions, Activities, Inventory, Learning, Organization, Payroll, Documents, Workflow and Tenancy. Both APIs include Vite-development CORS.
