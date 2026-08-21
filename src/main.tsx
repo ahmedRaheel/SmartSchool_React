@@ -3,7 +3,10 @@ import { createRoot } from "react-dom/client";
 import { AppProviders } from "./app/providers/AppProviders";
 import "./core/theme/theme.css";
 import { installGlobalTelemetry } from "./core/telemetry/clientTelemetry";
+import { installGlobalErrorTelemetry } from "./core/telemetry/telemetry";
+
 installGlobalTelemetry();
+installGlobalErrorTelemetry();
 
 const rootElement = document.getElementById("root");
 

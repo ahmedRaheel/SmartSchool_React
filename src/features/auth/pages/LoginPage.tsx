@@ -16,10 +16,10 @@ export function LoginPage() {
         event.preventDefault();
         setSubmitting(true);
         setError("");
-        const success = await login(email, password);
+        const result = await login({ email, password });
         setSubmitting(false);
-        if (!success) {
-            setError("Enter both email and password.");
+        if (!result.success) {
+            setError(result.message ?? "Unable to sign in.");
             return;
         }
         const from = (location.state as {
@@ -87,11 +87,11 @@ export function LoginPage() {
           <p className="muted">Sign in to your SmartSchool workspace.</p>
           <label className="form-label">
             Email address
-            <input className="form-control" value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email"/>
+            <input className="form-control" name="email" value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email"/>
           </label>
           <label className="form-label">
             Password
-            <input className="form-control" value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password"/>
+            <input className="form-control" name="password" value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password"/>
           </label>
           <div className="login-options">
             <label className="check-row">
