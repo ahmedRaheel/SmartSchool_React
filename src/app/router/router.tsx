@@ -2,6 +2,7 @@ import { Navigate, createBrowserRouter, useLocation } from "react-router-dom";
 import { AppShell } from "../../components/layout/AppShell";
 import { useAuth } from "../../features/auth/auth";
 import { LoginPage } from "../../features/auth/pages/LoginPage";
+import { ProfilesPage } from "../../features/dashboard/pages/ProfilesPage";
 import { DashboardPage } from "../../features/dashboard/pages/DashboardPage";
 import { StudentsPage } from "../../features/students/pages/StudentsPage";
 import { TeachersPage } from "../../features/teachers/pages/TeachersPage";
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
         element: <ProtectedShell />,
         children: [
             { index: true, element: <DashboardPage /> },
+            { path: "profiles", element: <ProfilesPage /> },
             { path: "students", element: <StudentsPage /> },
             { path: "teachers", element: <TeachersPage /> },
             { path: "academics", element: <AcademicsPage /> },

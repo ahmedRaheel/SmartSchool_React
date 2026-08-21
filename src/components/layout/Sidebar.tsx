@@ -3,6 +3,7 @@ import { BarChart3, BookOpen, Bot, BriefcaseBusiness, Bus, CalendarCheck, Clipbo
 const items = [
     ["/", "Dashboard", LayoutDashboard],
     ["/academics", "Academics", GraduationCap],
+    ["/profiles", "Profiles", Users],
     ["/students", "Students", Users],
     ["/teachers", "Teachers", Users],
     ["/examinations", "Examinations", ClipboardCheck],
