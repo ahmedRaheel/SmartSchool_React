@@ -1,0 +1,1 @@
+export function apiErrorMessage(error:any,fallback="Request failed"){const detail=error?.response?.data?.detail||error?.response?.data?.title||error?.message||fallback;const t=error?.smartSchoolTrace;const ref=t?.correlationId||t?.traceId;return ref?`${detail} (Reference: ${ref})`:detail;}

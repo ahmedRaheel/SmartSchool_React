@@ -1,0 +1,5 @@
+import axios from "axios";import{env}from"../../config/env";
+export type TrackedError={message:string;correlationId?:string;traceId?:string;status?:number};
+export function ids(headers:any){return{correlationId:headers?.["x-correlation-id"],traceId:headers?.["x-trace-id"]}}
+export async function reportClientError(error:any,context?:{url?:string;method?:string;status?:number;correlationId?:string;traceId?:string}){const payload={message:error?.message||String(error),stack:error?.stack,url:context?.url||location.href,method:context?.method,status:context?.status,correlationId:context?.correlationId,traceId:context?.traceId,userAgent:navigator.userAgent,occurredAt:new Date().toISOString()};try{await axios.post(`${env.apiBaseUrl}/api/telemetry/client-errors`,payload,{timeout:3000})}catch{/* telemetry must never break the portal */}}
+export function installGlobalTelemetry(){window.addEventListener("error",e=>void reportClientError(e.error||new Error(e.message)));window.addEventListener("unhandledrejection",e=>void reportClientError(e.reason||new Error("Unhandled promise rejection")));}
