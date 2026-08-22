@@ -21,7 +21,15 @@ export function TenantManagementPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Tenant | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ code: "", name: "" });
+  const [form, setForm] = useState({
+    code: "",
+    name: "",
+    adminFirstName: "",
+    adminLastName: "",
+    adminEmail: "",
+    adminPhoneNumber: "",
+  });
+  const [createdAccount, setCreatedAccount] = useState<any>(null);
 
   async function load() {
     try {
@@ -47,10 +55,18 @@ export function TenantManagementPage() {
 
   async function createTenant() {
     try {
-      await api.post("/api/tenancy/tenant", form);
+      const response = await api.post<any>("/api/tenancy/tenant", form);
       setCreateOpen(false);
-      setForm({ code: "", name: "" });
-      notify("Tenant created successfully.");
+      setForm({
+        code: "",
+        name: "",
+        adminFirstName: "",
+        adminLastName: "",
+        adminEmail: "",
+        adminPhoneNumber: "",
+      });
+      setCreatedAccount(response.data?.adminAccount ?? null);
+      notify("Tenant and master administrator created successfully.");
       await load();
     } catch (error: any) {
       notify(error?.message ?? "Tenant could not be created.");
@@ -107,12 +123,30 @@ export function TenantManagementPage() {
 
       <Modal open={createOpen} title="Add Tenant" onClose={() => setCreateOpen(false)}>
         <div className="human-form">
+          <div className="form-section-title"><b>Organization</b><span>Create the tenant organization.</span></div>
           <div className="human-form-grid">
             <label className="human-field"><span>Tenant Code *</span><input value={form.code} onChange={(e) => setForm(v => ({...v, code: e.target.value}))} placeholder="e.g. BEACON" /></label>
             <label className="human-field"><span>Tenant Name *</span><input value={form.name} onChange={(e) => setForm(v => ({...v, name: e.target.value}))} placeholder="School organization name" /></label>
           </div>
+          <div className="form-section-title"><b>Master Administrator</b><span>This account can sign in immediately and must change its temporary password on first login.</span></div>
+          <div className="human-form-grid">
+            <label className="human-field"><span>First Name *</span><input value={form.adminFirstName} onChange={(e) => setForm(v => ({...v, adminFirstName: e.target.value}))} placeholder="Administrator first name" /></label>
+            <label className="human-field"><span>Last Name *</span><input value={form.adminLastName} onChange={(e) => setForm(v => ({...v, adminLastName: e.target.value}))} placeholder="Administrator last name" /></label>
+            <label className="human-field"><span>Email / Login *</span><input type="email" value={form.adminEmail} onChange={(e) => setForm(v => ({...v, adminEmail: e.target.value}))} placeholder="admin@school.com" /></label>
+            <label className="human-field"><span>Phone</span><input value={form.adminPhoneNumber} onChange={(e) => setForm(v => ({...v, adminPhoneNumber: e.target.value}))} placeholder="+92..." /></label>
+          </div>
         </div>
         <div className="modal-actions"><button className="secondary" onClick={() => setCreateOpen(false)}>Cancel</button><button className="primary" onClick={() => void createTenant()}>Create Tenant</button></div>
+      </Modal>
+
+      <Modal open={!!createdAccount} title="Tenant Administrator Created" onClose={() => setCreatedAccount(null)}>
+        {createdAccount && <div className="credential-card">
+          <div className="credential-success"><ShieldCheck size={22}/><div><b>Account is ready to sign in</b><span>Share these temporary credentials securely. The password is shown only once.</span></div></div>
+          <div className="credential-row"><span>Email</span><b>{createdAccount.email}</b></div>
+          <div className="credential-row"><span>Temporary password</span><code>{createdAccount.temporaryPassword}</code></div>
+          <div className="credential-note">Password change is required on first login.</div>
+        </div>}
+        <div className="modal-actions"><button className="primary" onClick={() => setCreatedAccount(null)}>Done</button></div>
       </Modal>
 
       <Modal open={!!selected} title={selected?.name ?? "Tenant"} onClose={() => setSelected(null)}>
