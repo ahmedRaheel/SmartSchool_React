@@ -7,6 +7,7 @@ import { useMockData } from "../../mocks/MockDataProvider";
 import { Modal, useUi } from "../ui/InteractiveUi";
 import { Sidebar } from "./Sidebar";
 import { getNotifications, getUnreadCount, markAllRead, markRead, type NotificationItem } from "../../features/communication/api/notifications";
+import { createNotificationConnection } from "../../features/communication/realtime/communicationRealtime";
 import { effectiveTenantId } from "../../core/tenant/tenantContext";
 const chats = [{ id: "parent", title: "Mrs. Yusuf", subtitle: "Amina • Grade 10 A", path: "/communication" }, { id: "teacher", title: "Sadia Iqbal", subtitle: "Mathematics Teacher", path: "/academics" }, { id: "finance", title: "Finance Office", subtitle: "Accounts & Fees", path: "/finance" }];
 export function AppShell() {
@@ -48,9 +49,22 @@ export function AppShell() {
         }
     }
     useEffect(() => {
+        if (!user?.id || !tenantId) return;
+        let disposed = false;
+        const hub = createNotificationConnection((notification) => {
+            if (disposed) return;
+            setNotes(current => [notification, ...current.filter(item => item.id !== notification.id)].slice(0, 30));
+            if (!notification.isRead) setUnreadCount(current => current + 1);
+        });
+
+        // Hydrate once. New notifications arrive through SignalR; there is no polling timer.
         void loadNotifications();
-        const timer = window.setInterval(() => void loadNotifications(), 30000);
-        return () => window.clearInterval(timer);
+        void hub.start().catch(error => console.error("Notification SignalR connection failed", error));
+
+        return () => {
+            disposed = true;
+            void hub.stop();
+        };
     }, [user?.id, tenantId]);
     const results = useMemo(() => !q ? [] : Object.entries(modules).flatMap(([path, m]) => mock.getRecords(path).map(r => ({ ...r, module: m.title, path: `/${path}` }))).filter(x => `${x.title} ${x.subtitle} ${x.meta} ${x.module}`.toLowerCase().includes(q.toLowerCase())).slice(0, 10), [q, mock]);
     const go = (path: string) => { setDrawer(null); setSearchOpen(false); nav(path); };
@@ -122,9 +136,9 @@ export function AppShell() {
 </header>{drawer === "notifications" ? <div className="drawer-content">
 <div className="drawer-toolbar">
 <span>{unreadCount} unread</span>
-<button className="text-button" onClick={async () => { if(!user?.id)return; await markAllRead(tenantId,user.id); await loadNotifications(); notify("All notifications marked as read."); }}>Mark all read</button>
+<button className="text-button" onClick={async () => { if(!user?.id)return; await markAllRead(tenantId,user.id); setNotes(current => current.map(item => ({...item,isRead:true}))); setUnreadCount(0); notify("All notifications marked as read."); }}>Mark all read</button>
 </div>
-<div className="notification-list">{notes.map(n => <button key={n.id} className={n.isRead ? "read" : ""} onClick={async () => { if(!user?.id)return; if(!n.isRead)await markRead(tenantId,user.id,n.id); await loadNotifications(); if(n.actionUrl)go(n.actionUrl); }}>
+<div className="notification-list">{notes.map(n => <button key={n.id} className={n.isRead ? "read" : ""} onClick={async () => { if(!user?.id)return; if(!n.isRead){await markRead(tenantId,user.id,n.id); setNotes(current => current.map(item => item.id===n.id?{...item,isRead:true}:item)); setUnreadCount(current => Math.max(0,current-1));} if(n.actionUrl)go(n.actionUrl); }}>
 <span className="notification-bullet"/>
 <div>
 <b>{n.title}</b>
