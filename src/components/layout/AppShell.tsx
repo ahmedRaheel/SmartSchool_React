@@ -69,7 +69,7 @@ export function AppShell() {
     const results = useMemo(() => !q ? [] : Object.entries(modules).flatMap(([path, m]) => mock.getRecords(path).map(r => ({ ...r, module: m.title, path: `/${path}` }))).filter(x => `${x.title} ${x.subtitle} ${x.meta} ${x.module}`.toLowerCase().includes(q.toLowerCase())).slice(0, 10), [q, mock]);
     const go = (path: string) => { setDrawer(null); setSearchOpen(false); nav(path); };
     function send() { const value = text.trim(); if (!value)
-        return; setMessages(s => ({ ...s, [activeChat.id]: [...(s[activeChat.id] ?? []), `You: ${value}`] })); setText(""); notify("Message queued in the conversation view."); }
+        return; setMessages(s => ({ ...s, [activeChat.id]: [...(s[activeChat.id] ?? []), `You: ${value}`] })); setText(""); notify({kind:"success",title:"Message sent",message:"Your message was added to the conversation."}); }
     return <div className="app">
 <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)}/>
 <main className="main">
@@ -136,7 +136,7 @@ export function AppShell() {
 </header>{drawer === "notifications" ? <div className="drawer-content">
 <div className="drawer-toolbar">
 <span>{unreadCount} unread</span>
-<button className="text-button" onClick={async () => { if(!user?.id)return; await markAllRead(tenantId,user.id); setNotes(current => current.map(item => ({...item,isRead:true}))); setUnreadCount(0); notify("All notifications marked as read."); }}>Mark all read</button>
+<button className="text-button" onClick={async () => { if(!user?.id)return; await markAllRead(tenantId,user.id); setNotes(current => current.map(item => ({...item,isRead:true}))); setUnreadCount(0); notify({kind:"success",title:"Notifications updated",message:"All notifications were marked as read."}); }}>Mark all read</button>
 </div>
 <div className="notification-list">{notes.map(n => <button key={n.id} className={n.isRead ? "read" : ""} onClick={async () => { if(!user?.id)return; if(!n.isRead){await markRead(tenantId,user.id,n.id); setNotes(current => current.map(item => item.id===n.id?{...item,isRead:true}:item)); setUnreadCount(current => Math.max(0,current-1));} if(n.actionUrl)go(n.actionUrl); }}>
 <span className="notification-bullet"/>

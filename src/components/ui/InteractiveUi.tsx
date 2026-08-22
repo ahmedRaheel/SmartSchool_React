@@ -1,43 +1,9 @@
-import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
-import { CheckCircle2, X } from "lucide-react";
-const UiContext = createContext<{
-    notify: (message: string) => void;
-} | undefined>(undefined);
-export function UiProvider({ children }: {
-    children: ReactNode;
-}) {
-    const [message, setMessage] = useState("");
-    const value = useMemo(() => ({ notify: (next: string) => { setMessage(next); window.setTimeout(() => setMessage(""), 2400); } }), []);
-    return <UiContext.Provider value={value}>{children}{message && <div className="toast">
-<CheckCircle2 size={18}/>
-<span>{message}</span>
-<button onClick={() => setMessage("")}>
-<X size={15}/>
-</button>
-</div>}</UiContext.Provider>;
-}
-export function useUi() { const value = useContext(UiContext); if (!value)
-    throw new Error("UiProvider required"); return value; }
-export function Modal({ open, title, children, onClose }: {
-    open: boolean;
-    title: string;
-    children: ReactNode;
-    onClose: () => void;
-}) {
-    if (!open)
-        return null;
-    return <div className="modal-backdrop" onMouseDown={onClose}>
-<section className="modal-card" role="dialog" aria-modal="true" onMouseDown={e => e.stopPropagation()}>
-  <header className="modal-head">
-<div>
-<span className="eyebrow">SmartSchool</span>
-<h2>{title}</h2>
-</div>
-<button className="icon-button" onClick={onClose}>
-<X size={19}/>
-</button>
-</header>{children}
- </section>
-</div>;
-}
-
+import { createContext, type ReactNode, useContext, useMemo, useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
+export type ToastKind="success"|"error"|"warning"|"info";
+export type ToastInput=string|{title?:string;message:string;kind?:ToastKind;duration?:number};
+type Toast={id:number;title:string;message:string;kind:ToastKind};
+const UiContext=createContext<{notify:(input:ToastInput)=>void}|undefined>(undefined);
+export function UiProvider({children}:{children:ReactNode}){const[toasts,setToasts]=useState<Toast[]>([]);const seq=useRef(1);const value=useMemo(()=>({notify:(input:ToastInput)=>{const x=typeof input==="string"?{message:input}:input;const kind=x.kind??"success";const id=seq.current++;const title=x.title??({success:"Success",error:"Something went wrong",warning:"Attention",info:"Information"} as const)[kind];setToasts(v=>[...v.slice(-3),{id,title,message:x.message,kind}]);window.setTimeout(()=>setToasts(v=>v.filter(t=>t.id!==id)),x.duration??4200)}}),[]);const icon=(k:ToastKind)=>k==="success"?<CheckCircle2 size={20}/>:k==="error"?<AlertCircle size={20}/>:k==="warning"?<TriangleAlert size={20}/>:<Info size={20}/>;return <UiContext.Provider value={value}>{children}<div className="toast-stack" aria-live="polite">{toasts.map(t=><div className={`toast toast-${t.kind}`} key={t.id}><span className="toast-icon">{icon(t.kind)}</span><div className="toast-copy"><b>{t.title}</b><span>{t.message}</span></div><button aria-label="Dismiss" onClick={()=>setToasts(v=>v.filter(x=>x.id!==t.id))}><X size={16}/></button></div>)}</div></UiContext.Provider>}
+export function useUi(){const v=useContext(UiContext);if(!v)throw new Error("UiProvider required");return v}
+export function Modal({open,title,children,onClose}:{open:boolean;title:string;children:ReactNode;onClose:()=>void}){if(!open)return null;return <div className="modal-backdrop" onMouseDown={onClose}><section className="modal-card" role="dialog" aria-modal="true" onMouseDown={e=>e.stopPropagation()}><header className="modal-head"><div><span className="eyebrow">SmartSchool</span><h2>{title}</h2></div><button className="icon-button" onClick={onClose}><X size={19}/></button></header>{children}</section></div>}

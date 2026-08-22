@@ -38,7 +38,7 @@ export function TenantManagementPage() {
       });
       setTenants(response.data?.items ?? response.data ?? []);
     } catch (error: any) {
-      notify(error?.message ?? "Unable to load tenants.");
+      notify({kind:"error",title:"Unable to load tenants",message:error?.message ?? "Tenant request failed."});
     }
   }
 
@@ -66,16 +66,16 @@ export function TenantManagementPage() {
         adminPhoneNumber: "",
       });
       setCreatedAccount(response.data?.adminAccount ?? null);
-      notify("Tenant and master administrator created successfully.");
+      notify({kind:"success",title:"Tenant created",message:"Tenant and master administrator created successfully."});
       await load();
     } catch (error: any) {
-      notify(error?.message ?? "Tenant could not be created.");
+      notify({kind:"error",title:"Tenant creation failed",message:error?.message ?? "Tenant could not be created."});
     }
   }
 
   function impersonate(tenant: Tenant) {
     sessionStorage.setItem("selected_tenant_id", tenantIdOf(tenant));
-    notify(`Tenant context changed to ${tenant.name}. Select a user to start audited impersonation.`);
+    notify({kind:"info",title:"Tenant context changed",message:`Now viewing ${tenant.name}. Select a user to start audited impersonation.`});
   }
 
   return (
