@@ -6,7 +6,8 @@ import { modules } from "../../mocks/moduleData";
 import { useMockData } from "../../mocks/MockDataProvider";
 import { Modal, useUi } from "../ui/InteractiveUi";
 import { Sidebar } from "./Sidebar";
-const seedNotes = [{ id: "1", title: "Attendance alert", body: "Grade 7 C is below target.", path: "/attendance", read: false }, { id: "2", title: "Fee follow-up", body: "12 overdue accounts need attention.", path: "/finance", read: false }, { id: "3", title: "AI prediction", body: "34 students have grade-risk signals.", path: "/ai", read: false }];
+import { getNotifications, getUnreadCount, markAllRead, markRead, type NotificationItem } from "../../features/communication/api/notifications";
+import { effectiveTenantId } from "../../core/tenant/tenantContext";
 const chats = [{ id: "parent", title: "Mrs. Yusuf", subtitle: "Amina • Grade 10 A", path: "/communication" }, { id: "teacher", title: "Sadia Iqbal", subtitle: "Mathematics Teacher", path: "/academics" }, { id: "finance", title: "Finance Office", subtitle: "Accounts & Fees", path: "/finance" }];
 export function AppShell() {
     const { user, logout } = useAuth();
@@ -16,7 +17,9 @@ export function AppShell() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [drawer, setDrawer] = useState<"chat" | "notifications" | null>(null);
-    const [notes, setNotes] = useState(seedNotes);
+    const [notes, setNotes] = useState<NotificationItem[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const tenantId = effectiveTenantId(user);
     const [activeChat, setActiveChat] = useState(chats[0]);
     const [messages, setMessages] = useState<Record<string, string[]>>({ parent: ["Mrs. Yusuf: Assalam-o-Alaikum, I wanted to confirm Amina's assignment deadline.", "You: Wa-Alaikum-Salam. It is due on Thursday."], teacher: ["Sadia Iqbal: Grade 10 timetable review is ready."], finance: ["Finance Office: August collection summary has been prepared."] });
     const [text, setText] = useState("");
@@ -31,6 +34,24 @@ export function AppShell() {
     } }; document.addEventListener("keydown", f); return () => document.removeEventListener("keydown", f); }, []);
     useEffect(() => { const f = (e: MouseEvent) => { if (!profileRef.current?.contains(e.target as Node))
         setProfileOpen(false); }; document.addEventListener("mousedown", f); return () => document.removeEventListener("mousedown", f); }, []);
+    async function loadNotifications() {
+        if (!user?.id || !tenantId) return;
+        try {
+            const [page, count] = await Promise.all([
+                getNotifications(tenantId, user.id),
+                getUnreadCount(tenantId, user.id),
+            ]);
+            setNotes(page.items ?? []);
+            setUnreadCount(count ?? 0);
+        } catch (error) {
+            console.error("Unable to load notifications", error);
+        }
+    }
+    useEffect(() => {
+        void loadNotifications();
+        const timer = window.setInterval(() => void loadNotifications(), 30000);
+        return () => window.clearInterval(timer);
+    }, [user?.id, tenantId]);
     const results = useMemo(() => !q ? [] : Object.entries(modules).flatMap(([path, m]) => mock.getRecords(path).map(r => ({ ...r, module: m.title, path: `/${path}` }))).filter(x => `${x.title} ${x.subtitle} ${x.meta} ${x.module}`.toLowerCase().includes(q.toLowerCase())).slice(0, 10), [q, mock]);
     const go = (path: string) => { setDrawer(null); setSearchOpen(false); nav(path); };
     function send() { const value = text.trim(); if (!value)
@@ -54,7 +75,7 @@ export function AppShell() {
 </button>
 <button className="top-icon" onClick={() => setDrawer("notifications")}>
 <Bell size={19}/>
-<span className="notification-count">{notes.filter(n => !n.read).length}</span>
+<span className="notification-count">{unreadCount}</span>
 </button>
 <button className="top-icon" onClick={() => setDark(v => !v)}>{dark ? <Sun size={19}/> : <Moon size={19}/>}</button>
 <div className="profile-menu" ref={profileRef}>
@@ -100,14 +121,14 @@ export function AppShell() {
 </button>
 </header>{drawer === "notifications" ? <div className="drawer-content">
 <div className="drawer-toolbar">
-<span>{notes.filter(n => !n.read).length} unread</span>
-<button className="text-button" onClick={() => { setNotes(v => v.map(n => ({ ...n, read: true }))); notify("All notifications marked as read."); }}>Mark all read</button>
+<span>{unreadCount} unread</span>
+<button className="text-button" onClick={async () => { if(!user?.id)return; await markAllRead(tenantId,user.id); await loadNotifications(); notify("All notifications marked as read."); }}>Mark all read</button>
 </div>
-<div className="notification-list">{notes.map(n => <button key={n.id} className={n.read ? "read" : ""} onClick={() => { setNotes(v => v.map(x => x.id === n.id ? { ...x, read: true } : x)); go(n.path); }}>
+<div className="notification-list">{notes.map(n => <button key={n.id} className={n.isRead ? "read" : ""} onClick={async () => { if(!user?.id)return; if(!n.isRead)await markRead(tenantId,user.id,n.id); await loadNotifications(); if(n.actionUrl)go(n.actionUrl); }}>
 <span className="notification-bullet"/>
 <div>
 <b>{n.title}</b>
-<p>{n.body}</p>
+<p>{n.message}</p>
 </div>
 </button>)}</div>
 </div> : <div className="chat-shell">

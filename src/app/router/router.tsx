@@ -19,6 +19,7 @@ import { ReportsPage } from "../../features/reports/pages/ReportsPage";
 import { RealModulePage } from "../../components/ui/RealModulePage";
 import { SettingsPage } from "../../features/settings/pages/SettingsPage";
 import { PlatformAdminPage } from "../../features/platform/pages/PlatformAdminPage";
+import { WorkflowCenterPage } from "../../features/workflow/pages/WorkflowCenterPage";
 function ProtectedShell() {
     const { user } = useAuth();
     const location = useLocation();
@@ -51,7 +52,7 @@ export const router = createBrowserRouter([
             { path: "organization", element: <RealModulePage module="organization" /> },
             { path: "payroll", element: <RealModulePage module="payroll" /> },
             { path: "documents", element: <RealModulePage module="documents" /> },
-            { path: "workflow", element: <RealModulePage module="workflow" /> },
+            { path: "workflow", element: <WorkflowCenterPage /> },
             { path: "tenancy", element: <RealModulePage module="tenancy" /> },
             { path: "reports", element: <ReportsPage /> },
             { path: "settings", element: <SettingsPage /> },
