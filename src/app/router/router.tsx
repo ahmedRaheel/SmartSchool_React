@@ -18,6 +18,7 @@ import { AiPage } from "../../features/ai/pages/AiPage";
 import { ReportsPage } from "../../features/reports/pages/ReportsPage";
 import { RealModulePage } from "../../components/ui/RealModulePage";
 import { SettingsPage } from "../../features/settings/pages/SettingsPage";
+import { PlatformAdminPage } from "../../features/platform/pages/PlatformAdminPage";
 function ProtectedShell() {
     const { user } = useAuth();
     const location = useLocation();
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
         children: [
             { index: true, element: <DashboardPage /> },
             { path: "profiles", element: <ProfilesPage /> },
+            { path: "platform", element: <PlatformAdminPage /> },
             { path: "students", element: <StudentsPage /> },
             { path: "teachers", element: <TeachersPage /> },
             { path: "academics", element: <AcademicsPage /> },

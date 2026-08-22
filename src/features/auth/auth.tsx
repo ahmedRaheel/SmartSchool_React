@@ -3,10 +3,10 @@ import axios, { AxiosError } from "axios";
 import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
 import { env } from "../../config/env";
 
-export interface SessionUser { id:string; tenantId?:string|null; name:string; email:string; role:string; roles:string[]; school:string; initials:string; accountType:string; businessEntityId?:string|null; }
+export interface SessionUser { id:string; tenantId?:string|null; name:string; email:string; role:string; roles:string[]; school:string; initials:string; accountType:string; businessEntityId?:string|null; schoolId?:string|null; mustChangePassword?:boolean; }
 export interface LoginCredentials { email:string; password:string; }
 interface AuthContextValue { user:SessionUser|null; login:(credentials:LoginCredentials)=>Promise<{success:boolean;message?:string}>; logout:()=>void; }
-type JwtClaims = Record<string, unknown> & { sub?:string; tenant_id?:string; name?:string; email?:string; role?:string|string[]; account_type?:string; given_name?:string; family_name?:string; business_entity_id?:string; };
+type JwtClaims = Record<string, unknown> & { sub?:string; tenant_id?:string; name?:string; email?:string; role?:string|string[]; account_type?:string; given_name?:string; family_name?:string; business_entity_id?:string; school_id?:string; must_change_password?:boolean|string; };
 const AuthContext=createContext<AuthContextValue|null>(null);
 const identityUrl=(path:string)=> import.meta.env.DEV ? `/identity${path}` : `${env.identityBaseUrl}${path}`;
 
@@ -68,6 +68,10 @@ export function AuthProvider({children}:{children:ReactNode}) {
         businessEntityId: claims.business_entity_id
           ? String(claims.business_entity_id)
           : null,
+        schoolId: claims.school_id ? String(claims.school_id) : null,
+        mustChangePassword:
+          claims.must_change_password === true ||
+          String(claims.must_change_password ?? "").toLowerCase() === "true",
       };
       if(!sessionUser.id) throw new Error("Access token does not contain a subject claim.");
       sessionStorage.setItem("tenant_id",tenantId||env.tenantId);
