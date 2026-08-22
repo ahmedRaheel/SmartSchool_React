@@ -1,6 +1,4 @@
-import axios from "axios";import {env} from "../../config/env";import{ids,reportClientError}from"../telemetry/clientTelemetry";
-export const http=axios.create({baseURL:env.apiBaseUrl,timeout:30000});
-http.interceptors.request.use(c=>{const token=sessionStorage.getItem("access_token");if(token)c.headers.Authorization=`Bearer ${token}`;c.headers["X-Tenant-ID"]=sessionStorage.getItem("tenant_id")||env.tenantId;c.headers["X-Correlation-ID"]=crypto.randomUUID();return c;});
-let refreshing:Promise<string|null>|null=null;
-http.interceptors.response.use(r=>r,async error=>{const original=error.config;const h=ids(error.response?.headers);const status=error.response?.status;const tracked=Object.assign(error,{smartSchoolTrace:{...h,status}});void reportClientError(tracked,{url:original?.url,method:original?.method,status,...h});if(status!==401||original?._retry)throw tracked;original._retry=true;refreshing??=refresh().finally(()=>refreshing=null);const token=await refreshing;if(!token){sessionStorage.clear();location.assign("/login");throw tracked;}original.headers.Authorization=`Bearer ${token}`;return http(original)});
-async function refresh(){const r=sessionStorage.getItem("refresh_token");if(!r)return null;try{const body=new URLSearchParams();body.set("grant_type","refresh_token");body.set("client_id","smartschool-login-api");body.set("refresh_token",r);const{data}=await axios.post(import.meta.env.DEV?"/identity/connect/token":`${env.identityBaseUrl}/connect/token`,body,{headers:{"Content-Type":"application/x-www-form-urlencoded"}});sessionStorage.setItem("access_token",data.access_token);if(data.refresh_token)sessionStorage.setItem("refresh_token",data.refresh_token);return data.access_token as string}catch{return null}}
+import { api } from "./ApiClient";
+
+/** @deprecated Import { api } from "./ApiClient" in new code. */
+export const http = api;

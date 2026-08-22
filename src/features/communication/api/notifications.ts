@@ -1,4 +1,4 @@
-import { api } from "../../../core/api/apiClient";
+import { api } from "../../../core/api/ApiClient";
 export type NotificationItem={tenantId:string;id:string;recipientUserId:string;type:string|number;title:string;message:string;relatedEntityId?:string|null;relatedEntityType?:string|null;actionUrl?:string|null;priority:string;isRead:boolean;readAt?:string|null;occurredAt:string};
 type Page<T>={items:T[];page:number;pageSize:number;totalCount:number};
 

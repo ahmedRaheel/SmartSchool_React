@@ -3,7 +3,9 @@ import axios from "axios";
 import { env } from "../../../config/env";
 import { useAuth } from "../../auth/auth";
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { http } from "../../../core/api/httpClient";
 
+type Tenant={id:string;tenantId:string;code:string;name:string};
 type IdentityUser = {
   id:string; tenantId?:string|null; schoolId?:string|null; email:string;
   firstName:string; lastName:string; displayName?:string|null; accountType?:string|null;
@@ -15,7 +17,7 @@ const authHeader=()=>({Authorization:`Bearer ${sessionStorage.getItem("access_to
 export function PlatformAdminPage(){
   const {user}=useAuth();
   const [tenantId,setTenantId]=useState(sessionStorage.getItem("selected_tenant_id")??"");
-  const [users,setUsers]=useState<IdentityUser[]>([]);
+  const [users,setUsers]=useState<IdentityUser[]>([]);const[tenants,setTenants]=useState<Tenant[]>([]);
   const [message,setMessage]=useState("");
   const [email,setEmail]=useState("");
   const [firstName,setFirstName]=useState("");
@@ -29,7 +31,7 @@ export function PlatformAdminPage(){
     });
     setUsers(r.data.items??[]);
   }
-  useEffect(()=>{void loadUsers()},[tenantId,isSuperAdmin]);
+  useEffect(()=>{void loadUsers()},[tenantId,isSuperAdmin]);useEffect(()=>{if(!isSuperAdmin)return;const pt=sessionStorage.getItem("tenant_id")||env.tenantId;http.get("/api/tenancy/tenant",{params:{tenantId:pt,page:1,pageSize:250}}).then(r=>{const d:any=r.data;setTenants(d?.items??d?.data?.items??[])}).catch(()=>setTenants([]))},[isSuperAdmin]);
 
   function selectTenant(value:string){
     setTenantId(value);
@@ -68,7 +70,7 @@ export function PlatformAdminPage(){
     <PageHeader title="Platform Management" subtitle="Tenants, school master users and support impersonation"/>
     <section className="panel">
       <h3>Tenant context</h3>
-      <input value={tenantId} onChange={e=>selectTenant(e.target.value)} placeholder="Tenant ID"/>
+      <select className="filter-select" value={tenantId} onChange={e=>selectTenant(e.target.value)}><option value="">All tenants</option>{tenants.map(t=><option key={t.id||t.tenantId} value={t.id||t.tenantId}>{t.name} ({t.code})</option>)}</select>
       <button onClick={()=>setTenantActive(true)}>Enable tenant</button>
       <button className="secondary" onClick={()=>setTenantActive(false)}>Disable tenant & users</button>
     </section>
