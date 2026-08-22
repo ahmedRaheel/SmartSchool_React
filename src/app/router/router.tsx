@@ -57,6 +57,11 @@ export const router = createBrowserRouter([
             { path: "tenancy", element: <TenantManagementPage /> },
             { path: "reports", element: <ReportsPage /> },
             { path: "settings", element: <SettingsPage /> },
+            { path: "notifications", element: <CommunicationPage /> },
+            { path: "reference", element: <RealModulePage module="reference" /> },
+            { path: "audit", element: <RealModulePage module="audit" /> },
+            { path: "observability", element: <RealModulePage module="observability" /> },
+            { path: "platform/features", element: <RealModulePage module="platform" /> },
         ],
     },
 ]);
