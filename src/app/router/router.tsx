@@ -19,6 +19,7 @@ import { ReportsPage } from "../../features/reports/pages/ReportsPage";
 import { RealModulePage } from "../../components/ui/RealModulePage";
 import { SettingsPage } from "../../features/settings/pages/SettingsPage";
 import { PlatformAdminPage } from "../../features/platform/pages/PlatformAdminPage";
+import { TenantManagementPage } from "../../features/tenancy/pages/TenantManagementPage";
 import { WorkflowCenterPage } from "../../features/workflow/pages/WorkflowCenterPage";
 function ProtectedShell() {
     const { user } = useAuth();
@@ -53,7 +54,7 @@ export const router = createBrowserRouter([
             { path: "payroll", element: <RealModulePage module="payroll" /> },
             { path: "documents", element: <RealModulePage module="documents" /> },
             { path: "workflow", element: <WorkflowCenterPage /> },
-            { path: "tenancy", element: <RealModulePage module="tenancy" /> },
+            { path: "tenancy", element: <TenantManagementPage /> },
             { path: "reports", element: <ReportsPage /> },
             { path: "settings", element: <SettingsPage /> },
         ],

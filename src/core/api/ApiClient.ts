@@ -6,19 +6,17 @@ export type ApiError = {
   message: string;
 };
 
-export type ApiResponse<T> = {
-  success: boolean;
-  data: T | null;
-  error: ApiError | null;
-  traceId: string;
-  timestampUtc: string;
+export type Result<T> = {
+  isSuccess: boolean;
+  isFailure: boolean;
+  error: ApiError;
+  value?: T | null;
 };
 
 export class SmartSchoolApiError extends Error {
   constructor(
     public readonly code: string,
     message: string,
-    public readonly traceId?: string,
     public readonly status?: number,
   ) {
     super(message);
@@ -44,32 +42,30 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => {
-    const body = response.data as ApiResponse<unknown>;
+    const result = response.data as Result<unknown>;
 
-    if (body && typeof body === "object" && "success" in body) {
-      if (!body.success) {
+    if (result && typeof result === "object" && "isSuccess" in result) {
+      if (!result.isSuccess) {
         throw new SmartSchoolApiError(
-          body.error?.code ?? "request_failed",
-          body.error?.message ?? "The request failed.",
-          body.traceId,
+          result.error?.code ?? "REQUEST_FAILED",
+          result.error?.message ?? "The request could not be completed.",
           response.status,
         );
       }
 
-      response.data = body.data;
+      response.data = result.value ?? null;
     }
 
     return response;
   },
-  (error: AxiosError<ApiResponse<unknown>>) => {
-    const body = error.response?.data;
+  (error: AxiosError<Result<unknown>>) => {
+    const result = error.response?.data;
 
-    if (body && typeof body === "object" && "success" in body) {
+    if (result && typeof result === "object" && "isSuccess" in result) {
       return Promise.reject(
         new SmartSchoolApiError(
-          body.error?.code ?? "request_failed",
-          body.error?.message ?? error.message,
-          body.traceId,
+          result.error?.code ?? "REQUEST_FAILED",
+          result.error?.message ?? error.message,
           error.response?.status,
         ),
       );

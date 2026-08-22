@@ -1,4 +1,4 @@
 import { api } from "./ApiClient";
 
-/** @deprecated Import { api } from "./ApiClient" in new code. */
+/** Compatibility alias. New code should import api from ApiClient. */
 export const http = api;
