@@ -34,7 +34,7 @@ export function AppShell() {
     const results = useMemo(() => !q ? [] : Object.entries(modules).flatMap(([path, m]) => mock.getRecords(path).map(r => ({ ...r, module: m.title, path: `/${path}` }))).filter(x => `${x.title} ${x.subtitle} ${x.meta} ${x.module}`.toLowerCase().includes(q.toLowerCase())).slice(0, 10), [q, mock]);
     const go = (path: string) => { setDrawer(null); setSearchOpen(false); nav(path); };
     function send() { const value = text.trim(); if (!value)
-        return; setMessages(s => ({ ...s, [activeChat.id]: [...(s[activeChat.id] ?? []), `You: ${value}`] })); setText(""); notify("Mock message sent and kept in memory."); }
+        return; setMessages(s => ({ ...s, [activeChat.id]: [...(s[activeChat.id] ?? []), `You: ${value}`] })); setText(""); notify("Message queued in the conversation view."); }
     return <div className="app">
 <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)}/>
 <main className="main">
@@ -73,7 +73,7 @@ export function AppShell() {
 <small>{user?.email}</small>
 </div>
 </div>
-<button onClick={() => notify("Profile mock ready for IdentityServer.")}>
+<button onClick={() => nav("/profiles")}>
 <UserRound size={17}/> My profile</button>
 <button onClick={() => nav("/settings")}>
 <Settings size={17}/> Account settings</button>
@@ -143,7 +143,7 @@ export function AppShell() {
 <div className="command-search">
 <label className="search-box">
 <Search size={18}/>
-<input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search current in-memory data..."/>
+<input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search SmartSchool..."/>
 </label>
 <div className="search-results">{q && !results.length && <div className="empty-state">No matching records.</div>}{results.map(x => <button key={`${x.path}-${x.id}`} onClick={() => go(x.path)}>
 <span className="search-result-icon">
