@@ -1,1 +1,15 @@
-export function apiErrorMessage(error:any,fallback="Request failed"){const detail=error?.response?.data?.detail||error?.response?.data?.title||error?.message||fallback;const t=error?.smartSchoolTrace;const ref=t?.correlationId||t?.traceId;return ref?`${detail} (Reference: ${ref})`:detail;}
+import axios from "axios";
+import { SmartSchoolApiError } from "./ApiClient";
+
+/** Converts API, OAuth and network failures into a user-friendly message. */
+export function getErrorMessage(error: unknown, fallback = "The request could not be completed."): string {
+  if (error instanceof SmartSchoolApiError) return error.message;
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as Record<string, unknown> | undefined;
+    const value = data?.detail ?? data?.title ?? data?.message ?? data?.error_description ?? data?.error;
+    if (value) return String(value);
+    if (!error.response) return "The SmartSchool service could not be reached. Check that the backend is running.";
+    return error.message || fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+}

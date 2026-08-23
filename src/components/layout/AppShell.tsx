@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Bell, ChevronDown, LogOut, Menu, MessageSquare, Moon, Search, Send, Settings, Sun, UserRound, X } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, MessageSquare, Moon, Search, Send, Settings, ShieldCheck, Sun, UserRound, X } from "lucide-react";
 import { useAuth } from "../../features/auth/auth";
-import { modules } from "../../mocks/moduleData";
-import { useMockData } from "../../mocks/MockDataProvider";
 import { Modal, useUi } from "../ui/InteractiveUi";
 import { Sidebar } from "./Sidebar";
 import { getNotifications, getUnreadCount, markAllRead, markRead, type NotificationItem } from "../../features/communication/api/notifications";
@@ -11,9 +9,8 @@ import { createNotificationConnection } from "../../features/communication/realt
 import { effectiveTenantId } from "../../core/tenant/tenantContext";
 const chats = [{ id: "parent", title: "Mrs. Yusuf", subtitle: "Amina • Grade 10 A", path: "/communication" }, { id: "teacher", title: "Sadia Iqbal", subtitle: "Mathematics Teacher", path: "/academics" }, { id: "finance", title: "Finance Office", subtitle: "Accounts & Fees", path: "/finance" }];
 export function AppShell() {
-    const { user, logout } = useAuth();
+    const { user, logout, stopImpersonation } = useAuth();
     const { notify } = useUi();
-    const mock = useMockData();
     const nav = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -66,13 +63,22 @@ export function AppShell() {
             void hub.stop();
         };
     }, [user?.id, tenantId]);
-    const results = useMemo(() => !q ? [] : Object.entries(modules).flatMap(([path, m]) => mock.getRecords(path).map(r => ({ ...r, module: m.title, path: `/${path}` }))).filter(x => `${x.title} ${x.subtitle} ${x.meta} ${x.module}`.toLowerCase().includes(q.toLowerCase())).slice(0, 10), [q, mock]);
+    const searchableModules = useMemo(() => [
+        ["Dashboard", "/"], ["Students", "/students"], ["Teachers", "/teachers"], ["Academics", "/academics"],
+        ["Examinations", "/examinations"], ["Attendance", "/attendance"], ["Finance", "/finance"], ["HR & Payroll", "/hr"],
+        ["Transport", "/transport"], ["Communication", "/communication"], ["AI Assistant", "/ai"], ["Workflows", "/workflow"],
+        ["Reports", "/reports"], ["Settings", "/settings"], ["Tenants", "/tenancy"], ["Platform", "/platform"],
+    ] as const, []);
+    const results = useMemo(() => q.trim() ? searchableModules
+        .filter(([title]) => title.toLowerCase().includes(q.trim().toLowerCase()))
+        .map(([title, path]) => ({ id: path, title, module: "SmartSchool", subtitle: "Open workspace", meta: "", path })) : [], [q, searchableModules]);
     const go = (path: string) => { setDrawer(null); setSearchOpen(false); nav(path); };
     function send() { const value = text.trim(); if (!value)
         return; setMessages(s => ({ ...s, [activeChat.id]: [...(s[activeChat.id] ?? []), `You: ${value}`] })); setText(""); notify({kind:"success",title:"Message sent",message:"Your message was added to the conversation."}); }
     return <div className="app">
 <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)}/>
 <main className="main">
+{user?.impersonated && <div className="impersonation-banner" role="status"><div><ShieldCheck size={16}/><span><b>Support session:</b> you are viewing SmartSchool as {user.name} ({user.role}). Actions are audited.</span></div><button onClick={() => { stopImpersonation(); window.location.assign("/"); }}>Return to administrator</button></div>}
 <header className="topbar">
 <button className="mobile-menu" onClick={() => setSidebarOpen(true)}>
 <Menu size={21}/>

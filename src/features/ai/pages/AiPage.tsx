@@ -1,36 +1,50 @@
 import { useState } from "react";
-import axios from "axios";
-import { AlertCircle, Bot, Send } from "lucide-react";
-import { env } from "../../../config/env";
-import { useAuth } from "../../auth/auth";
-import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { Bot, Database, Send, Sparkles, Zap } from "lucide-react";
+import { PageHeader } from "../../../components/ui/PageHeader";
 import { useUi } from "../../../components/ui/InteractiveUi";
+import { api } from "../../../core/api/ApiClient";
+import { getErrorMessage } from "../../../core/api/errorMessage";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { useAuth } from "../../auth/auth";
 
-type Citation={id:string;name:string;score:number};
-type Answer={answer:string;citations:Citation[];model:string};
+type Citation = { id: string; documentName?: string; name?: string; collection?: string; score: number };
+type Answer = { answer: string; citations?: Citation[]; model?: string; contextSource?: "cag" | "rag" | string; contextVersion?: string };
 
-export function AiPage(){
- const {user}=useAuth(); const {notify}=useUi(); const [question,setQuestion]=useState(""); const [result,setResult]=useState<Answer|null>(null);
- const [busy,setBusy]=useState(false); const [error,setError]=useState("");
- async function ask(){
-  const q=question.trim(); if(!q)return; setBusy(true);setError("");
-  try{
-   const r=await axios.post(`${env.apiBaseUrl}/api/ai/assistant/ask`,
-    {tenantId:effectiveTenantId(user),question:q,actor:user?.role,schoolId:user?.schoolId},
-    {headers:{Authorization:`Bearer ${sessionStorage.getItem("access_token")??""}`}});
-   setResult(r.data);
-   notify({kind:"success",title:"AI response ready",message:"SmartSchool Assistant answered your question."});
-  }catch(e:any){
-   const message=e?.response?.data?.detail??e?.response?.data?.title??e?.response?.data?.message??e?.message??"AI request failed.";
-   setResult(null); setError(message);
-   notify({kind:"error",title:"AI request failed",message});
+/** SmartSchool governed AI workspace backed by CAG, RAG and Ollama. */
+export function AiPage() {
+  const { user } = useAuth(); const { notify } = useUi();
+  const [question, setQuestion] = useState(""); const [result, setResult] = useState<Answer | null>(null); const [busy, setBusy] = useState(false);
+
+  async function ask(): Promise<void> {
+    const prompt = question.trim(); if (!prompt || !user) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post<Answer>("/api/aicore/execute", {
+        tenantId: effectiveTenantId(user), assistant: user.role || "SmartSchool Assistant", prompt,
+        collections: collectionsFor(user.role), schoolId: user.schoolId, actorId: user.id,
+      });
+      setResult(data); notify({ kind: "success", title: "AI response ready", message: data.contextSource === "cag" ? "Answered from the authorized context cache." : "Knowledge was retrieved and grounded before answering." });
+    } catch (error) { setResult(null); notify({ kind: "error", title: "AI request failed", message: getErrorMessage(error) }); }
+    finally { setBusy(false); }
   }
-  finally{setBusy(false);}
- }
- return <div><div className="page-header"><div><span className="eyebrow">Ollama + pgvector RAG</span><h1>SmartSchool AI Assistant</h1><p>Tenant-scoped knowledge assistant with source citations.</p></div></div>
- <section className="panel"><div className="chat-compose"><textarea value={question} onChange={e=>setQuestion(e.target.value)} placeholder="Ask about school notes, policies, learning material or student support..." />
- <button className="primary" disabled={busy} onClick={ask}><Send size={16}/>{busy?" Thinking...":" Ask"}</button></div>
- {error&&<div className="error-state" role="alert"><AlertCircle size={20}/><div><b>Unable to get an AI response</b><span>{error}</span></div></div>}
- {result&&<div><h3><Bot size={18}/> Answer</h3><p style={{whiteSpace:"pre-wrap"}}>{result.answer}</p><small>Model: {result.model}</small>
- <h4>Sources</h4>{result.citations.map((c,i)=><div key={c.id}>[{i+1}] {c.name} • relevance {(c.score*100).toFixed(1)}%</div>)}</div>}</section></div>;
+
+  return <>
+    <PageHeader title="SmartSchool AI" subtitle="Role-aware assistant using cached authorized context with pgvector retrieval fallback" />
+    <div className="ai-workspace">
+      <section className="surface ai-chat-card"><div className="ai-hero"><span className="ai-orb"><Bot size={22}/></span><div><span className="eyebrow">CAG-first intelligence</span><h2>How can I help, {user?.name?.split(" ")[0]}?</h2><p>Your tenant, role and school scope are applied before context reaches the model.</p></div></div>
+        <div className="ai-prompt-box"><textarea value={question} onChange={e => setQuestion(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void ask(); } }} placeholder="Ask about learning, policy, operations, fees, attendance, results or school knowledge…"/><button className="primary" disabled={busy || !question.trim()} onClick={() => void ask()}><Send size={16}/>{busy ? "Thinking…" : "Ask SmartSchool"}</button></div>
+        {result && <div className="ai-answer"><div className="ai-answer-head"><span><Sparkles size={16}/> Answer</span><span className={`context-badge ${result.contextSource ?? "rag"}`}><Zap size={13}/>{(result.contextSource ?? "RAG").toUpperCase()}</span></div><p>{result.answer}</p>{result.citations?.length ? <div className="citation-list"><b><Database size={14}/> Grounded sources</b>{result.citations.map((item,index) => <div key={item.id}><span>{index + 1}</span><div><b>{item.documentName ?? item.name ?? "Knowledge source"}</b><small>{item.collection ? `${item.collection} • ` : ""}{Math.round(item.score * 100)}% relevance</small></div></div>)}</div> : null}</div>}
+      </section>
+      <aside className="surface ai-trust-card"><span className="eyebrow">Governance</span><h3>Context protection</h3><div><b>Tenant isolated</b><span>Knowledge is scoped to your active tenant.</span></div><div><b>Actor aware</b><span>Student, parent, teacher and administrator boundaries are preserved.</span></div><div><b>Cache optimized</b><span>Redis CAG is used first; pgvector RAG refreshes missing or stale context.</span></div><div><b>Auditable</b><span>AI execution and context source are recorded by the backend.</span></div></aside>
+    </div>
+  </>;
+}
+
+function collectionsFor(role: string): string[] {
+  const value = role.toLowerCase();
+  if (value.includes("student")) return ["learning", "academic", "policy"];
+  if (value.includes("teacher")) return ["learning", "academic", "policy", "operations"];
+  if (value.includes("parent")) return ["academic", "policy"];
+  if (value.includes("admin")) return ["operations", "academic", "policy", "admissions"];
+  return ["learning", "academic", "policy"];
 }
