@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import { env } from "../../config/env";
+import { clearAuthenticationState } from "../../features/auth/auth";
 
 export type ApiError = {
   code: string;
@@ -34,6 +35,8 @@ api.interceptors.request.use((config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    delete config.headers.Authorization;
   }
 
   config.headers.Accept = "application/json";
@@ -59,6 +62,13 @@ api.interceptors.response.use(
     return response;
   },
   (error: AxiosError<Result<unknown>>) => {
+    if (error.response?.status === 401) {
+      // The token may have expired or been signed by a retired IdentityServer
+      // key. Never keep sending a known-invalid JWT.
+      clearAuthenticationState();
+      window.dispatchEvent(new CustomEvent("smartschool:unauthorized"));
+    }
+
     const result = error.response?.data;
 
     if (result && typeof result === "object" && "isSuccess" in result) {
