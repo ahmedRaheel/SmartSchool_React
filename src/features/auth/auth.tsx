@@ -3,7 +3,7 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 import { env } from "../../config/env";
 import { captureApiError } from "../../core/telemetry/telemetry";
 
-/** Represents the authenticated SmartSchool user stored in the browser session. */
+/** Represents the authenticated SmartSchool user persisted across browser refreshes. */
 export interface SessionUser {
   id: string;
   tenantId?: string | null;
@@ -50,7 +50,7 @@ const AUTH_KEYS = ["access_token", "refresh_token", "id_token", SESSION_KEY, "te
 
 /** Clears every authentication and impersonation value owned by the portal. */
 export function clearAuthenticationState(): void {
-  AUTH_KEYS.forEach((key) => { sessionStorage.removeItem(key); localStorage.removeItem(key); });
+  AUTH_KEYS.forEach((key) => { localStorage.removeItem(key); sessionStorage.removeItem(key); });
 }
 
 function decodeJwt(token: string): JwtClaims {
@@ -92,7 +92,10 @@ function createSessionUser(token: string, fallbackEmail = ""): SessionUser {
 /** Provides login, logout and audited impersonation state to the portal. */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(() => {
-    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "null"); } catch { return null; }
+    try {
+      const stored = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY);
+      return JSON.parse(stored ?? "null");
+    } catch { return null; }
   });
 
   useEffect(() => {
@@ -102,9 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   function persistSession(token: string, sessionUser: SessionUser): void {
-    sessionStorage.setItem("access_token", token);
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
-    if (sessionUser.tenantId) sessionStorage.setItem("tenant_id", sessionUser.tenantId);
+    localStorage.setItem("access_token", token);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+    if (sessionUser.tenantId) localStorage.setItem("tenant_id", sessionUser.tenantId);
     setUser(sessionUser);
   }
 
@@ -119,8 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" }, timeout: 30_000,
       });
       if (!data?.access_token) throw new Error("Identity did not return an access token.");
-      if (data.refresh_token) sessionStorage.setItem("refresh_token", data.refresh_token);
-      if (data.id_token) sessionStorage.setItem("id_token", data.id_token);
+      if (data.refresh_token) localStorage.setItem("refresh_token", data.refresh_token);
+      if (data.id_token) localStorage.setItem("id_token", data.id_token);
       persistSession(data.access_token, createSessionUser(data.access_token, email));
       return { success: true };
     } catch (error) {
@@ -132,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function impersonate(targetUserId: string, reason: string): Promise<AuthResult> {
-    const actorToken = sessionStorage.getItem("access_token");
+    const actorToken = localStorage.getItem("access_token") ?? (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token"));
     if (!actorToken || !user) return { success: false, message: "Your administrator session is no longer available." };
     const body = new URLSearchParams({ grant_type: "impersonation", client_id: "smartschool-login-api",
       actor_token: actorToken, target_user_id: targetUserId, reason: reason.trim() || "Support session" });
@@ -141,8 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" }, timeout: 30_000,
       });
       if (!data?.access_token) throw new Error("Identity did not return an impersonation token.");
-      sessionStorage.setItem(ORIGINAL_TOKEN_KEY, actorToken);
-      sessionStorage.setItem(ORIGINAL_SESSION_KEY, JSON.stringify(user));
+      localStorage.setItem(ORIGINAL_TOKEN_KEY, actorToken);
+      localStorage.setItem(ORIGINAL_SESSION_KEY, JSON.stringify(user));
       persistSession(data.access_token, createSessionUser(data.access_token));
       return { success: true };
     } catch (error) {
@@ -152,13 +155,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function stopImpersonation(): void {
-    const token = sessionStorage.getItem(ORIGINAL_TOKEN_KEY);
-    const original = sessionStorage.getItem(ORIGINAL_SESSION_KEY);
+    const token = localStorage.getItem(ORIGINAL_TOKEN_KEY) ?? sessionStorage.getItem(ORIGINAL_TOKEN_KEY);
+    const original = localStorage.getItem(ORIGINAL_SESSION_KEY) ?? sessionStorage.getItem(ORIGINAL_SESSION_KEY);
     if (!token || !original) return;
     try {
       const originalUser = JSON.parse(original) as SessionUser;
-      sessionStorage.removeItem(ORIGINAL_TOKEN_KEY); sessionStorage.removeItem(ORIGINAL_SESSION_KEY);
-      sessionStorage.removeItem("selected_tenant_id");
+      localStorage.removeItem(ORIGINAL_TOKEN_KEY); localStorage.removeItem(ORIGINAL_SESSION_KEY);
+      localStorage.removeItem("selected_tenant_id"); sessionStorage.removeItem("selected_tenant_id");
       persistSession(token, originalUser);
     } catch { clearAuthenticationState(); setUser(null); }
   }

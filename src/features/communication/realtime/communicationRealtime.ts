@@ -2,7 +2,7 @@ import * as signalR from "@microsoft/signalr";
 import { env } from "../../../config/env";
 import type { NotificationItem } from "../api/notifications";
 
-const token = () => sessionStorage.getItem("access_token") ?? "";
+const token = () => (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token")) ?? "";
 
 function connection(path: string) {
   return new signalR.HubConnectionBuilder()

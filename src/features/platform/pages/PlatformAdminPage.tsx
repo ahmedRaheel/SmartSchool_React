@@ -41,7 +41,7 @@ export function PlatformAdminPage() {
   async function loadUsers(): Promise<void> {
     if (!isSuperAdmin) return;
     try {
-      const token = sessionStorage.getItem("access_token") ?? "";
+      const token = (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token")) ?? "";
       const { data } = await fetch(`${identityPath("/api/identity/users")}?page=1&pageSize=100${tenantId ? `&tenantId=${tenantId}` : ""}`,
         { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }).then(async response => {
           if (!response.ok) throw new Error((await response.json().catch(() => null))?.detail ?? `Identity request failed (${response.status}).`);
@@ -68,7 +68,7 @@ export function PlatformAdminPage() {
     }
     setBusy(true);
     try {
-      const token = sessionStorage.getItem("access_token") ?? "";
+      const token = (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token")) ?? "";
       const response = await fetch(identityPath("/api/identity/users"), { method: "POST", headers: { Authorization: `Bearer ${token}`,
         "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ tenantId, schoolId: null,
           email: form.email.trim(), password: null, firstName: form.firstName.trim(), lastName: form.lastName.trim(), accountType: "SchoolAdmin", roles: ["SchoolAdmin"] }) });
@@ -84,7 +84,7 @@ export function PlatformAdminPage() {
   async function setTenantActive(active: boolean): Promise<void> {
     if (!tenantId) { notify({ kind: "warning", message: "Select a tenant first." }); return; }
     try {
-      const token = sessionStorage.getItem("access_token") ?? "";
+      const token = (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token")) ?? "";
       const response = await fetch(identityPath(`/api/identity/users/tenant/${tenantId}/status`), { method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ isActive: active }) });
       const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.detail ?? data.title ?? "Status update failed.");

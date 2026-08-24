@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { AppProviders } from "./app/providers/AppProviders";
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./core/theme/theme.css";
 import { installGlobalTelemetry } from "./core/telemetry/clientTelemetry";
 import { installGlobalErrorTelemetry } from "./core/telemetry/telemetry";

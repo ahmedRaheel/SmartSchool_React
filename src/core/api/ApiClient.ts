@@ -31,7 +31,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("access_token");
+  const token = localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token");
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -61,10 +61,36 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error: AxiosError<Result<unknown>>) => {
-    if (error.response?.status === 401) {
-      // The token may have expired or been signed by a retired IdentityServer
-      // key. Never keep sending a known-invalid JWT.
+  async (error: AxiosError<Result<unknown>>) => {
+    const originalRequest = error.config as (typeof error.config & { _smartSchoolRetried?: boolean });
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._smartSchoolRetried) {
+      const refreshToken = localStorage.getItem("refresh_token") ?? sessionStorage.getItem("refresh_token");
+      if (refreshToken) {
+        originalRequest._smartSchoolRetried = true;
+        try {
+          const tokenUrl = import.meta.env.DEV ? "/identity/connect/token" : `${env.identityBaseUrl}/connect/token`;
+          const body = new URLSearchParams({
+            grant_type: "refresh_token",
+            client_id: "smartschool-login-api",
+            refresh_token: refreshToken,
+          });
+          const refreshResponse = await axios.post(tokenUrl, body.toString(), {
+            headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+            timeout: 30_000,
+          });
+          const accessToken = refreshResponse.data?.access_token;
+          if (accessToken) {
+            localStorage.setItem("access_token", accessToken);
+            if (refreshResponse.data?.refresh_token) localStorage.setItem("refresh_token", refreshResponse.data.refresh_token);
+            originalRequest.headers = originalRequest.headers ?? {};
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return api.request(originalRequest);
+          }
+        } catch {
+          // Refresh really failed; only now end the persisted login session.
+        }
+      }
       clearAuthenticationState();
       window.dispatchEvent(new CustomEvent("smartschool:unauthorized"));
     }
