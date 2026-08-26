@@ -1,5 +1,6 @@
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { Upload, X } from "lucide-react";
+import { lookupApi, LookupOption } from "../../../core/api/lookupApi";
 import { CreateEmployeeRequest, hrApi } from "../api/hrApi";
 
 interface AddEmployeeDialogProps {
@@ -43,6 +44,24 @@ export function AddEmployeeDialog({
   const [form, setForm] = useState<EmployeeFormState>(initialState);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [employmentTypes, setEmploymentTypes] = useState<LookupOption[]>([]);
+
+  useEffect(() => {
+    const loadEmploymentTypes = async () => {
+      try {
+        const values = await lookupApi.getValues("EMPLOYMENT_TYPE");
+        setEmploymentTypes(values);
+
+        if (values.length > 0 && !values.some((item) => item.code === form.employmentTypeCode)) {
+          setForm((current) => ({ ...current, employmentTypeCode: values[0].code }));
+        }
+      } catch {
+        // The API validator remains the source of truth. Keep the form usable if reference data is unavailable.
+      }
+    };
+
+    void loadEmploymentTypes();
+  }, []);
 
   const updateField = (field: keyof EmployeeFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -129,12 +148,8 @@ export function AddEmployeeDialog({
                   label="Employment type"
                   value={form.employmentTypeCode}
                   onChange={(value) => updateField("employmentTypeCode", value)}
-                  options={[
-                    ["FULL_TIME", "Full time"],
-                    ["PART_TIME", "Part time"],
-                    ["CONTRACT", "Contract"],
-                    ["TEMPORARY", "Temporary"],
-                  ]}
+                  options={employmentTypes.map((item) => [item.code, item.name])}
+                  placeholder="Select employment type"
                 />
                 <TextField
                   label="Hire date"
@@ -259,13 +274,15 @@ interface SelectFieldProps {
   value: string;
   onChange: (value: string) => void;
   options: Array<[string, string]>;
+  placeholder?: string;
 }
 
-function SelectField({ label, value, onChange, options }: SelectFieldProps) {
+function SelectField({ label, value, onChange, options, placeholder }: SelectFieldProps) {
   return (
     <label className="field">
       <span>{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {placeholder && <option value="">{placeholder}</option>}
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>
             {optionLabel}

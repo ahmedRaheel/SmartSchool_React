@@ -4,7 +4,7 @@ import { api } from "../../../core/api/api";
 import { getErrorMessage } from "../../../core/api/errorMessage";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { Modal, useUi } from "../../../components/ui/InteractiveUi";
-import { RealModulePage } from "../../../components/ui/RealModulePage";
+import { HrPage } from "../../hr/pages/HrPage";
 import { useAuth } from "../../auth/auth";
 
 type Row=Record<string,any>;
@@ -34,4 +34,4 @@ function TeacherWorkspace(){
 }
 function Field({label,value,onChange,type="text"}:{label:string,value:any,onChange:(v:string)=>void,type?:string}){return <label className="human-field"><span>{label}</span><input type={type} value={value??""} onChange={e=>onChange(e.target.value)}/></label>}
 function DataTable({rows,title}:{rows:Row[],title:string}){const cols=rows[0]?Object.keys(rows[0]).slice(0,8):[];return <section className="surface data-surface"><div className="surface-head"><div><h3>{title[0].toUpperCase()+title.slice(1)}</h3><p>{rows.length} live records</p></div></div><div className="table-wrap"><table className="premium-table"><thead><tr>{cols.map(c=><th key={c}>{c.replace(/([A-Z])/g," $1")}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i}>{cols.map(c=><td key={c}>{typeof r[c]==="object"?JSON.stringify(r[c]):String(r[c]??"—")}</td>)}</tr>)}{!rows.length&&<tr><td><div className="empty-state">No records available.</div></td></tr>}</tbody></table></div></section>}
-export function TeachersPage(){const {user}=useAuth();return user?.roles.includes("Teacher")?<TeacherWorkspace/>:<RealModulePage module="hr" initialResource="employee" title="Teachers & Staff" subtitle="Employees, teacher profiles, qualifications, assignments and workforce records"/>}
+export function TeachersPage(){const {user}=useAuth();return user?.roles.includes("Teacher") ? <TeacherWorkspace /> : <HrPage />}
