@@ -11,7 +11,7 @@ import { PageHeader } from "./PageHeader";
 type Row = Record<string, unknown>;
 type OpenApiOperation = { requestBody?: unknown; responses?: unknown };
 type OpenApiPath = Record<string, OpenApiOperation>;
-type OpenApiSchema = { type?: string; format?: string; properties?: Record<string, OpenApiSchema>; required?: string[]; $ref?: string; enum?: unknown[] };
+type OpenApiSchema = { type?: string; format?: string; properties?: Record<string, OpenApiSchema>; required?: string[]; $ref?: string; enum?: unknown[]; nullable?: boolean };
 type OpenApiSpec = { paths: Record<string, OpenApiPath>; components?: { schemas?: Record<string, OpenApiSchema> } };
 
 const SYSTEM_FIELDS = new Set(["id", "tenantId", "rowVersion", "createdAt", "updatedAt", "isActive"]);
@@ -64,14 +64,44 @@ export function RealModulePage({ module, initialResource, title, subtitle }: { m
 
   const filtered = useMemo(() => rows.filter(row => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())), [rows, query]);
   const columns = useMemo(() => rows[0] ? Object.keys(rows[0]).filter(key => !["photo", "rowVersion", "content"].includes(key)).slice(0, 7) : [], [rows]);
-  const requestFields = useMemo(() => { const post = operations.post as any; const schema = post?.requestBody?.content?.["application/json"]?.schema as OpenApiSchema | undefined; const resolved = schema?.$ref ? spec?.components?.schemas?.[schema.$ref.split("/").at(-1) ?? ""] : schema; return Object.keys(resolved?.properties ?? {}).filter(key => !SYSTEM_FIELDS.has(key)); }, [operations.post, spec]);
-  const editableFields = useMemo(() => { const source = selected ?? rows[0]; return (source ? Object.keys(source) : requestFields).filter(key => !SYSTEM_FIELDS.has(key)).slice(0, 24); }, [selected, rows, requestFields]);
+  const requestSchema = useMemo(() => { const operation = (selected ? (itemOperations.put || itemOperations.patch) : operations.post) as any; const schema = operation?.requestBody?.content?.["application/json"]?.schema as OpenApiSchema | undefined; return schema?.$ref ? spec?.components?.schemas?.[schema.$ref.split("/").at(-1) ?? ""] : schema; }, [selected, itemOperations.put, itemOperations.patch, operations.post, spec]);
+  const requestFields = useMemo(() => Object.keys(requestSchema?.properties ?? {}).filter(key => !SYSTEM_FIELDS.has(key)), [requestSchema]);
+  const editableFields = useMemo(() => { const source = selected ?? rows[0]; const contractFields = requestFields.length ? requestFields : (source ? Object.keys(source) : []); return contractFields.filter(key => !SYSTEM_FIELDS.has(key)).slice(0, 40); }, [selected, rows, requestFields]);
+  const requiredFields = new Set(requestSchema?.required ?? []);
+  function fieldSchema(field: string): OpenApiSchema { const raw=requestSchema?.properties?.[field] ?? {}; return raw.$ref ? (spec?.components?.schemas?.[raw.$ref.split("/").at(-1) ?? ""] ?? raw) : raw; }
+  function updateField(field: string, value: unknown): void {
+    setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  async function updateFileField(field: string, file: File | null): Promise<void> {
+    if (!file) {
+      updateField(field, null);
+      return;
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    bytes.forEach((value) => { binary += String.fromCharCode(value); });
+    updateField(field, btoa(binary));
+
+    if (field.toLowerCase() === "photo") {
+      setDraft((current) => ({
+        ...current,
+        photo: btoa(binary),
+        photoContentType: file.type || "application/octet-stream",
+        photoFileName: file.name,
+      }));
+    }
+  }
+
+  function renderField(field:string) { const schema=fieldSchema(field); const value=draft[field]; const label=<span>{pretty(field)}{requiredFields.has(field) && <i className="required-mark"> *</i>}</span>; if(schema.enum?.length) return <label className="human-field" key={field}>{label}<select value={String(value ?? "")} onChange={e=>updateField(field,e.target.value)}><option value="">Select {pretty(field)}</option>{schema.enum.map(option=><option key={String(option)} value={String(option)}>{pretty(String(option))}</option>)}</select></label>; if(schema.format==="byte" || field.toLowerCase()==="photo") return <label className="human-field field-wide" key={field}>{label}<input type="file" accept={field.toLowerCase()==="photo" ? "image/*" : undefined} onChange={e=>void updateFileField(field,e.target.files?.[0] ?? null)}/>{draft[`${field}FileName`] && <small>{String(draft[`${field}FileName`])}</small>}</label>; if(schema.type==="boolean") return <label className="human-field checkbox-field" key={field}>{label}<input type="checkbox" checked={Boolean(value)} onChange={e=>updateField(field,e.target.checked)}/></label>; const lower=field.toLowerCase(); if(lower.includes("description")||lower.includes("notes")||lower.includes("reason")||lower.includes("instructions")||lower.includes("metadata")) return <label className="human-field field-wide" key={field}>{label}<textarea value={String(value??"")} onChange={e=>updateField(field,e.target.value)} placeholder={`Enter ${pretty(field).toLowerCase()}`}/></label>; const type=schema.format==="date"||lower.endsWith("date")?"date":schema.format==="date-time"||lower.endsWith("at")?"datetime-local":schema.format==="email"||lower.includes("email")?"email":lower.includes("phone")?"tel":schema.type==="integer"||schema.type==="number"?"number":"text"; return <label className="human-field" key={field}>{label}<input required={requiredFields.has(field)} type={type} value={String(value??"")} onChange={e=>updateField(field,type==="number"?(e.target.value===""?null:Number(e.target.value)):e.target.value)} placeholder={`Enter ${pretty(field).toLowerCase()}`}/></label>; }
 
   function selectTenant(value: string): void { setSelectedTenant(value); sessionStorage.setItem("selected_tenant_id", value); }
   function create(): void { setSelected(null); setDraft({ tenantId: selectedTenant }); setEditing(true); }
   function edit(row: Row): void { setSelected(row); setDraft({ ...row, tenantId: selectedTenant }); setEditing(true); }
 
   async function save(): Promise<void> {
+    const missing=editableFields.filter(field=>requiredFields.has(field) && (draft[field]===undefined || draft[field]===null || String(draft[field]).trim()==="")); if(missing.length){notify({kind:"error",title:"Required information missing",message:`Complete: ${missing.map(pretty).join(", ")}.`});return;}
     const endBusy = beginBusy(selected ? "Saving changes…" : "Creating record…");
     try {
       const id = selected ? rowId(selected) : undefined; const body = { ...draft, tenantId: selectedTenant };
@@ -95,6 +125,6 @@ export function RealModulePage({ module, initialResource, title, subtitle }: { m
       <div className="table-wrap"><table className="premium-table"><thead><tr>{columns.map(column => <th key={column}>{pretty(column)}</th>)}{(canUpdate || canDelete) && <th>Actions</th>}</tr></thead><tbody>{filtered.map((row,index) => <tr key={rowId(row) ?? index} onClick={() => setSelected(row)}>{columns.map(column => <td key={column}>{display(row[column])}</td>)}{(canUpdate || canDelete) && <td className="row-actions">{canUpdate && <button className="icon-button" title="Edit" onClick={event => { event.stopPropagation(); edit(row); }}><Pencil size={14}/></button>}{canDelete && <button className="icon-button" title="Delete" onClick={event => { event.stopPropagation(); void remove(row); }}><Trash2 size={14}/></button>}</td>}</tr>)}{!filtered.length && <tr><td colSpan={Math.max(1, columns.length + 1)}><div className="empty-state">{loading ? "Loading live data…" : resources.length ? "No records found." : "No compatible API resources are exposed for this module."}</div></td></tr>}</tbody></table></div><div className="table-footer">{filtered.length} live records</div>
     </section>
     <Modal open={!!selected && !editing} title={pretty(resource)} onClose={() => setSelected(null)}>{selected && <div className="detail-grid">{Object.entries(selected).map(([key,value]) => <div key={key}><span>{pretty(key)}</span><b>{display(value)}</b></div>)}</div>}</Modal>
-    <Modal open={editing} title={`${selected ? "Edit" : "Add"} ${pretty(resource)}`} onClose={() => setEditing(false)}><div className="human-form">{isSuperAdmin && <div className="form-context"><Building2 size={18}/><div><b>Tenant context</b><span>{selectedTenant}</span></div></div>}<div className="human-form-grid">{editableFields.map(field => <label className="human-field" key={field}><span>{pretty(field)}</span><input type={field.toLowerCase().includes("date") ? "date" : field.toLowerCase().includes("email") ? "email" : field.toLowerCase().includes("phone") ? "tel" : "text"} value={String(draft[field] ?? "")} onChange={e => setDraft(value => ({ ...value, [field]: e.target.value }))} placeholder={`Enter ${pretty(field).toLowerCase()}`}/></label>)}</div></div><div className="modal-actions"><button className="secondary" onClick={() => setEditing(false)}>Cancel</button><button className="primary" onClick={() => void save()}>{selected ? "Save changes" : "Create record"}</button></div></Modal>
+    <Modal open={editing} title={`${selected ? "Edit" : "Add"} ${pretty(resource)}`} onClose={() => setEditing(false)}><div className="human-form">{isSuperAdmin && <div className="form-context"><Building2 size={18}/><div><b>Tenant context</b><span>{selectedTenant}</span></div></div>}<div className="human-form-grid">{editableFields.map(renderField)}</div></div><div className="modal-actions"><button className="secondary" onClick={() => setEditing(false)}>Cancel</button><button className="primary" onClick={() => void save()}>{selected ? "Save changes" : "Create record"}</button></div></Modal>
   </>;
 }

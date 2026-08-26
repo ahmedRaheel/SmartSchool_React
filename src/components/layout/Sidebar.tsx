@@ -1,11 +1,90 @@
+import { Activity, GraduationCap, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { Activity, BarChart3, Bell, BookOpen, Bot, BriefcaseBusiness, Bus, CalendarCheck, ClipboardCheck, FileCheck2, GraduationCap, HeartPulse, LayoutDashboard, ListTree, MessageCircle, Settings, ShieldCheck, SlidersHorizontal, UserCog, Users, Wallet, Workflow, X } from "lucide-react";
 import { useAuth } from "../../features/auth/auth";
-type Item={to?:string;label?:string;icon?:any;roles:string[];section?:string;badge?:string};
-const nav:Item[]=[
-{section:"Platform",roles:["SuperAdmin"]},{to:"/",label:"Dashboard",icon:LayoutDashboard,roles:["*"]},{to:"/tenancy",label:"Tenants",icon:GraduationCap,roles:["SuperAdmin"]},{to:"/platform",label:"Tenant users",icon:Users,roles:["SuperAdmin"]},{to:"/profiles",label:"Users & impersonation",icon:UserCog,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin"]},{to:"/platform/features",label:"Plans & features",icon:SlidersHorizontal,roles:["SuperAdmin"]},{to:"/audit",label:"Audit & impersonation log",icon:ShieldCheck,roles:["SuperAdmin"]},{to:"/observability",label:"API health & error logs",icon:HeartPulse,roles:["SuperAdmin"]},
-{section:"School management",roles:["SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal"]},{to:"/organization",label:"Schools & branches",icon:GraduationCap,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal"]},{to:"/students",label:"Students",icon:Users,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Teacher"]},{to:"/admissions",label:"Admissions & enquiries",icon:ClipboardCheck,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal"]},{to:"/teachers",label:"Teachers & workload",icon:Users,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal"]},{to:"/academics",label:"Classes, courses & timetable",icon:BookOpen,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Teacher","Student","Parent"]},{to:"/workflow",label:"Workflow center",icon:Workflow,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Teacher","Parent","Student"]},
-{section:"Academic operations",roles:["*"]},{to:"/attendance",label:"Attendance & leave",icon:CalendarCheck,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Teacher","Student","Parent"]},{to:"/examinations",label:"Tests, exams & results",icon:ClipboardCheck,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Teacher","Student","Parent","Examiner"]},{to:"/learning",label:"Assignments & learning",icon:FileCheck2,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","Principal","Teacher","Student","Parent"]},{to:"/finance",label:"Fees & finance",icon:Wallet,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Accountant","Parent","Student"]},{to:"/hr",label:"HR, payroll & leave",icon:BriefcaseBusiness,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","HRManager","Staff","Teacher"]},{to:"/transport",label:"Transport",icon:Bus,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","TransportManager","Driver","Parent"]},{to:"/library",label:"Library",icon:BookOpen,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Teacher","Student","Librarian"]},{to:"/documents",label:"Documents & certificates",icon:FileCheck2,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Teacher","Student","Parent"]},
-{section:"Communication & AI",roles:["*"]},{to:"/communication",label:"Chat",icon:MessageCircle,roles:["*"],badge:"3"},{to:"/notifications",label:"Notifications",icon:Bell,roles:["*"],badge:"2"},{to:"/ai",label:"AI assistant & predictions",icon:Bot,roles:["*"]},{to:"/reports",label:"Reports & analytics",icon:BarChart3,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal","Examiner"]},{to:"/reference",label:"Lookups",icon:ListTree,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice"]},{to:"/settings",label:"Settings",icon:Settings,roles:["SuperAdmin","SchoolAdmin","TenantAdmin","Admin","AdminOffice","Principal"]}
-];
-export function Sidebar({open,onClose}:{open:boolean;onClose:()=>void}){const{user}=useAuth();const roles=user?.roles?.length?user.roles:[user?.role||""];const allowed=(a:string[])=>a.includes("*")||a.some(r=>roles.includes(r));const visible=nav.filter(x=>allowed(x.roles));const isSuper=roles.includes("SuperAdmin");return <>{open&&<button className="sidebar-backdrop" aria-label="Close navigation" onClick={onClose}/>}<aside className={`sidebar ${open?"open":""}`}><div className="sidebar-head"><div className="brand"><span className="brand-mark"><GraduationCap size={22}/></span><span>Smart<b>School</b></span></div><button className="sidebar-close" onClick={onClose}><X size={20}/></button></div><div className="school-chip"><span>{user?.initials||"SS"}</span><div><b>{user?.name||"SmartSchool"}</b><small>{isSuper?"Platform master workspace":`${user?.role||"User"} workspace`}</small></div></div><nav className="nav">{visible.map((x,i)=>x.section?<div className="nav-label" key={`${x.section}-${i}`}>{x.section}</div>:<NavLink key={x.to} to={x.to!} end={x.to==="/"} onClick={onClose}><x.icon size={18}/><span>{x.label}</span>{x.badge&&<i className="nav-count">{x.badge}</i>}</NavLink>)}</nav><div className="sidebar-upgrade"><Activity size={20}/><b>Platform services</b><span>PostgreSQL • Redis • Kafka • AI</span><div className="health-line"><i/> Observability enabled</div></div></aside></>}
+import { hasAnyRole, navigationSections } from "./navigation";
+
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
+  const { user } = useAuth();
+  const userRoles = user?.roles?.length ? user.roles : [user?.role ?? ""];
+  const isSuperAdmin = userRoles.includes("SuperAdmin");
+
+  const visibleSections = navigationSections
+    .filter((section) => hasAnyRole(section.roles, userRoles))
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => hasAnyRole(item.roles, userRoles)),
+    }))
+    .filter((section) => section.items.length > 0);
+
+  return (
+    <>
+      {open && (
+        <button
+          className="sidebar-backdrop"
+          type="button"
+          aria-label="Close navigation"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`sidebar ${open ? "open" : ""}`}>
+        <header className="sidebar-head">
+          <div className="brand">
+            <span className="brand-mark">
+              <GraduationCap size={22} />
+            </span>
+            <span>
+              Smart<b>School</b>
+            </span>
+          </div>
+
+          <button className="sidebar-close" type="button" aria-label="Close navigation" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </header>
+
+        <div className="school-chip">
+          <span>{user?.initials ?? "SS"}</span>
+          <div>
+            <b>{user?.name ?? "SmartSchool"}</b>
+            <small>{isSuperAdmin ? "Platform master workspace" : `${user?.role ?? "User"} workspace`}</small>
+          </div>
+        </div>
+
+        <nav className="nav" aria-label="Main navigation">
+          {visibleSections.map((section) => (
+            <div className="nav-section" key={section.title}>
+              <div className="nav-label">{section.title}</div>
+
+              {section.items.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <NavLink key={item.path} to={item.path} end={item.path === "/"} onClick={onClose}>
+                    <Icon size={18} />
+                    <span>{item.label}</span>
+                    {item.badge && <i className="nav-count">{item.badge}</i>}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <footer className="sidebar-upgrade">
+          <Activity size={20} />
+          <b>Platform services</b>
+          <span>PostgreSQL • Redis • Kafka • AI</span>
+          <div className="health-line">
+            <i /> Observability enabled
+          </div>
+        </footer>
+      </aside>
+    </>
+  );
+}
