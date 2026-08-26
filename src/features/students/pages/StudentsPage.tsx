@@ -1,12 +1,8 @@
-import { RealModulePage } from "../../../components/ui/RealModulePage";
-
-export function StudentsPage() {
-  return (
-    <RealModulePage
-      module="students"
-      initialResource="student"
-      title="Students"
-      subtitle="Manage student profiles, guardians, enrolments and student records from the live Students API."
-    />
-  );
-}
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Search, UserRound, UsersRound, AlertTriangle, GraduationCap } from "lucide-react";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { useAuth } from "../../auth/auth";
+import { AddStudentWizard } from "../components/AddStudentWizard";
+import { StudentSummary, studentsApi } from "../api/studentsApi";
+export function StudentsPage(){const {user}=useAuth();const tenantId=effectiveTenantId(user);const [students,setStudents]=useState<StudentSummary[]>([]);const [loading,setLoading]=useState(true);const [open,setOpen]=useState(false);const [query,setQuery]=useState("");const load=async()=>{setLoading(true);try{const page=await studentsApi.getPage(tenantId,1,50);setStudents(page?.items??[]);}finally{setLoading(false)}};useEffect(()=>{void load()},[tenantId]);const filtered=useMemo(()=>students.filter(s=>`${s.studentNumber} ${s.firstName} ${s.lastName||""}`.toLowerCase().includes(query.toLowerCase())),[students,query]);return <div className="business-page"><header className="business-hero"><div><span className="eyebrow">STUDENT INFORMATION SYSTEM</span><h1>Students</h1><p>Manage the complete student lifecycle from admission and enrollment through academics, wellbeing and graduation.</p></div><button className="button primary" onClick={()=>setOpen(true)}><Plus size={17}/>Add student</button></header><section className="metric-grid"><Metric icon={<UsersRound/>} label="Total students" value={String(students.length)}/><Metric icon={<UserRound/>} label="Active" value={String(students.filter(x=>x.status==="ACTIVE").length)}/><Metric icon={<GraduationCap/>} label="New admissions" value={String(students.filter(x=>x.admissionDate).length)}/><Metric icon={<AlertTriangle/>} label="Needs attention" value="0"/></section><section className="content-card"><div className="content-toolbar"><div><h2>Student directory</h2><p>Open a student to access their 360° academic and administrative record.</p></div><label className="search-box"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name or student number"/></label></div>{loading?<div className="state-panel">Loading students…</div>:filtered.length===0?<div className="state-panel"><UsersRound/><h3>No students found</h3><p>Create the first student or change your search.</p><button className="button primary" onClick={()=>setOpen(true)}>Add student</button></div>:<div className="data-table"><div className="data-row data-head"><span>Student</span><span>Student no.</span><span>Admission</span><span>Status</span></div>{filtered.map(s=><div className="data-row" key={s.id}><span><b>{s.firstName} {s.lastName}</b><small>{s.id}</small></span><span>{s.studentNumber}</span><span>{s.admissionDate||"—"}</span><span><i className="status-pill">{s.status}</i></span></div>)}</div>}</section>{open&&<AddStudentWizard tenantId={tenantId} onClose={()=>setOpen(false)} onCreated={()=>{setOpen(false);void load()}}/>}</div>}
+function Metric({icon,label,value}:{icon:React.ReactNode;label:string;value:string}){return <article className="metric-card"><span>{icon}</span><div><small>{label}</small><strong>{value}</strong></div></article>}
