@@ -11,7 +11,8 @@ import { PageHeader } from "./PageHeader";
 type Row = Record<string, unknown>;
 type OpenApiOperation = { requestBody?: unknown; responses?: unknown };
 type OpenApiPath = Record<string, OpenApiOperation>;
-type OpenApiSpec = { paths: Record<string, OpenApiPath> };
+type OpenApiSchema = { type?: string; format?: string; properties?: Record<string, OpenApiSchema>; required?: string[]; $ref?: string; enum?: unknown[] };
+type OpenApiSpec = { paths: Record<string, OpenApiPath>; components?: { schemas?: Record<string, OpenApiSchema> } };
 
 const SYSTEM_FIELDS = new Set(["id", "tenantId", "rowVersion", "createdAt", "updatedAt", "isActive"]);
 
@@ -21,9 +22,9 @@ function display(value: unknown): string { if (value === null || value === undef
 function rowId(row: Row): string | undefined { const value = row.id ?? Object.entries(row).find(([key]) => key.toLowerCase().endsWith("id"))?.[1]; return value ? String(value) : undefined; }
 
 /** Generic live-data workspace used by database-backed SmartSchool modules. */
-export function RealModulePage({ module }: { module: string }) {
-  const { notify } = useUi(); const { user } = useAuth();
-  const [spec, setSpec] = useState<OpenApiSpec | null>(null); const [resource, setResource] = useState("");
+export function RealModulePage({ module, initialResource, title, subtitle }: { module: string; initialResource?: string; title?: string; subtitle?: string }) {
+  const { notify, beginBusy, confirm } = useUi(); const { user } = useAuth();
+  const [spec, setSpec] = useState<OpenApiSpec | null>(null); const [resource, setResource] = useState(initialResource ?? "");
   const [rows, setRows] = useState<Row[]>([]); const [query, setQuery] = useState(""); const [selected, setSelected] = useState<Row | null>(null);
   const [editing, setEditing] = useState(false); const [draft, setDraft] = useState<Row>({}); const [loading, setLoading] = useState(false);
   const [tenants, setTenants] = useState<Row[]>([]); const isSuperAdmin = user?.roles.includes("SuperAdmin") ?? false;
@@ -38,7 +39,7 @@ export function RealModulePage({ module }: { module: string }) {
     const prefix = `/api/${module}/`;
     return [...new Set(Object.keys(spec.paths).filter(path => path.startsWith(prefix) && !path.includes("{")).map(path => path.slice(prefix.length)).filter(Boolean))].sort();
   }, [spec, module]);
-  useEffect(() => { if (resources.length && !resources.includes(resource)) setResource(resources[0]); }, [resources, resource]);
+  useEffect(() => { if (resources.length && !resources.includes(resource)) setResource(initialResource && resources.includes(initialResource) ? initialResource : resources[0]); }, [resources, resource, initialResource]);
 
   const basePath = resource ? `/api/${module}/${resource}` : "";
   const operations = spec?.paths[basePath] ?? {};
@@ -48,10 +49,10 @@ export function RealModulePage({ module }: { module: string }) {
 
   async function load(): Promise<void> {
     if (!basePath || !canRead) return;
-    setLoading(true);
+    setLoading(true); const endBusy = beginBusy(`Loading ${pretty(resource || module)}…`);
     try { const { data } = await api.get(basePath, { params: { tenantId: selectedTenant, page: 1, pageSize: 100 } }); setRows(unwrap(data)); }
     catch (error) { setRows([]); notify({ kind: "error", title: `Unable to load ${pretty(resource)}`, message: getErrorMessage(error) }); }
-    finally { setLoading(false); }
+    finally { setLoading(false); endBusy(); }
   }
   useEffect(() => { void load(); }, [basePath, selectedTenant]);
 
@@ -63,35 +64,37 @@ export function RealModulePage({ module }: { module: string }) {
 
   const filtered = useMemo(() => rows.filter(row => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())), [rows, query]);
   const columns = useMemo(() => rows[0] ? Object.keys(rows[0]).filter(key => !["photo", "rowVersion", "content"].includes(key)).slice(0, 7) : [], [rows]);
-  const editableFields = useMemo(() => Object.keys(selected ?? rows[0] ?? {}).filter(key => !SYSTEM_FIELDS.has(key)).slice(0, 18), [selected, rows]);
+  const requestFields = useMemo(() => { const post = operations.post as any; const schema = post?.requestBody?.content?.["application/json"]?.schema as OpenApiSchema | undefined; const resolved = schema?.$ref ? spec?.components?.schemas?.[schema.$ref.split("/").at(-1) ?? ""] : schema; return Object.keys(resolved?.properties ?? {}).filter(key => !SYSTEM_FIELDS.has(key)); }, [operations.post, spec]);
+  const editableFields = useMemo(() => { const source = selected ?? rows[0]; return (source ? Object.keys(source) : requestFields).filter(key => !SYSTEM_FIELDS.has(key)).slice(0, 24); }, [selected, rows, requestFields]);
 
   function selectTenant(value: string): void { setSelectedTenant(value); sessionStorage.setItem("selected_tenant_id", value); }
   function create(): void { setSelected(null); setDraft({ tenantId: selectedTenant }); setEditing(true); }
   function edit(row: Row): void { setSelected(row); setDraft({ ...row, tenantId: selectedTenant }); setEditing(true); }
 
   async function save(): Promise<void> {
+    const endBusy = beginBusy(selected ? "Saving changes…" : "Creating record…");
     try {
       const id = selected ? rowId(selected) : undefined; const body = { ...draft, tenantId: selectedTenant };
       if (id) await api.put(`${basePath}/${id}`, body); else await api.post(basePath, body);
       notify({ kind: "success", title: id ? "Changes saved" : "Record created", message: `${pretty(resource)} was saved successfully.` });
       setEditing(false); setSelected(null); await load();
-    } catch (error) { notify({ kind: "error", title: "Save failed", message: getErrorMessage(error) }); }
+    } catch (error) { notify({ kind: "error", title: "Save failed", message: getErrorMessage(error) }); } finally { endBusy(); }
   }
 
   async function remove(row: Row): Promise<void> {
-    const id = rowId(row); if (!id || !window.confirm(`Delete this ${pretty(resource).toLowerCase()}?`)) return;
-    try { await api.delete(`${basePath}/${id}`, { params: { tenantId: selectedTenant } }); notify({ kind: "success", title: "Record deleted", message: "The record was removed successfully." }); await load(); }
-    catch (error) { notify({ kind: "error", title: "Delete failed", message: getErrorMessage(error) }); }
+    const id = rowId(row); if (!id) return; const approved = await confirm({ title: `Delete ${pretty(resource)}`, message: "This action cannot be undone. The selected record will be permanently removed.", confirmText: "Delete", danger: true }); if (!approved) return;
+    const endBusy = beginBusy("Deleting record…"); try { await api.delete(`${basePath}/${id}`, { params: { tenantId: selectedTenant } }); notify({ kind: "success", title: "Record deleted", message: "The record was removed successfully." }); await load(); }
+    catch (error) { notify({ kind: "error", title: "Delete failed", message: getErrorMessage(error) }); } finally { endBusy(); }
   }
 
   return <>
-    <PageHeader title={pretty(module)} subtitle={isSuperAdmin ? "Operate within the selected tenant using the live backend contract" : "Live school operations and records"}
+    <PageHeader title={title ?? pretty(module)} subtitle={subtitle ?? (isSuperAdmin ? "Operate within the selected tenant using the live backend contract" : "Live school operations and records")}
       action={<div className="page-actions">{isSuperAdmin && <label className="tenant-context"><Building2 size={16}/><span>Tenant</span><select value={selectedTenant} onChange={e => selectTenant(e.target.value)}>{!tenants.length && <option value={selectedTenant}>{selectedTenant}</option>}{tenants.map(tenant => { const id = String(tenant.id ?? tenant.tenantId ?? ""); return <option key={id} value={id}>{display(tenant.name ?? tenant.code ?? id)}</option>; })}</select></label>}{canCreate && <button className="primary" onClick={create}><Plus size={16}/> Add {pretty(resource || "record")}</button>}</div>} />
     <section className="surface data-surface"><div className="surface-head"><div><h3>{pretty(resource || module)}</h3><p>{resources.length} backend resources available in this module</p></div><button className="icon-button" title="Refresh" onClick={() => void load()}><RefreshCw size={16}/></button></div>
       <div className="data-toolbar"><select className="filter-select" value={resource} onChange={e => setResource(e.target.value)}>{resources.map(value => <option key={value} value={value}>{pretty(value)}</option>)}</select><label className="search-box"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search current records"/></label></div>
       <div className="table-wrap"><table className="premium-table"><thead><tr>{columns.map(column => <th key={column}>{pretty(column)}</th>)}{(canUpdate || canDelete) && <th>Actions</th>}</tr></thead><tbody>{filtered.map((row,index) => <tr key={rowId(row) ?? index} onClick={() => setSelected(row)}>{columns.map(column => <td key={column}>{display(row[column])}</td>)}{(canUpdate || canDelete) && <td className="row-actions">{canUpdate && <button className="icon-button" title="Edit" onClick={event => { event.stopPropagation(); edit(row); }}><Pencil size={14}/></button>}{canDelete && <button className="icon-button" title="Delete" onClick={event => { event.stopPropagation(); void remove(row); }}><Trash2 size={14}/></button>}</td>}</tr>)}{!filtered.length && <tr><td colSpan={Math.max(1, columns.length + 1)}><div className="empty-state">{loading ? "Loading live data…" : resources.length ? "No records found." : "No compatible API resources are exposed for this module."}</div></td></tr>}</tbody></table></div><div className="table-footer">{filtered.length} live records</div>
     </section>
     <Modal open={!!selected && !editing} title={pretty(resource)} onClose={() => setSelected(null)}>{selected && <div className="detail-grid">{Object.entries(selected).map(([key,value]) => <div key={key}><span>{pretty(key)}</span><b>{display(value)}</b></div>)}</div>}</Modal>
-    <Modal open={editing} title={`${selected ? "Edit" : "Add"} ${pretty(resource)}`} onClose={() => setEditing(false)}><div className="human-form">{isSuperAdmin && <div className="form-context"><Building2 size={18}/><div><b>Tenant context</b><span>{selectedTenant}</span></div></div>}<div className="human-form-grid">{editableFields.map(field => <label className="human-field" key={field}><span>{pretty(field)}</span><input value={String(draft[field] ?? "")} onChange={e => setDraft(value => ({ ...value, [field]: e.target.value }))} placeholder={`Enter ${pretty(field).toLowerCase()}`}/></label>)}</div></div><div className="modal-actions"><button className="secondary" onClick={() => setEditing(false)}>Cancel</button><button className="primary" onClick={() => void save()}>{selected ? "Save changes" : "Create record"}</button></div></Modal>
+    <Modal open={editing} title={`${selected ? "Edit" : "Add"} ${pretty(resource)}`} onClose={() => setEditing(false)}><div className="human-form">{isSuperAdmin && <div className="form-context"><Building2 size={18}/><div><b>Tenant context</b><span>{selectedTenant}</span></div></div>}<div className="human-form-grid">{editableFields.map(field => <label className="human-field" key={field}><span>{pretty(field)}</span><input type={field.toLowerCase().includes("date") ? "date" : field.toLowerCase().includes("email") ? "email" : field.toLowerCase().includes("phone") ? "tel" : "text"} value={String(draft[field] ?? "")} onChange={e => setDraft(value => ({ ...value, [field]: e.target.value }))} placeholder={`Enter ${pretty(field).toLowerCase()}`}/></label>)}</div></div><div className="modal-actions"><button className="secondary" onClick={() => setEditing(false)}>Cancel</button><button className="primary" onClick={() => void save()}>{selected ? "Save changes" : "Create record"}</button></div></Modal>
   </>;
 }
