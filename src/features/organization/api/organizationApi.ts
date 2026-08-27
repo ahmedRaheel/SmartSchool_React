@@ -27,6 +27,7 @@ export interface Campus {
   address?: string;
   city?: string;
   province?: string;
+  country?: string;
   phone?: string;
   fax?: string;
   mobile?: string;
@@ -47,14 +48,14 @@ export const organizationApi = {
     const response = await api.get("/api/organization/school", { params: { tenantId, page: 1, pageSize: 100 } });
     return items<School>(response.data);
   },
-  async createSchool(request: CreateSchoolRequest): Promise<void> {
-    await api.post("/api/organization/school", request);
-  },
+  async createSchool(request: CreateSchoolRequest): Promise<void> { await api.post("/api/organization/school", request); },
+  async updateSchool(id: string, request: CreateSchoolRequest): Promise<void> { await api.put(`/api/organization/school/${id}`, { ...request, id }); },
+  async deleteSchool(id: string, tenantId: string): Promise<void> { await api.delete(`/api/organization/school/${id}`, { params: { tenantId } }); },
   async getCampuses(tenantId: string): Promise<Campus[]> {
     const response = await api.get("/api/organization/campus", { params: { tenantId, page: 1, pageSize: 200 } });
     return items<Campus>(response.data);
   },
-  async createCampus(request: CreateCampusRequest): Promise<void> {
-    await api.post("/api/organization/campus", request);
-  },
+  async createCampus(request: CreateCampusRequest): Promise<void> { await api.post("/api/organization/campus", request); },
+  async updateCampus(id: string, request: CreateCampusRequest): Promise<void> { await api.put(`/api/organization/campus/${id}`, { ...request, id }); },
+  async deleteCampus(id: string, tenantId: string): Promise<void> { await api.delete(`/api/organization/campus/${id}`, { params: { tenantId } }); },
 };

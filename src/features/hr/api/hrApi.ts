@@ -10,8 +10,13 @@ export interface EmployeeSummary {
   cnicNumber?: string | null;
   email?: string | null;
   phone?: string | null;
+  alternatePhone?: string | null;
+  address?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
   hireDate: string;
   employmentTypeCode: string;
+  staffType?: string;
   status: string;
   sourceCandidateId?: string | null;
 }
@@ -36,8 +41,13 @@ export interface CreateEmployeeRequest {
   photoFileName?: string | null;
   email?: string | null;
   phone?: string | null;
+  alternatePhone?: string | null;
+  address?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
   hireDate: string;
   employmentTypeCode: string;
+  staffType?: string;
   status: string;
   sourceCandidateId?: string | null;
 }
@@ -58,6 +68,10 @@ export const hrApi = {
     );
 
     return response.data;
+  },
+
+  async updateRecruitmentStatus(employeeId: string, tenantId: string, status: "SUBMITTED" | "REJECTED" | "WAITING_LIST") {
+    return (await api.put(`/api/hr/employee/${employeeId}/recruitment-status`, { tenantId, employeeId, status })).data;
   },
 
   async approveEmployee(employeeId: string, tenantId: string, roles: string[]) {

@@ -25,12 +25,16 @@ export class SmartSchoolApiError extends Error {
   }
 }
 
+let pendingRequests = 0;
+function publishBusy(delta: number) { pendingRequests = Math.max(0, pendingRequests + delta); window.dispatchEvent(new CustomEvent("smartschool:api-busy", { detail: pendingRequests > 0 })); }
+
 export const api = axios.create({
   baseURL: env.apiBaseUrl,
   timeout: 30_000,
 });
 
 api.interceptors.request.use((config) => {
+  publishBusy(1);
   const token = localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token");
 
   if (token) {
@@ -45,6 +49,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => {
+    publishBusy(-1);
     const result = response.data as Result<unknown>;
 
     if (result && typeof result === "object" && "isSuccess" in result) {
@@ -62,6 +67,7 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<Result<unknown>>) => {
+    publishBusy(-1);
     const originalRequest = error.config as (typeof error.config & { _smartSchoolRetried?: boolean });
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._smartSchoolRetried) {

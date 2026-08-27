@@ -1,0 +1,10 @@
+import { useEffect, useState } from "react";
+import { geographyApi, GeographyOption } from "../../core/api/lookupApi";
+interface Props { country:string; province:string; city:string; onChange:(value:{country:string;province:string;city:string})=>void; }
+export function GeographySelector({country,province,city,onChange}:Props){
+ const [countries,setCountries]=useState<GeographyOption[]>([]); const [provinces,setProvinces]=useState<GeographyOption[]>([]); const [cities,setCities]=useState<GeographyOption[]>([]);
+ useEffect(()=>{void geographyApi.countries().then(setCountries)},[]);
+ async function countryChanged(id:string){const selected=countries.find(x=>x.id===Number(id)); const next=selected?.name??""; onChange({country:next,province:"",city:""}); setCities([]); setProvinces(id?await geographyApi.provinces(Number(id)):[])}
+ async function provinceChanged(id:string){const selected=provinces.find(x=>x.id===Number(id)); const next=selected?.name??""; onChange({country,province:next,city:""}); setCities(id?await geographyApi.cities(Number(id)):[])}
+ return <><label className="human-field"><span>Country</span><select value={countries.find(x=>x.name===country)?.id??""} onChange={e=>void countryChanged(e.target.value)}><option value="">Select country</option>{countries.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="human-field"><span>Province</span><select value={provinces.find(x=>x.name===province)?.id??""} disabled={!provinces.length} onChange={e=>void provinceChanged(e.target.value)}><option value="">Select province</option>{provinces.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label className="human-field"><span>City</span><select value={city} disabled={!cities.length} onChange={e=>onChange({country,province,city:e.target.value})}><option value="">Select city</option>{cities.map(x=><option key={x.id} value={x.name}>{x.name}</option>)}</select></label></>;
+}

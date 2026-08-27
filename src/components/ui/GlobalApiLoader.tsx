@@ -1,0 +1,2 @@
+import { useEffect, useState } from "react";
+export function GlobalApiLoader(){const[active,setActive]=useState(false);useEffect(()=>{const h=(e:Event)=>setActive((e as CustomEvent<boolean>).detail);window.addEventListener("smartschool:api-busy",h);return()=>window.removeEventListener("smartschool:api-busy",h)},[]);return active?<div className="global-api-loader" role="status" aria-live="polite"><span className="spinner"/><span>Working…</span></div>:null}

@@ -21,7 +21,11 @@ interface EmployeeFormState {
   phone: string;
   hireDate: string;
   employmentTypeCode: string;
-  status: string;
+  staffType: string;
+  alternatePhone: string;
+  address: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
   photo?: string;
   photoContentType?: string;
   photoFileName?: string;
@@ -37,7 +41,11 @@ const initialState: EmployeeFormState = {
   phone: "",
   hireDate: new Date().toISOString().slice(0, 10),
   employmentTypeCode: "FULL_TIME",
-  status: "PENDING_APPROVAL",
+  staffType: "TEACHER",
+  alternatePhone: "",
+  address: "",
+  emergencyContactName: "",
+  emergencyContactPhone: "",
 };
 
 export function AddEmployeeDialog({
@@ -104,7 +112,11 @@ export function AddEmployeeDialog({
         phone: optional(form.phone),
         hireDate: form.hireDate,
         employmentTypeCode: form.employmentTypeCode,
-        status: "PENDING_APPROVAL",
+        staffType: form.staffType,
+        alternatePhone: optional(form.alternatePhone),
+        address: optional(form.address),
+        emergencyContactName: optional(form.emergencyContactName),
+        emergencyContactPhone: optional(form.emergencyContactPhone),
         photo: form.photo,
         photoContentType: form.photoContentType,
         photoFileName: form.photoFileName,
@@ -160,17 +172,8 @@ export function AddEmployeeDialog({
                   onChange={(value) => updateField("hireDate", value)}
                   required
                 />
-                <SelectField
-                  label="Status"
-                  value={form.status}
-                  onChange={(value) => updateField("status", value)}
-                  options={[
-                    ["ACTIVE", "Active"],
-                    ["ON_LEAVE", "On leave"],
-                    ["SUSPENDED", "Suspended"],
-                    ["INACTIVE", "Inactive"],
-                  ]}
-                />
+                <SelectField label="Staff category" value={form.staffType} onChange={(value) => updateField("staffType", value)} options={[["TEACHER","Teacher"],["DRIVER","Driver"],["PRINCIPAL","Principal"],["ADMIN_OFFICER","Admin officer"],["ACCOUNTANT","Accountant"],["HR","HR staff"],["LIBRARIAN","Librarian"],["TRANSPORT","Transport staff"],["OTHER","Other non-teaching staff"]]} placeholder="Select staff category" />
+
               </div>
             </div>
 
@@ -212,7 +215,7 @@ export function AddEmployeeDialog({
               </div>
             </div>
 
-            <label className="upload-zone">
+            <div className="form-section-title"><b>Contact & emergency information</b></div><div className="human-form-grid"><TextField label="Alternate phone" value={form.alternatePhone} onChange={(value) => updateField("alternatePhone", value)} /><TextField label="Address" value={form.address} onChange={(value) => updateField("address", value)} /><TextField label="Emergency contact" value={form.emergencyContactName} onChange={(value) => updateField("emergencyContactName", value)} /><TextField label="Emergency phone" value={form.emergencyContactPhone} onChange={(value) => updateField("emergencyContactPhone", value)} /></div><label className="upload-zone">
               <Upload size={22} />
               <b>Employee photograph</b>
               <span>{form.photoFileName ?? "Upload a PNG or JPEG photograph."}</span>

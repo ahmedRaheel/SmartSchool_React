@@ -8,6 +8,8 @@ import { DashboardPage } from "../../features/dashboard/pages/DashboardPage";
 import { StudentsPage } from "../../features/students/pages/StudentsPage";
 import { TeachersPage } from "../../features/teachers/pages/TeachersPage";
 import { AcademicsPage } from "../../features/academics/pages/AcademicsPage";
+import { AdmissionsPage } from "../../features/admissions/pages/AdmissionsPage";
+import { DocumentsPage } from "../../features/documents/pages/DocumentsPage";
 import { ExaminationsPage } from "../../features/examinations/pages/ExaminationsPage";
 import { AttendancePage } from "../../features/attendance/pages/AttendancePage";
 import { FinancePage } from "../../features/finance/pages/FinancePage";
@@ -49,13 +51,13 @@ export const router = createBrowserRouter([
             { path: "transport", element: <TransportPage /> },
             { path: "communication", element: <CommunicationPage /> },
             { path: "ai", element: <AiPage /> },
-            { path: "admissions", element: <RealModulePage module="admissions" /> },
+            { path: "admissions", element: <AdmissionsPage /> },
             { path: "activities", element: <RealModulePage module="activities" /> },
             { path: "inventory", element: <RealModulePage module="inventory" /> },
             { path: "learning", element: <RealModulePage module="learning" /> },
             { path: "organization", element: <OrganizationPage /> },
             { path: "payroll", element: <RealModulePage module="payroll" /> },
-            { path: "documents", element: <RealModulePage module="documents" /> },
+            { path: "documents", element: <DocumentsPage /> },
             { path: "workflow", element: <WorkflowCenterPage /> },
             { path: "tenancy", element: <TenantManagementPage /> },
             { path: "reports", element: <ReportsPage /> },

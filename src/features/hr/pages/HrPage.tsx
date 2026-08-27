@@ -56,6 +56,19 @@ export function HrPage() {
     }
   }
 
+  async function changeRecruitmentStatus(employee: EmployeeSummary, status: string) {
+    setErrorMessage("");
+    try {
+      if (status === "HIRED") {
+        const roleByType: Record<string,string> = { TEACHER:"Teacher", DRIVER:"Driver", PRINCIPAL:"Principal", ADMIN_OFFICER:"AdminOffice", ACCOUNTANT:"Accountant", HR:"HRManager", LIBRARIAN:"Librarian", TRANSPORT:"TransportManager", OTHER:"Staff" };
+        await hrApi.approveEmployee(employee.id, tenantId, [roleByType[employee.staffType ?? "OTHER"] ?? "Staff"]);
+      } else {
+        await hrApi.updateRecruitmentStatus(employee.id, tenantId, status as "SUBMITTED" | "REJECTED" | "WAITING_LIST");
+      }
+      await loadEmployees();
+    } catch (error) { setErrorMessage(error instanceof Error ? error.message : "Employment status could not be updated."); }
+  }
+
   return (
     <div className="page-stack">
       <header className="page-header">
@@ -99,7 +112,7 @@ export function HrPage() {
           { key: "employment", header: "Employment", render: employee => employee.employmentTypeCode },
           { key: "contact", header: "Contact", render: employee => employee.phone || employee.email || "—" },
           { key: "hireDate", header: "Hire date", render: employee => employee.hireDate },
-          { key: "status", header: "Status / access", render: employee => employee.status === "PENDING_APPROVAL" ? <button className="button primary compact" onClick={() => setEmployeeToApprove(employee)}><ShieldCheck size={15}/>Approve</button> : <span className="status-pill">{employee.status}</span> },
+          { key: "status", header: "Recruitment status", render: employee => employee.status === "HIRED" || employee.status === "TERMINATED" ? <span className="status-pill">{employee.status}</span> : <select value={employee.status} onChange={event => void changeRecruitmentStatus(employee,event.target.value)}><option value="SUBMITTED">Submitted</option><option value="HIRED">Hired</option><option value="REJECTED">Rejected</option><option value="WAITING_LIST">Waiting list</option></select> },
         ] as DataGridColumn<EmployeeSummary>[]}
       />
 

@@ -25,3 +25,10 @@ export const lookupApi = {
     return response.data;
   },
 };
+
+export interface GeographyOption { id: number; code: string; name: string; }
+export const geographyApi = {
+  async countries(): Promise<GeographyOption[]> { return (await api.get("/api/lookups/geography/countries")).data; },
+  async provinces(countryId: number): Promise<GeographyOption[]> { return (await api.get("/api/lookups/geography/provinces", { params: { countryId } })).data; },
+  async cities(provinceId: number): Promise<GeographyOption[]> { return (await api.get("/api/lookups/geography/cities", { params: { provinceId } })).data; },
+};
