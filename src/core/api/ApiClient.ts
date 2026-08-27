@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 import { env } from "../../config/env";
 import { clearAuthenticationState } from "../../features/auth/auth";
+import { validateContactPayload } from "../validation/contactInformation";
 
 export type ApiError = {
   code: string;
@@ -34,6 +35,10 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  if (config.data && !(config.data instanceof FormData)) {
+    validateContactPayload(config.data);
+  }
+
   publishBusy(1);
   const token = localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token");
 

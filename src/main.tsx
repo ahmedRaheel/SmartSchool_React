@@ -6,9 +6,11 @@ import "./core/theme/theme.css";
 import "./styles.css";
 import { installGlobalTelemetry } from "./core/telemetry/clientTelemetry";
 import { installGlobalErrorTelemetry } from "./core/telemetry/telemetry";
+import { installContactInputRules } from "./core/validation/contactInformation";
 
 installGlobalTelemetry();
 installGlobalErrorTelemetry();
+installContactInputRules();
 
 const rootElement = document.getElementById("root");
 
