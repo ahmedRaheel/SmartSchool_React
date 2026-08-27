@@ -1,6 +1,8 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Upload, X } from "lucide-react";
 import { CreateStudentRequest, studentsApi } from "../api/studentsApi";
+import { SchoolBranchSelector } from "../../../components/forms/SchoolBranchSelector";
+import { documentApi } from "../../documents/api/documentApi";
 
 interface AddStudentWizardProps {
   tenantId: string;
@@ -52,6 +54,8 @@ const statusOptions = ["ACTIVE", "APPLICANT", "INACTIVE", "ALUMNI"] as const;
 function createInitialForm(tenantId: string): StudentFormState {
   return {
     tenantId,
+    schoolId: "",
+    branchId: "",
     firstName: "",
     lastName: "",
     dateOfBirth: "",
@@ -78,6 +82,7 @@ export function AddStudentWizard({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const isReviewStep = currentStep === wizardSteps.length - 1;
 
@@ -89,11 +94,9 @@ export function AddStudentWizard({
   }
 
   function canContinue() {
-    if (currentStep !== 0) {
-      return true;
-    }
-
-    return Boolean(form.firstName.trim());
+    if (currentStep === 0) return Boolean(form.firstName.trim());
+    if (currentStep === 1) return Boolean(form.schoolId && form.branchId);
+    return true;
   }
 
   function goBack() {
@@ -120,14 +123,8 @@ export function AddStudentWizard({
       return;
     }
 
-    const photo = await convertFileToBase64(selectedFile);
-
-    setForm((current) => ({
-      ...current,
-      photo,
-      photoFileName: selectedFile.name,
-      photoContentType: selectedFile.type,
-    }));
+    setPhotoFile(selectedFile);
+    setForm((current) => ({ ...current, photoFileName: selectedFile.name, photoContentType: selectedFile.type }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -143,6 +140,10 @@ export function AddStudentWizard({
 
     try {
       const student = await studentsApi.create(buildStudentRequest(form));
+
+      if (photoFile) {
+        await documentApi.upload({ tenantId, schoolId: form.schoolId, branchId: form.branchId, entityType: "STUDENT", entityId: student.id, purpose: "PROFILE_PHOTO", category: "STUDENT", documentType: "PHOTO", title: "Student photograph", isPrimary: true, file: photoFile });
+      }
 
       if (form.academicYearId && form.classSectionId) {
         await studentsApi.enroll({
@@ -176,7 +177,7 @@ export function AddStudentWizard({
             )}
 
             {currentStep === 1 && (
-              <AcademicPlacementStep form={form} onChange={updateField} />
+              <AcademicPlacementStep tenantId={tenantId} form={form} onChange={updateField} />
             )}
 
             {currentStep === 2 && (
@@ -301,9 +302,11 @@ function StudentInformationStep({
 }
 
 function AcademicPlacementStep({
+  tenantId,
   form,
   onChange,
 }: {
+  tenantId: string;
   form: StudentFormState;
   onChange: (field: keyof StudentFormState, value: string) => void;
 }) {
@@ -315,6 +318,7 @@ function AcademicPlacementStep({
       </div>
 
       <div className="form-grid">
+        <SchoolBranchSelector tenantId={tenantId} schoolId={form.schoolId} branchId={form.branchId} onSchoolChange={(value) => onChange("schoolId", value)} onBranchChange={(value) => onChange("branchId", value)} />
         <TextField
           label="Academic year"
           value={form.academicYearId}

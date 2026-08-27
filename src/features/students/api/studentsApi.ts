@@ -18,7 +18,9 @@ export interface PagedStudents {
 }
 
 export interface CreateStudentRequest {
-  tenantId: string;
+  tenantId?: string;
+  schoolId: string;
+  branchId: string;
   userId?: string | null;
   firstName: string;
   lastName?: string | null;

@@ -19,6 +19,11 @@ const SYSTEM_FIELDS = new Set(["id", "tenantId", "rowVersion", "createdAt", "upd
 function pretty(value: string): string { return value.replaceAll("-", " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/\b\w/g, value => value.toUpperCase()); }
 function unwrap(data: any): Row[] { const value = data?.value ?? data; return value?.items ?? value?.Items ?? (Array.isArray(value) ? value : []); }
 function display(value: unknown): string { if (value === null || value === undefined || value === "") return "—"; if (typeof value === "boolean") return value ? "Yes" : "No"; return typeof value === "object" ? JSON.stringify(value) : String(value); }
+function isTechnicalIdentifier(key: string): boolean {
+  const normalized = key.toLowerCase();
+  return normalized === "id" || normalized === "tenantid" || normalized === "userid" || normalized.endsWith("id");
+}
+
 function rowId(row: Row): string | undefined { const value = row.id ?? Object.entries(row).find(([key]) => key.toLowerCase().endsWith("id"))?.[1]; return value ? String(value) : undefined; }
 
 /** Generic live-data workspace used by database-backed SmartSchool modules. */
@@ -63,7 +68,7 @@ export function RealModulePage({ module, initialResource, title, subtitle }: { m
   }, [isSuperAdmin, sessionTenant]);
 
   const filtered = useMemo(() => rows.filter(row => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())), [rows, query]);
-  const columns = useMemo(() => rows[0] ? Object.keys(rows[0]).filter(key => !["photo", "rowVersion", "content"].includes(key)).slice(0, 7) : [], [rows]);
+  const columns = useMemo(() => rows[0] ? Object.keys(rows[0]).filter(key => !isTechnicalIdentifier(key) && !["photo", "rowVersion", "content"].includes(key)).slice(0, 7) : [], [rows]);
   const requestSchema = useMemo(() => { const operation = (selected ? (itemOperations.put || itemOperations.patch) : operations.post) as any; const schema = operation?.requestBody?.content?.["application/json"]?.schema as OpenApiSchema | undefined; return schema?.$ref ? spec?.components?.schemas?.[schema.$ref.split("/").at(-1) ?? ""] : schema; }, [selected, itemOperations.put, itemOperations.patch, operations.post, spec]);
   const requestFields = useMemo(() => Object.keys(requestSchema?.properties ?? {}).filter(key => !SYSTEM_FIELDS.has(key)), [requestSchema]);
   const editableFields = useMemo(() => { const source = selected ?? rows[0]; const contractFields = requestFields.length ? requestFields : (source ? Object.keys(source) : []); return contractFields.filter(key => !SYSTEM_FIELDS.has(key)).slice(0, 40); }, [selected, rows, requestFields]);
@@ -124,7 +129,7 @@ export function RealModulePage({ module, initialResource, title, subtitle }: { m
       <div className="data-toolbar"><select className="filter-select" value={resource} onChange={e => setResource(e.target.value)}>{resources.map(value => <option key={value} value={value}>{pretty(value)}</option>)}</select><label className="search-box"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search current records"/></label></div>
       <div className="table-wrap"><table className="premium-table"><thead><tr>{columns.map(column => <th key={column}>{pretty(column)}</th>)}{(canUpdate || canDelete) && <th>Actions</th>}</tr></thead><tbody>{filtered.map((row,index) => <tr key={rowId(row) ?? index} onClick={() => setSelected(row)}>{columns.map(column => <td key={column}>{display(row[column])}</td>)}{(canUpdate || canDelete) && <td className="row-actions">{canUpdate && <button className="icon-button" title="Edit" onClick={event => { event.stopPropagation(); edit(row); }}><Pencil size={14}/></button>}{canDelete && <button className="icon-button" title="Delete" onClick={event => { event.stopPropagation(); void remove(row); }}><Trash2 size={14}/></button>}</td>}</tr>)}{!filtered.length && <tr><td colSpan={Math.max(1, columns.length + 1)}><div className="empty-state">{loading ? "Loading live data…" : resources.length ? "No records found." : "No compatible API resources are exposed for this module."}</div></td></tr>}</tbody></table></div><div className="table-footer">{filtered.length} live records</div>
     </section>
-    <Modal open={!!selected && !editing} title={pretty(resource)} onClose={() => setSelected(null)}>{selected && <div className="detail-grid">{Object.entries(selected).map(([key,value]) => <div key={key}><span>{pretty(key)}</span><b>{display(value)}</b></div>)}</div>}</Modal>
+    <Modal open={!!selected && !editing} title={pretty(resource)} onClose={() => setSelected(null)}>{selected && <div className="detail-grid">{Object.entries(selected).filter(([key]) => !isTechnicalIdentifier(key)).map(([key,value]) => <div key={key}><span>{pretty(key)}</span><b>{display(value)}</b></div>)}</div>}</Modal>
     <Modal open={editing} title={`${selected ? "Edit" : "Add"} ${pretty(resource)}`} onClose={() => setEditing(false)}><div className="human-form">{isSuperAdmin && <div className="form-context"><Building2 size={18}/><div><b>Tenant context</b><span>{selectedTenant}</span></div></div>}<div className="human-form-grid">{editableFields.map(renderField)}</div></div><div className="modal-actions"><button className="secondary" onClick={() => setEditing(false)}>Cancel</button><button className="primary" onClick={() => void save()}>{selected ? "Save changes" : "Create record"}</button></div></Modal>
   </>;
 }

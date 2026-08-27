@@ -24,7 +24,9 @@ export interface EmployeePage {
 }
 
 export interface CreateEmployeeRequest {
-  tenantId: string;
+  tenantId?: string;
+  schoolId: string;
+  branchId: string;
   userId?: string | null;
   firstName: string;
   lastName?: string | null;

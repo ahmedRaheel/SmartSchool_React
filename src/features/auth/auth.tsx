@@ -16,6 +16,12 @@ export interface SessionUser {
   accountType: string;
   businessEntityId?: string | null;
   schoolId?: string | null;
+  branchId?: string | null;
+  studentId?: string | null;
+  teacherId?: string | null;
+  driverId?: string | null;
+  examinerId?: string | null;
+  employeeId?: string | null;
   mustChangePassword?: boolean;
   impersonated?: boolean;
   impersonatorSubject?: string | null;
@@ -36,7 +42,7 @@ interface AuthContextValue {
 type JwtClaims = Record<string, unknown> & {
   sub?: string; tenant_id?: string; name?: string; email?: string; role?: string | string[];
   account_type?: string; given_name?: string; family_name?: string; business_entity_id?: string;
-  school_id?: string; must_change_password?: boolean | string; impersonated?: boolean | string;
+  school_id?: string; branch_id?: string; student_id?: string; teacher_id?: string; driver_id?: string; examiner_id?: string; employee_id?: string; must_change_password?: boolean | string; impersonated?: boolean | string;
   impersonator_sub?: string;
 };
 
@@ -83,6 +89,12 @@ function createSessionUser(token: string, fallbackEmail = ""): SessionUser {
     id: String(claims.sub), tenantId, name, email, role: roles[0] || accountType, roles, accountType,
     school: "SmartSchool", initials, businessEntityId: claims.business_entity_id ? String(claims.business_entity_id) : null,
     schoolId: claims.school_id ? String(claims.school_id) : null,
+    branchId: claims.branch_id ? String(claims.branch_id) : null,
+    studentId: claims.student_id ? String(claims.student_id) : null,
+    teacherId: claims.teacher_id ? String(claims.teacher_id) : null,
+    driverId: claims.driver_id ? String(claims.driver_id) : null,
+    examinerId: claims.examiner_id ? String(claims.examiner_id) : null,
+    employeeId: claims.employee_id ? String(claims.employee_id) : null,
     mustChangePassword: claims.must_change_password === true || String(claims.must_change_password ?? "").toLowerCase() === "true",
     impersonated: claims.impersonated === true || String(claims.impersonated ?? "").toLowerCase() === "true",
     impersonatorSubject: claims.impersonator_sub ? String(claims.impersonator_sub) : null,

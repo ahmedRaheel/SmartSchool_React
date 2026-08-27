@@ -2,6 +2,8 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { lookupApi, LookupOption } from "../../../core/api/lookupApi";
 import { CreateEmployeeRequest, hrApi } from "../api/hrApi";
+import { SchoolBranchSelector } from "../../../components/forms/SchoolBranchSelector";
+import { documentApi } from "../../documents/api/documentApi";
 
 interface AddEmployeeDialogProps {
   tenantId: string;
@@ -10,6 +12,8 @@ interface AddEmployeeDialogProps {
 }
 
 interface EmployeeFormState {
+  schoolId: string;
+  branchId: string;
   firstName: string;
   lastName: string;
   cnicNumber: string;
@@ -24,6 +28,8 @@ interface EmployeeFormState {
 }
 
 const initialState: EmployeeFormState = {
+  schoolId: "",
+  branchId: "",
   firstName: "",
   lastName: "",
   cnicNumber: "",
@@ -43,6 +49,7 @@ export function AddEmployeeDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [employmentTypes, setEmploymentTypes] = useState<LookupOption[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   useEffect(() => {
     const loadEmploymentTypes = async () => {
@@ -71,12 +78,10 @@ export function AddEmployeeDialog({
       return;
     }
 
-    const dataUrl = await readFileAsDataUrl(selectedFile);
-    const base64 = dataUrl.split(",")[1] ?? "";
+    setPhotoFile(selectedFile);
 
     setForm((current) => ({
       ...current,
-      photo: base64,
       photoContentType: selectedFile.type,
       photoFileName: selectedFile.name,
     }));
@@ -90,6 +95,8 @@ export function AddEmployeeDialog({
     try {
       const request: CreateEmployeeRequest = {
         tenantId,
+        schoolId: form.schoolId,
+        branchId: form.branchId,
         firstName: form.firstName.trim(),
         lastName: optional(form.lastName),
         cnicNumber: optional(form.cnicNumber),
@@ -103,7 +110,10 @@ export function AddEmployeeDialog({
         photoFileName: form.photoFileName,
       };
 
-      await hrApi.createEmployee(request);
+      const employee = await hrApi.createEmployee(request);
+      if (photoFile) {
+        await documentApi.upload({ tenantId, schoolId: form.schoolId, branchId: form.branchId, entityType: "EMPLOYEE", entityId: employee.id, purpose: "PROFILE_PHOTO", category: "HR", documentType: "PHOTO", title: "Employee photograph", isPrimary: true, file: photoFile });
+      }
       onCreated();
     } catch (error: unknown) {
       setErrorMessage(getErrorMessage(error));
@@ -135,6 +145,7 @@ export function AddEmployeeDialog({
               </div>
 
               <div className="form-grid">
+                <SchoolBranchSelector tenantId={tenantId} schoolId={form.schoolId} branchId={form.branchId} onSchoolChange={(value) => updateField("schoolId", value)} onBranchChange={(value) => updateField("branchId", value)} />
                 <SelectField
                   label="Employment type"
                   value={form.employmentTypeCode}
