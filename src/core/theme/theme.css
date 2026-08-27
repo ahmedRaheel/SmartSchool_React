@@ -446,3 +446,226 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .decision-summary { display: grid; gap: 4px; padding: 14px 16px; border-radius: 12px; background: var(--soft); }
 .decision-summary b { font-size: 15px; }
 .decision-summary span { font-size: 13px; color: var(--muted); }
+
+/* v109: compact controls and consistent workflow actions */
+.workspace-tabs {
+  gap: 6px;
+  padding: 5px;
+  border-color: var(--line);
+  box-shadow: none;
+}
+.workspace-tabs button {
+  min-height: 38px;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  box-shadow: none !important;
+  font-weight: 650;
+}
+.workspace-tabs button:hover {
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+}
+.workspace-tabs button.active {
+  border-color: color-mix(in srgb, var(--brand) 18%, transparent) !important;
+  background: var(--soft) !important;
+  color: var(--brand) !important;
+}
+.academic-current-field {
+  align-content: start;
+}
+.checkbox-control {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  margin-top: 7px;
+}
+.checkbox-control input {
+  position: absolute;
+  width: 22px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.checkbox-control > span {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  pointer-events: none;
+}
+.checkbox-control input:checked + span {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.checkbox-control input:checked + span::after {
+  content: "";
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: translateY(-1px) rotate(-45deg);
+}
+.grid-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.grid-row-actions .button {
+  min-height: 34px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.detail-grid article {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.detail-grid span,
+.detail-grid b {
+  display: block;
+}
+.detail-grid span {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.detail-grid b {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.workflow-body {
+  overflow-x: hidden;
+}
+.workflow-dialog {
+  max-width: min(760px, calc(100vw - 32px));
+}
+@media (max-width: 720px) {
+  .detail-grid { grid-template-columns: 1fr; }
+  .grid-row-actions { flex-wrap: wrap; }
+}
+
+/* v110 — Canonical SmartSchool visual system. The AI workspace is the reference language. */
+:root {
+  --app-bg: #f5f7fb;
+  --control-bg: #f8f9fc;
+  --control-height: 44px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --page-title-size: 28px;
+  --section-title-size: 18px;
+  --body-size: 13px;
+  --label-size: 12px;
+}
+
+body { font-size: var(--body-size); }
+.content { padding: 26px 28px 36px; }
+.page-head { margin: 0 0 20px; align-items: center; }
+.page-head h1 { font-size: var(--page-title-size); font-weight: 600; letter-spacing: -.65px; }
+.page-head p { margin-top: 6px; font-size: 12px; line-height: 1.55; }
+.surface, .organization-card, .workflow-card, .premium-grid-shell { border-radius: var(--radius-lg); box-shadow: 0 10px 30px rgba(25,32,56,.055); }
+.surface-head { padding: 20px 22px 16px; }
+.surface-head h2, .surface-head h3 { margin: 0; font-size: var(--section-title-size); line-height: 1.3; font-weight: 600; }
+.surface-head p { margin: 5px 0 0; font-size: 11px; line-height: 1.55; color: var(--muted); }
+
+.primary, .secondary, .soft-button, .button, .table-action {
+  min-height: 40px; padding: 0 15px; border-radius: 10px; font-size: 12px; font-weight: 700;
+  line-height: 1; white-space: nowrap;
+}
+.primary { background: linear-gradient(135deg, #6d60ed, #584bd3); }
+.icon-button { width: 40px; height: 40px; border-radius: 10px; }
+.icon-button svg, .primary svg, .secondary svg, .soft-button svg, .table-action svg { width: 16px; height: 16px; flex: 0 0 auto; }
+
+.human-form { padding: 20px 22px 22px; }
+.human-form-grid { gap: 16px 18px; }
+.human-field { gap: 7px; min-width: 0; }
+.human-field > span, .form-label { font-size: var(--label-size); font-weight: 700; color: #30394c; }
+.human-field input, .human-field select, .human-field textarea,
+.form-control, .form-select, input.form-control, select.form-control {
+  width: 100%; min-height: var(--control-height); padding: 0 13px; border: 1px solid var(--line);
+  border-radius: 11px; background: var(--control-bg); color: var(--text); font-size: 13px; box-shadow: none;
+}
+.human-field textarea { min-height: 112px; padding-top: 12px; resize: vertical; }
+.human-field input:focus, .human-field select:focus, .human-field textarea:focus,
+.form-control:focus, .form-select:focus { border-color: #9188ef; box-shadow: 0 0 0 3px rgba(101,88,232,.10); }
+.form-section-title { margin: 2px 0 14px; }
+.form-section-title b { font-size: 13px; }
+.form-section-title span { font-size: 10px; line-height: 1.5; }
+
+/* Native checkboxes were rendering as giant controls on academic-year forms. */
+input[type="checkbox"] { width: 18px !important; height: 18px !important; min-height: 18px !important; margin: 0; padding: 0; accent-color: var(--brand); border-radius: 5px; box-shadow: none !important; }
+.check-row, .checkbox-row { min-height: 40px; display: flex; align-items: center; gap: 9px; }
+
+/* One tab language everywhere; neutral tabs never get browser/Bootstrap black borders. */
+.section-tabs, .workspace-tabs, .tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin-bottom: 14px; }
+.section-tabs button, .workspace-tabs button, .tabs button,
+.nav-tabs .nav-link, .nav-pills .nav-link {
+  min-height: 40px; padding: 0 15px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line) !important; border-radius: 10px !important; background: var(--surface) !important;
+  color: #536079 !important; font-size: 12px; font-weight: 700; box-shadow: none !important;
+}
+.section-tabs button:hover, .workspace-tabs button:hover, .tabs button:hover, .nav-tabs .nav-link:hover { background: var(--surface-2) !important; color: var(--text) !important; }
+.section-tabs button.active, .workspace-tabs button.active, .tabs button.active,
+.nav-tabs .nav-link.active, .nav-pills .nav-link.active {
+  border-color: var(--brand) !important; background: linear-gradient(135deg,#6d60ed,#584bd3) !important; color: #fff !important;
+}
+
+/* Unified table/grid scale. */
+.table-wrap, .premium-table-wrap, .premium-grid-scroll { overflow-x: auto; }
+.premium-table, .premium-grid { min-width: 760px; }
+.premium-table th, .premium-grid thead th {
+  padding: 12px 16px; background: var(--surface-2); color: #69748a; font-size: 10px; font-weight: 800;
+  letter-spacing: .65px; text-transform: uppercase; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.premium-table td, .premium-grid tbody td { padding: 14px 16px; font-size: 12px; line-height: 1.45; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.premium-table td small, .premium-grid td small { font-size: 10px; color: var(--muted); }
+.premium-table td:last-child { display: table-cell; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
+.table-action { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 0 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+.status-pill { padding: 5px 9px; font-size: 10px; }
+.search-box { height: var(--control-height); border-radius: 11px; }
+.search-box input { font-size: 12px; }
+
+/* KPI cards: reserve icon/value/description space so nothing can overlap. */
+.metric-grid { gap: 14px; }
+.metric-card { min-height: 112px; padding: 18px; border-radius: 16px; overflow: hidden; }
+.platform-metrics .metric-card { display: grid; grid-template-columns: 42px minmax(0,1fr); grid-template-rows: auto auto; column-gap: 13px; align-content: center; }
+.platform-metrics .metric-card > span { grid-column: 2; grid-row: 1; align-self: end; color: var(--muted); font-size: 11px; font-weight: 700; }
+.platform-metrics .metric-card > strong { grid-column: 1; grid-row: 1 / 3; width: 42px; height: 42px; display: grid; place-items: center; align-self: center; border-radius: 12px; background: var(--soft); color: var(--brand); font-size: 18px; line-height: 1; }
+.platform-metrics .metric-card > strong svg { width: 20px; height: 20px; }
+.platform-metrics .metric-card > small { grid-column: 2; grid-row: 2; align-self: start; margin-top: 4px; color: var(--text); font-size: 12px; line-height: 1.4; }
+
+/* Dialogs/drawers use the same card/form treatment as the AI workspace. */
+.modal-backdrop, .workflow-overlay { background: rgba(17,24,42,.52); backdrop-filter: blur(3px); }
+.modal-panel, .workflow-dialog { border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: 0 28px 70px rgba(17,24,42,.20); overflow: hidden; }
+.modal-head, .workflow-header { padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.modal-head h2, .workflow-header h2 { margin: 4px 0 0; font-size: 24px; font-weight: 600; letter-spacing: -.5px; }
+.modal-actions, .workflow-footer { padding: 16px 22px; gap: 9px; border-top: 1px solid var(--line); background: var(--surface); }
+
+/* AI page is the canonical visual reference, but uses the same tokens as all modules. */
+.ai-chat-card { border-radius: 18px; padding: 28px; }
+.ai-hero { gap: 16px; }
+.ai-hero h2 { font-size: 22px; font-weight: 500; }
+.ai-prompt-box { border-radius: 15px; background: var(--surface-2); border: 1px solid var(--line); }
+.ai-prompt-box textarea { font-size: 12px; }
+
+@media (max-width: 760px) {
+  .content { padding: 20px 16px 28px; }
+  .page-head { align-items: flex-start; }
+  .page-head h1 { font-size: 24px; }
+  .human-form-grid { grid-template-columns: 1fr; }
+  .platform-metrics .metric-card { grid-template-columns: 38px minmax(0,1fr); }
+}

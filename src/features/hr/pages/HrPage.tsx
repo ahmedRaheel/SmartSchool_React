@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Plus, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
+import { Eye, Plus, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../auth/auth";
 import { AddEmployeeDialog } from "../components/AddEmployeeDialog";
 import { EmployeeSummary, hrApi } from "../api/hrApi";
 import { DataGrid, DataGridColumn } from "../../../components/ui/DataGrid";
+import { Modal } from "../../../components/ui/Modal";
 
 export function HrPage() {
   const { user } = useAuth();
@@ -13,8 +14,9 @@ export function HrPage() {
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [employeeToApprove, setEmployeeToApprove] = useState<EmployeeSummary | null>(null);
-  const [selectedRole, setSelectedRole] = useState("Teacher");
+  const [employeeToReview, setEmployeeToReview] = useState<EmployeeSummary | null>(null);
+  const [employeeToView, setEmployeeToView] = useState<EmployeeSummary | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState("SUBMITTED");
 
   const loadEmployees = async () => {
     if (!tenantId) {
@@ -44,29 +46,51 @@ export function HrPage() {
     return text.includes(searchText.toLowerCase());
   });
 
-  async function approveEmployee() {
-    if (!employeeToApprove) return;
+  async function updateRecruitmentDecision() {
+    if (!employeeToReview) {
+      return;
+    }
+
     setErrorMessage("");
+
     try {
-      await hrApi.approveEmployee(employeeToApprove.id, tenantId, [selectedRole]);
-      setEmployeeToApprove(null);
+      if (selectedStatus === "HIRED") {
+        const roleByType: Record<string, string> = {
+          TEACHER: "Teacher",
+          DRIVER: "Driver",
+          PRINCIPAL: "Principal",
+          ADMIN_OFFICER: "AdminOffice",
+          ACCOUNTANT: "Accountant",
+          HR: "HRManager",
+          LIBRARIAN: "Librarian",
+          TRANSPORT: "TransportManager",
+          OTHER: "Staff",
+        };
+
+        const portalRole = roleByType[employeeToReview.staffType ?? "OTHER"] ?? "Staff";
+        await hrApi.approveEmployee(employeeToReview.id, tenantId, [portalRole]);
+      } else {
+        await hrApi.updateRecruitmentStatus(
+          employeeToReview.id,
+          tenantId,
+          selectedStatus as "SUBMITTED" | "REJECTED" | "WAITING_LIST",
+        );
+      }
+
+      setEmployeeToReview(null);
       await loadEmployees();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Employee approval failed.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Employment status could not be updated.",
+      );
     }
   }
 
-  async function changeRecruitmentStatus(employee: EmployeeSummary, status: string) {
-    setErrorMessage("");
-    try {
-      if (status === "HIRED") {
-        const roleByType: Record<string,string> = { TEACHER:"Teacher", DRIVER:"Driver", PRINCIPAL:"Principal", ADMIN_OFFICER:"AdminOffice", ACCOUNTANT:"Accountant", HR:"HRManager", LIBRARIAN:"Librarian", TRANSPORT:"TransportManager", OTHER:"Staff" };
-        await hrApi.approveEmployee(employee.id, tenantId, [roleByType[employee.staffType ?? "OTHER"] ?? "Staff"]);
-      } else {
-        await hrApi.updateRecruitmentStatus(employee.id, tenantId, status as "SUBMITTED" | "REJECTED" | "WAITING_LIST");
-      }
-      await loadEmployees();
-    } catch (error) { setErrorMessage(error instanceof Error ? error.message : "Employment status could not be updated."); }
+  function openReview(employee: EmployeeSummary) {
+    setEmployeeToReview(employee);
+    setSelectedStatus(employee.status);
   }
 
   return (
@@ -112,24 +136,97 @@ export function HrPage() {
           { key: "employment", header: "Employment", render: employee => employee.employmentTypeCode },
           { key: "contact", header: "Contact", render: employee => employee.phone || employee.email || "—" },
           { key: "hireDate", header: "Hire date", render: employee => employee.hireDate },
-          { key: "status", header: "Recruitment status", render: employee => employee.status === "HIRED" || employee.status === "TERMINATED" ? <span className="status-pill">{employee.status}</span> : <select value={employee.status} onChange={event => void changeRecruitmentStatus(employee,event.target.value)}><option value="SUBMITTED">Submitted</option><option value="HIRED">Hired</option><option value="REJECTED">Rejected</option><option value="WAITING_LIST">Waiting list</option></select> },
+          {
+            key: "status",
+            header: "Recruitment status",
+            render: (employee) => (
+              <span className={`status-pill status-${employee.status.toLowerCase()}`}>
+                {employee.status.replaceAll("_", " ")}
+              </span>
+            ),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            width: "210px",
+            render: (employee) => (
+              <div className="grid-row-actions">
+                <button className="button secondary compact" onClick={() => setEmployeeToView(employee)}>
+                  <Eye size={15} />
+                  View
+                </button>
+                {employee.status !== "TERMINATED" && (
+                  <button className="button primary compact" onClick={() => openReview(employee)}>
+                    <ShieldCheck size={15} />
+                    Review
+                  </button>
+                )}
+              </div>
+            ),
+          },
         ] as DataGridColumn<EmployeeSummary>[]}
       />
 
-      {employeeToApprove && (
-        <div className="workflow-overlay">
-          <section className="workflow-dialog compact-dialog" role="dialog" aria-modal="true">
-            <header className="workflow-header">
-              <div><small>ACCOUNT APPROVAL</small><h2>Approve {employeeToApprove.firstName}</h2><p>Choose the school role. The Identity account is created only after this approval.</p></div>
-            </header>
-            <div className="workflow-body">
-              <label className="field"><span>Portal role</span><select value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)}><option>Teacher</option><option>AdminOffice</option><option>Accountant</option><option>HRManager</option><option>Librarian</option><option>TransportManager</option><option>Driver</option></select></label>
-              <div className="callout"><b>Login email</b><span>{employeeToApprove.email || "Add an employee email before approval."}</span></div>
-            </div>
-            <footer className="workflow-footer"><button className="button secondary" onClick={() => setEmployeeToApprove(null)}>Cancel</button><button className="button primary" disabled={!employeeToApprove.email} onClick={() => void approveEmployee()}>Approve & create account</button></footer>
-          </section>
+      <Modal
+        open={Boolean(employeeToView)}
+        title="Employee details"
+        onClose={() => setEmployeeToView(null)}
+      >
+        {employeeToView && (
+          <div className="detail-grid">
+            <article><span>Name</span><b>{employeeToView.firstName} {employeeToView.lastName}</b></article>
+            <article><span>Employee no.</span><b>{employeeToView.employeeNumber ?? "Assigned after approval"}</b></article>
+            <article><span>Staff type</span><b>{employeeToView.staffType ?? "Staff"}</b></article>
+            <article><span>Employment</span><b>{employeeToView.employmentTypeCode}</b></article>
+            <article><span>Email</span><b>{employeeToView.email ?? "—"}</b></article>
+            <article><span>Phone</span><b>{employeeToView.phone ?? "—"}</b></article>
+            <article><span>Hire date</span><b>{employeeToView.hireDate}</b></article>
+            <article><span>Status</span><b>{employeeToView.status.replaceAll("_", " ")}</b></article>
+          </div>
+        )}
+        <div className="modal-actions">
+          <button className="button secondary" onClick={() => setEmployeeToView(null)}>Close</button>
         </div>
-      )}
+      </Modal>
+
+      <Modal
+        open={Boolean(employeeToReview)}
+        title="Review recruitment status"
+        onClose={() => setEmployeeToReview(null)}
+      >
+        {employeeToReview && (
+          <div className="decision-dialog">
+            <div className="decision-summary">
+              <b>{employeeToReview.firstName} {employeeToReview.lastName}</b>
+              <span>{employeeToReview.staffType ?? "Staff"} · Current status: {employeeToReview.status.replaceAll("_", " ")}</span>
+            </div>
+            <label className="human-field">
+              <span>Decision *</span>
+              <select value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value)}>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="HIRED">Hired</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="WAITING_LIST">Waiting list</option>
+              </select>
+            </label>
+            {selectedStatus === "HIRED" && (
+              <div className="success-callout">
+                Hiring creates the employee portal account using the approved staff type and login email.
+              </div>
+            )}
+          </div>
+        )}
+        <div className="modal-actions">
+          <button className="button secondary" onClick={() => setEmployeeToReview(null)}>Cancel</button>
+          <button
+            className="button primary"
+            disabled={selectedStatus === "HIRED" && !employeeToReview?.email}
+            onClick={() => void updateRecruitmentDecision()}
+          >
+            Update status
+          </button>
+        </div>
+      </Modal>
 
       {showAddEmployee && (
         <AddEmployeeDialog

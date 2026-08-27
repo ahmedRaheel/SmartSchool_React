@@ -179,7 +179,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
               <label className="human-field"><span>Academic year</span><select value={form.name} onChange={event => { const year = Number(event.target.value); setForm(current => ({ ...current, name: event.target.value, startDate: `${year}-08-01`, endDate: `${year + 1}-07-31` })); }}><option value="">Select year</option><option value={String(currentYear)}>{currentYear}/{currentYear + 1} (current)</option><option value={String(currentYear + 1)}>{currentYear + 1}/{currentYear + 2} (next)</option></select></label>
               <label className="human-field"><span>Start date</span><input type="date" value={form.startDate} onChange={event => setForm(current => ({ ...current, startDate: event.target.value }))} /></label>
               <label className="human-field"><span>End date</span><input type="date" value={form.endDate} onChange={event => setForm(current => ({ ...current, endDate: event.target.value }))} /></label>
-              <label className="human-field"><span>Current year</span><input type="checkbox" checked={form.isCurrent} onChange={event => setForm(current => ({ ...current, isCurrent: event.target.checked }))} /></label>
+              <label className="human-field academic-current-field"><span>Current year</span><span className="checkbox-control"><input type="checkbox" checked={form.isCurrent} onChange={event => setForm(current => ({ ...current, isCurrent: event.target.checked }))} /><span aria-hidden="true" /></span></label>
             </>
           ) : (
             <>
