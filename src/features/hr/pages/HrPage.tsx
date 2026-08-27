@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, RefreshCw, Search, Users } from "lucide-react";
+import { Plus, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
 import { useAuth } from "../../auth/auth";
 import { AddEmployeeDialog } from "../components/AddEmployeeDialog";
 import { EmployeeSummary, hrApi } from "../api/hrApi";
@@ -12,6 +12,8 @@ export function HrPage() {
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [employeeToApprove, setEmployeeToApprove] = useState<EmployeeSummary | null>(null);
+  const [selectedRole, setSelectedRole] = useState("Teacher");
 
   const loadEmployees = async () => {
     if (!tenantId) {
@@ -40,6 +42,18 @@ export function HrPage() {
     const text = `${employee.employeeNumber} ${employee.firstName} ${employee.lastName ?? ""} ${employee.email ?? ""}`.toLowerCase();
     return text.includes(searchText.toLowerCase());
   });
+
+  async function approveEmployee() {
+    if (!employeeToApprove) return;
+    setErrorMessage("");
+    try {
+      await hrApi.approveEmployee(employeeToApprove.id, tenantId, [selectedRole]);
+      setEmployeeToApprove(null);
+      await loadEmployees();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Employee approval failed.");
+    }
+  }
 
   return (
     <div className="page-stack">
@@ -91,7 +105,7 @@ export function HrPage() {
                   <th>Employment</th>
                   <th>Contact</th>
                   <th>Hire date</th>
-                  <th>Status</th>
+                  <th>Status / access</th>
                 </tr>
               </thead>
               <tbody>
@@ -100,11 +114,20 @@ export function HrPage() {
                     <td>
                       <strong>{employee.firstName} {employee.lastName}</strong>
                     </td>
-                    <td>{employee.employeeNumber}</td>
+                    <td>{employee.employeeNumber ?? "Assigned after approval"}</td>
                     <td>{employee.employmentTypeCode}</td>
                     <td>{employee.email || employee.phone || "—"}</td>
                     <td>{employee.hireDate}</td>
-                    <td><span className="status-pill">{employee.status}</span></td>
+                    <td>
+                      {employee.status === "PENDING_APPROVAL" ? (
+                        <button className="button primary" onClick={() => setEmployeeToApprove(employee)}>
+                          <ShieldCheck size={15} />
+                          Approve
+                        </button>
+                      ) : (
+                        <span className="status-pill">{employee.status}</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -112,6 +135,21 @@ export function HrPage() {
           </div>
         )}
       </section>
+
+      {employeeToApprove && (
+        <div className="workflow-overlay">
+          <section className="workflow-dialog compact-dialog" role="dialog" aria-modal="true">
+            <header className="workflow-header">
+              <div><small>ACCOUNT APPROVAL</small><h2>Approve {employeeToApprove.firstName}</h2><p>Choose the school role. The Identity account is created only after this approval.</p></div>
+            </header>
+            <div className="workflow-body">
+              <label className="field"><span>Portal role</span><select value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)}><option>Teacher</option><option>AdminOffice</option><option>Accountant</option><option>HRManager</option><option>Librarian</option><option>TransportManager</option><option>Driver</option></select></label>
+              <div className="callout"><b>Login email</b><span>{employeeToApprove.email || "Add an employee email before approval."}</span></div>
+            </div>
+            <footer className="workflow-footer"><button className="button secondary" onClick={() => setEmployeeToApprove(null)}>Cancel</button><button className="button primary" disabled={!employeeToApprove.email} onClick={() => void approveEmployee()}>Approve & create account</button></footer>
+          </section>
+        </div>
+      )}
 
       {showAddEmployee && (
         <AddEmployeeDialog

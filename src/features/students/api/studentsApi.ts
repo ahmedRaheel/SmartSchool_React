@@ -3,7 +3,7 @@ import { api } from "../../../core/api/ApiClient";
 export interface StudentSummary {
   id: string;
   tenantId: string;
-  studentNumber: string;
+  studentNumber?: string | null;
   firstName: string;
   lastName?: string;
   status: string;
@@ -20,7 +20,6 @@ export interface PagedStudents {
 export interface CreateStudentRequest {
   tenantId: string;
   userId?: string | null;
-  studentNumber: string;
   firstName: string;
   lastName?: string | null;
   dateOfBirth?: string | null;
@@ -56,6 +55,24 @@ export const studentsApi = {
       request,
     );
 
+    return response.data;
+  },
+
+  async approve(studentId: string, tenantId: string, email: string) {
+    const response = await api.post(`/api/students/student/${studentId}/approve`, {
+      tenantId,
+      studentId,
+      email,
+    });
+    return response.data;
+  },
+
+  async strikeOff(studentId: string, tenantId: string, reason: string) {
+    const response = await api.post(`/api/students/student/${studentId}/strike-off`, {
+      tenantId,
+      studentId,
+      reason,
+    });
     return response.data;
   },
 

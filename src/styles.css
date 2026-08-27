@@ -1,0 +1,12 @@
+
+/* Organization workspace */
+.organization-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; padding:20px; }
+.organization-card { border:1px solid var(--border, #e4e8f1); border-radius:18px; padding:20px; background:var(--surface, #fff); box-shadow:0 8px 24px rgba(26,35,58,.05); }
+.organization-card-head { display:flex; gap:12px; align-items:center; }
+.organization-card-head h3 { margin:0 0 4px; font-size:17px; }
+.organization-card-head p { margin:0; color:var(--muted, #73809a); font-size:12px; }
+.organization-contact { display:grid; gap:5px; margin:16px 0; padding:14px; border-radius:12px; background:#f8f9fc; color:#59657b; font-size:13px; }
+.branch-list { border-top:1px solid #edf0f5; padding-top:12px; display:grid; gap:8px; }
+.branch-row { display:flex; gap:10px; align-items:flex-start; padding:10px; border-radius:10px; background:#fafbfe; }
+.branch-row div { display:grid; gap:3px; } .branch-row small { color:#7a859a; }
+.empty-inline { padding:12px; color:#8a94a8; font-size:13px; }

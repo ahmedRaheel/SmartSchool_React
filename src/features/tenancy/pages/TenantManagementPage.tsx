@@ -3,6 +3,8 @@ import { Building2, Eye, MoreHorizontal, Plus, Search, ShieldCheck, Trash2, User
 import { api } from "../../../core/api/ApiClient";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { Modal, useUi } from "../../../components/ui/InteractiveUi";
+import { useAuth } from "../../auth/auth";
+import { env } from "../../../config/env";
 
 type Tenant = {
   id: string;
@@ -17,12 +19,12 @@ const tenantIdOf = (tenant: Tenant) => tenant.id || tenant.tenantId || "";
 
 export function TenantManagementPage() {
   const { notify } = useUi();
+  const { impersonate: startImpersonation } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Tenant | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({
-    code: "",
     name: "",
     adminFirstName: "",
     adminLastName: "",
@@ -58,8 +60,7 @@ export function TenantManagementPage() {
       const response = await api.post<any>("/api/tenancy/tenant", form);
       setCreateOpen(false);
       setForm({
-        code: "",
-        name: "",
+            name: "",
         adminFirstName: "",
         adminLastName: "",
         adminEmail: "",
@@ -73,9 +74,34 @@ export function TenantManagementPage() {
     }
   }
 
-  function impersonate(tenant: Tenant) {
-    sessionStorage.setItem("selected_tenant_id", tenantIdOf(tenant));
-    notify({kind:"info",title:"Tenant context changed",message:`Now viewing ${tenant.name}. Select a user to start audited impersonation.`});
+  async function impersonate(tenant: Tenant): Promise<void> {
+    const tenantId = tenantIdOf(tenant);
+    sessionStorage.setItem("selected_tenant_id", tenantId);
+
+    try {
+      const token = localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token") ?? "";
+      const baseUrl = import.meta.env.DEV ? "/identity" : env.identityBaseUrl;
+      const response = await fetch(`${baseUrl}/api/identity/users?page=1&pageSize=100&tenantId=${tenantId}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`Unable to load tenant users (${response.status}).`);
+
+      const payload = await response.json();
+      const users = payload?.items ?? payload?.value?.items ?? [];
+      const administrator = users.find((item: any) =>
+        item.isActive !== false && item.roles?.some((role: string) => ["SchoolAdmin", "TenantAdmin", "Admin"].includes(role)));
+
+      if (!administrator) {
+        window.location.assign(`/platform?tenantId=${tenantId}`);
+        return;
+      }
+
+      const result = await startImpersonation(administrator.id, `Tenant support session for ${tenant.name}`);
+      if (!result.success) throw new Error(result.message ?? "Identity rejected the impersonation request.");
+      window.location.assign("/");
+    } catch (error) {
+      notify({ kind: "error", title: "Impersonation failed", message: error instanceof Error ? error.message : "Unable to start support session." });
+    }
   }
 
   return (
@@ -110,7 +136,7 @@ export function TenantManagementPage() {
                   <td><span className={`status-pill ${tenant.isActive === false ? "danger" : "success"}`}>{tenant.isActive === false ? "Disabled" : "Active"}</span></td>
                   <td className="row-actions">
                     <button className="table-action" onClick={() => setSelected(tenant)}><Eye size={14}/> View</button>
-                    <button className="table-action" onClick={() => impersonate(tenant)}><UserRoundCog size={14}/> Impersonate</button>
+                    <button className="table-action" onClick={() => void impersonate(tenant)}><UserRoundCog size={14}/> Impersonate</button>
                     <button className="table-action danger" title="Delete tenant"><Trash2 size={14}/></button>
                     <button className="table-action" title="More actions"><MoreHorizontal size={14}/></button>
                   </td>
@@ -125,7 +151,6 @@ export function TenantManagementPage() {
         <div className="human-form">
           <div className="form-section-title"><b>Organization</b><span>Create the tenant organization.</span></div>
           <div className="human-form-grid">
-            <label className="human-field"><span>Tenant Code *</span><input value={form.code} onChange={(e) => setForm(v => ({...v, code: e.target.value}))} placeholder="e.g. BEACON" /></label>
             <label className="human-field"><span>Tenant Name *</span><input value={form.name} onChange={(e) => setForm(v => ({...v, name: e.target.value}))} placeholder="School organization name" /></label>
           </div>
           <div className="form-section-title"><b>Master Administrator</b><span>This account can sign in immediately and must change its temporary password on first login.</span></div>

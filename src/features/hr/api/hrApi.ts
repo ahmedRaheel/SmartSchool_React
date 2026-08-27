@@ -4,7 +4,7 @@ export interface EmployeeSummary {
   tenantId: string;
   id: string;
   userId?: string | null;
-  employeeNumber: string;
+  employeeNumber?: string | null;
   firstName: string;
   lastName?: string | null;
   cnicNumber?: string | null;
@@ -26,7 +26,6 @@ export interface EmployeePage {
 export interface CreateEmployeeRequest {
   tenantId: string;
   userId?: string | null;
-  employeeNumber: string;
   firstName: string;
   lastName?: string | null;
   cnicNumber?: string | null;
@@ -56,6 +55,24 @@ export const hrApi = {
       request,
     );
 
+    return response.data;
+  },
+
+  async approveEmployee(employeeId: string, tenantId: string, roles: string[]) {
+    const response = await api.post(`/api/hr/employee/${employeeId}/approve`, {
+      tenantId,
+      employeeId,
+      roles,
+    });
+    return response.data;
+  },
+
+  async terminateEmployee(employeeId: string, tenantId: string, reason: string) {
+    const response = await api.post(`/api/hr/employee/${employeeId}/terminate`, {
+      tenantId,
+      employeeId,
+      reason,
+    });
     return response.data;
   },
 };

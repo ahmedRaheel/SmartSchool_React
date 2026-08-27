@@ -1,3 +1,4 @@
+import { OrganizationPage } from "../../features/organization/pages/OrganizationPage";
 import { Navigate, createBrowserRouter, useLocation } from "react-router-dom";
 import { AppShell } from "../../components/layout/AppShell";
 import { useAuth } from "../../features/auth/auth";
@@ -50,7 +51,7 @@ export const router = createBrowserRouter([
             { path: "activities", element: <RealModulePage module="activities" /> },
             { path: "inventory", element: <RealModulePage module="inventory" /> },
             { path: "learning", element: <RealModulePage module="learning" /> },
-            { path: "organization", element: <RealModulePage module="organization" /> },
+            { path: "organization", element: <OrganizationPage /> },
             { path: "payroll", element: <RealModulePage module="payroll" /> },
             { path: "documents", element: <RealModulePage module="documents" /> },
             { path: "workflow", element: <WorkflowCenterPage /> },

@@ -52,13 +52,12 @@ const statusOptions = ["ACTIVE", "APPLICANT", "INACTIVE", "ALUMNI"] as const;
 function createInitialForm(tenantId: string): StudentFormState {
   return {
     tenantId,
-    studentNumber: "",
     firstName: "",
     lastName: "",
     dateOfBirth: "",
     gender: "",
     admissionDate: new Date().toISOString().slice(0, 10),
-    status: "ACTIVE",
+    status: "PENDING_APPROVAL",
     academicYearId: "",
     classSectionId: "",
     guardianName: "",
@@ -94,7 +93,7 @@ export function AddStudentWizard({
       return true;
     }
 
-    return Boolean(form.studentNumber.trim() && form.firstName.trim());
+    return Boolean(form.firstName.trim());
   }
 
   function goBack() {
@@ -152,7 +151,7 @@ export function AddStudentWizard({
           academicYearId: form.academicYearId,
           classSectionId: form.classSectionId,
           enrollmentDate: form.admissionDate ?? today(),
-          status: "ACTIVE",
+          status: "PENDING_APPROVAL",
         });
       }
 
@@ -262,12 +261,6 @@ function StudentInformationStep({
 }) {
   return (
     <div className="form-grid">
-      <TextField
-        label="Student / admission number"
-        required
-        value={form.studentNumber}
-        onChange={(value) => onChange("studentNumber", value)}
-      />
       <TextField
         label="First name"
         required
@@ -399,7 +392,7 @@ function ReviewStep({ form }: { form: StudentFormState }) {
         title="Student"
         lines={[
           studentName,
-          form.studentNumber,
+          "Student number will be assigned after admission approval",
           form.dateOfBirth || "Date of birth not supplied",
           form.gender || "Gender not supplied",
         ]}
@@ -507,7 +500,6 @@ function buildStudentRequest(form: StudentFormState): CreateStudentRequest {
   return {
     tenantId: form.tenantId,
     userId: form.userId,
-    studentNumber: form.studentNumber.trim(),
     firstName: form.firstName.trim(),
     lastName: form.lastName?.trim() || null,
     dateOfBirth: form.dateOfBirth || null,

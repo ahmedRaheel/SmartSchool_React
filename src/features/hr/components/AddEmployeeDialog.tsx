@@ -10,7 +10,6 @@ interface AddEmployeeDialogProps {
 }
 
 interface EmployeeFormState {
-  employeeNumber: string;
   firstName: string;
   lastName: string;
   cnicNumber: string;
@@ -25,7 +24,6 @@ interface EmployeeFormState {
 }
 
 const initialState: EmployeeFormState = {
-  employeeNumber: "",
   firstName: "",
   lastName: "",
   cnicNumber: "",
@@ -33,7 +31,7 @@ const initialState: EmployeeFormState = {
   phone: "",
   hireDate: new Date().toISOString().slice(0, 10),
   employmentTypeCode: "FULL_TIME",
-  status: "ACTIVE",
+  status: "PENDING_APPROVAL",
 };
 
 export function AddEmployeeDialog({
@@ -92,7 +90,6 @@ export function AddEmployeeDialog({
     try {
       const request: CreateEmployeeRequest = {
         tenantId,
-        employeeNumber: form.employeeNumber.trim(),
         firstName: form.firstName.trim(),
         lastName: optional(form.lastName),
         cnicNumber: optional(form.cnicNumber),
@@ -100,7 +97,7 @@ export function AddEmployeeDialog({
         phone: optional(form.phone),
         hireDate: form.hireDate,
         employmentTypeCode: form.employmentTypeCode,
-        status: form.status,
+        status: "PENDING_APPROVAL",
         photo: form.photo,
         photoContentType: form.photoContentType,
         photoFileName: form.photoFileName,
@@ -138,12 +135,6 @@ export function AddEmployeeDialog({
               </div>
 
               <div className="form-grid">
-                <TextField
-                  label="Employee number"
-                  value={form.employeeNumber}
-                  onChange={(value) => updateField("employeeNumber", value)}
-                  required
-                />
                 <SelectField
                   label="Employment type"
                   value={form.employmentTypeCode}

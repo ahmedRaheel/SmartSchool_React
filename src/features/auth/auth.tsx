@@ -107,7 +107,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function persistSession(token: string, sessionUser: SessionUser): void {
     localStorage.setItem("access_token", token);
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
-    if (sessionUser.tenantId) localStorage.setItem("tenant_id", sessionUser.tenantId);
+    if (sessionUser.tenantId) {
+      localStorage.setItem("tenant_id", sessionUser.tenantId);
+      if (!sessionUser.roles.includes("SuperAdmin")) {
+        sessionStorage.removeItem("selected_tenant_id");
+        localStorage.removeItem("selected_tenant_id");
+      }
+    }
     setUser(sessionUser);
   }
 
