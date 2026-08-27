@@ -3,6 +3,7 @@ import { Plus, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
 import { useAuth } from "../../auth/auth";
 import { AddEmployeeDialog } from "../components/AddEmployeeDialog";
 import { EmployeeSummary, hrApi } from "../api/hrApi";
+import { DataGrid, DataGridColumn } from "../../../components/ui/DataGrid";
 
 export function HrPage() {
   const { user } = useAuth();
@@ -86,55 +87,21 @@ export function HrPage() {
 
       {errorMessage && <div className="form-error">{errorMessage}</div>}
 
-      <section className="data-card">
-        {isLoading ? (
-          <div className="empty-state">Loading employees…</div>
-        ) : visibleEmployees.length === 0 ? (
-          <div className="empty-state">
-            <Users size={30} />
-            <h3>No employees found</h3>
-            <p>Add the first employee or change your search.</p>
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Employee no.</th>
-                  <th>Employment</th>
-                  <th>Contact</th>
-                  <th>Hire date</th>
-                  <th>Status / access</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleEmployees.map((employee) => (
-                  <tr key={employee.id}>
-                    <td>
-                      <strong>{employee.firstName} {employee.lastName}</strong>
-                    </td>
-                    <td>{employee.employeeNumber ?? "Assigned after approval"}</td>
-                    <td>{employee.employmentTypeCode}</td>
-                    <td>{employee.email || employee.phone || "—"}</td>
-                    <td>{employee.hireDate}</td>
-                    <td>
-                      {employee.status === "PENDING_APPROVAL" ? (
-                        <button className="button primary" onClick={() => setEmployeeToApprove(employee)}>
-                          <ShieldCheck size={15} />
-                          Approve
-                        </button>
-                      ) : (
-                        <span className="status-pill">{employee.status}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <DataGrid<EmployeeSummary>
+        rows={visibleEmployees}
+        rowKey={(employee) => employee.id}
+        loading={isLoading}
+        emptyTitle="No employees found"
+        emptyMessage="Add the first employee or change your search."
+        columns={[
+          { key: "employee", header: "Employee", render: employee => <div className="grid-primary"><span className="grid-avatar">{`${employee.firstName[0] ?? ""}${employee.lastName?.[0] ?? ""}`}</span><div><b>{employee.firstName} {employee.lastName}</b><small>{employee.email || "No email"}</small></div></div> },
+          { key: "number", header: "Employee no.", render: employee => <span className="business-code">{employee.employeeNumber ?? "Assigned after approval"}</span> },
+          { key: "employment", header: "Employment", render: employee => employee.employmentTypeCode },
+          { key: "contact", header: "Contact", render: employee => employee.phone || employee.email || "—" },
+          { key: "hireDate", header: "Hire date", render: employee => employee.hireDate },
+          { key: "status", header: "Status / access", render: employee => employee.status === "PENDING_APPROVAL" ? <button className="button primary compact" onClick={() => setEmployeeToApprove(employee)}><ShieldCheck size={15}/>Approve</button> : <span className="status-pill">{employee.status}</span> },
+        ] as DataGridColumn<EmployeeSummary>[]}
+      />
 
       {employeeToApprove && (
         <div className="workflow-overlay">

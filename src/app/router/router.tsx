@@ -22,6 +22,7 @@ import { SettingsPage } from "../../features/settings/pages/SettingsPage";
 import { PlatformAdminPage } from "../../features/platform/pages/PlatformAdminPage";
 import { TenantManagementPage } from "../../features/tenancy/pages/TenantManagementPage";
 import { WorkflowCenterPage } from "../../features/workflow/pages/WorkflowCenterPage";
+import { RouteErrorPage } from "../../components/ui/RouteErrorPage";
 function ProtectedShell() {
     const { user } = useAuth();
     const location = useLocation();
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
     {
         path: "/",
         element: <ProtectedShell />,
+        errorElement: <RouteErrorPage />,
         children: [
             { index: true, element: <DashboardPage /> },
             { path: "profiles", element: <ProfilesPage /> },
