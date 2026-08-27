@@ -5,6 +5,7 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { useAuth } from "../../auth/auth";
 import { Campus, LookupItem, organizationApi, School } from "../api/organizationApi";
 import { GeographySelector } from "../../../components/forms/GeographySelector";
+import { StatCard } from "../../../components/ui/StatCard";
 
 const emptySchool = { name: "", registrationNumber: "", email: "", phone: "", fax: "", website: "", address: "", city: "", province: "", country: "", logoUrl: "" };
 const emptyCampus = { schoolId: "", name: "", branchType: "REGIONAL_BRANCH" as const, branchGenderTypeId: "", educationLevelIds: [] as string[], address: "", city: "", province: "", country: "", phone: "", fax: "", mobile: "", email: "", logoUrl: "" };
@@ -79,9 +80,9 @@ export function OrganizationPage() {
       action={<div className="page-actions"><button className="secondary" onClick={() => setCampusOpen(true)} disabled={!schools.length}><Plus size={16}/> Add branch</button><button className="primary" onClick={() => setSchoolOpen(true)}><Plus size={16}/> Add school</button></div>} />
 
     <div className="metric-grid platform-metrics">
-      <article className="metric-card"><span><Building2 size={20} /></span><strong>{schools.length}</strong><small>Schools in this tenant</small></article>
-      <article className="metric-card"><span><MapPin size={20} /></span><strong>{campuses.length}</strong><small>Operating branches</small></article>
-      <article className="metric-card"><span><SchoolIcon size={20} /></span><strong>Structured</strong><small>School → branch hierarchy</small></article>
+      <StatCard icon={<Building2 size={20} />} value={schools.length} label="Schools" description="Schools in this tenant" />
+      <StatCard icon={<MapPin size={20} />} value={campuses.length} label="Branches" description="Operating branches" />
+      <StatCard icon={<SchoolIcon size={20} />} value="Structured" label="Organization" description="School → branch hierarchy" />
     </div>
 
     <section className="surface data-surface">

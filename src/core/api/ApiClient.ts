@@ -26,6 +26,25 @@ export class SmartSchoolApiError extends Error {
   }
 }
 
+function publishApiError(error: unknown): void {
+  let message = "The request could not be completed.";
+
+  if (error instanceof SmartSchoolApiError) {
+    message = error.message;
+  } else if (axios.isAxiosError(error)) {
+    const result = error.response?.data as Result<unknown> | undefined;
+    message = result?.error?.message ?? error.message ?? message;
+  } else if (error instanceof Error) {
+    message = error.message;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent("smartschool:api-error", {
+      detail: { message },
+    }),
+  );
+}
+
 let pendingRequests = 0;
 function publishBusy(delta: number) { pendingRequests = Math.max(0, pendingRequests + delta); window.dispatchEvent(new CustomEvent("smartschool:api-busy", { detail: pendingRequests > 0 })); }
 
@@ -59,11 +78,14 @@ api.interceptors.response.use(
 
     if (result && typeof result === "object" && "isSuccess" in result) {
       if (!result.isSuccess) {
-        throw new SmartSchoolApiError(
+        const apiError = new SmartSchoolApiError(
           result.error?.code ?? "REQUEST_FAILED",
           result.error?.message ?? "The request could not be completed.",
           response.status,
         );
+
+        publishApiError(apiError);
+        throw apiError;
       }
 
       response.data = result.value ?? null;
@@ -109,15 +131,17 @@ api.interceptors.response.use(
     const result = error.response?.data;
 
     if (result && typeof result === "object" && "isSuccess" in result) {
-      return Promise.reject(
-        new SmartSchoolApiError(
-          result.error?.code ?? "REQUEST_FAILED",
-          result.error?.message ?? error.message,
-          error.response?.status,
-        ),
+      const apiError = new SmartSchoolApiError(
+        result.error?.code ?? "REQUEST_FAILED",
+        result.error?.message ?? error.message,
+        error.response?.status,
       );
+
+      publishApiError(apiError);
+      return Promise.reject(apiError);
     }
 
+    publishApiError(error);
     return Promise.reject(error);
   },
 );

@@ -669,3 +669,144 @@ input[type="checkbox"] { width: 18px !important; height: 18px !important; min-he
   .human-form-grid { grid-template-columns: 1fr; }
   .platform-metrics .metric-card { grid-template-columns: 38px minmax(0,1fr); }
 }
+
+/* v111: academic workspace and global interaction consistency */
+.modal-card > .human-form-grid {
+  padding: 20px 22px 22px;
+}
+
+.modal-card > .human-form-grid + .modal-actions {
+  margin-top: 0;
+}
+
+.academic-current-field {
+  align-content: start;
+}
+
+.academic-current-field .checkbox-control {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 7px;
+}
+
+.academic-current-field .checkbox-control input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+}
+
+.global-api-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 490;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, .18);
+  backdrop-filter: blur(1.5px);
+  color: var(--text);
+}
+
+.global-api-loader::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 38%;
+  height: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, #6d60ed, #9b93f7);
+  animation: smartschool-progress 1s ease-in-out infinite alternate;
+}
+
+.global-api-loader > span:last-child {
+  min-width: 150px;
+  padding: 12px 16px 12px 43px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(17, 24, 42, .16);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.global-api-loader .spinner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin-left: -105px;
+  border: 2px solid rgba(101, 88, 232, .20);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: ss-spin .8s linear infinite;
+}
+
+@keyframes smartschool-progress {
+  from { transform: translateX(-25%); }
+  to { transform: translateX(210%); }
+}
+
+@media (max-width: 720px) {
+  .modal-card > .human-form-grid {
+    padding: 18px 16px;
+  }
+}
+
+/* v112 shared layout primitives — do not page-patch KPI/form alignment. */
+.stat-card {
+  min-width: 0;
+  min-height: 116px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.stat-card-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: var(--soft);
+  color: var(--brand);
+  flex: 0 0 auto;
+}
+.stat-card-icon svg { width: 22px; height: 22px; }
+.stat-card-content { min-width: 0; display: grid; gap: 3px; align-content: center; }
+.stat-card-value { min-width: 0; font-size: 24px; line-height: 1.15; color: var(--text); overflow-wrap: anywhere; }
+.stat-card-label { font-size: 14px; line-height: 1.35; font-weight: 700; color: var(--text); }
+.stat-card-description { font-size: 12px; line-height: 1.4; color: var(--muted); }
+
+/* Every embedded workspace uses one horizontal content boundary. */
+.data-surface > .surface-head,
+.data-surface > .lookup-stack,
+.data-surface > .section-tabs,
+.data-surface > .premium-table-wrap { margin-left: 24px; margin-right: 24px; }
+.data-surface > .surface-head { margin-top: 24px; }
+.data-surface > .premium-table-wrap { margin-bottom: 24px; }
+.lookup-stack { display: grid; gap: 16px; padding: 4px 0 2px; }
+.lookup-stack .field { gap: 8px; min-width: 0; }
+.lookup-stack .field > span { font-size: 12px; line-height: 1.35; }
+.lookup-stack .field select { min-height: 48px; }
+.academic-setup-head { align-items: flex-start; gap: 20px; }
+.academic-setup-head > div { min-width: 0; }
+.academic-setup-head h2 { margin: 0 0 5px; }
+.academic-setup-head p { margin: 0; }
+
+@media (max-width: 760px) {
+  .stat-card { grid-template-columns: 46px minmax(0,1fr); padding: 16px; }
+  .stat-card-icon { width: 46px; height: 46px; }
+  .data-surface > .surface-head,
+  .data-surface > .lookup-stack,
+  .data-surface > .section-tabs,
+  .data-surface > .premium-table-wrap { margin-left: 16px; margin-right: 16px; }
+}
+.platform-metrics .stat-card { display:grid; }

@@ -10,7 +10,6 @@ import { TeachersPage } from "../../features/teachers/pages/TeachersPage";
 import { AcademicsPage } from "../../features/academics/pages/AcademicsPage";
 import { AdmissionsPage } from "../../features/admissions/pages/AdmissionsPage";
 import { AdmissionCriteriaPage } from "../../features/admissions/pages/AdmissionCriteriaPage";
-import { AcademicSetupPage } from "../../features/academics/pages/AcademicSetupPage";
 import { DocumentsPage } from "../../features/documents/pages/DocumentsPage";
 import { ExaminationsPage } from "../../features/examinations/pages/ExaminationsPage";
 import { AttendancePage } from "../../features/attendance/pages/AttendancePage";
@@ -55,7 +54,7 @@ export const router = createBrowserRouter([
             { path: "ai", element: <AiPage /> },
             { path: "admissions", element: <AdmissionsPage /> },
             { path: "admission-criteria", element: <AdmissionCriteriaPage /> },
-            { path: "academic-setup", element: <AcademicsPage /> },
+            { path: "academic-setup", element: <Navigate to="/academics" replace /> },
             { path: "activities", element: <RealModulePage module="activities" /> },
             { path: "inventory", element: <RealModulePage module="inventory" /> },
             { path: "learning", element: <RealModulePage module="learning" /> },

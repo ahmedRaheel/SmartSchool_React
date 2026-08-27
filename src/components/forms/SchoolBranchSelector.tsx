@@ -25,8 +25,22 @@ export function SchoolBranchSelector({ tenantId, schoolId, branchId, onSchoolCha
 
   const availableBranches = useMemo(() => branches.filter(item => item.schoolId === schoolId), [branches, schoolId]);
 
-  return <>
-    <label className="field"><span>School *</span><select required value={schoolId} disabled={loading} onChange={event => { onSchoolChange(event.target.value); onBranchChange(""); }}><option value="">{loading ? "Loading schools…" : "Select school"}</option>{schools.map(item => <option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}</select></label>
-    <label className="field"><span>Branch *</span><select required value={branchId} disabled={!schoolId || loading} onChange={event => onBranchChange(event.target.value)}><option value="">Select branch</option>{availableBranches.map(item => <option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}</select></label>
-  </>;
+  return (
+    <div className="lookup-stack">
+      <label className="field">
+        <span>School *</span>
+        <select required value={schoolId} disabled={loading} onChange={event => { onSchoolChange(event.target.value); onBranchChange(""); }}>
+          <option value="">{loading ? "Loading schools…" : "Select school"}</option>
+          {schools.map(item => <option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}
+        </select>
+      </label>
+      <label className="field">
+        <span>Branch *</span>
+        <select required value={branchId} disabled={!schoolId || loading} onChange={event => onBranchChange(event.target.value)}>
+          <option value="">Select branch</option>
+          {availableBranches.map(item => <option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}
+        </select>
+      </label>
+    </div>
+  );
 }
