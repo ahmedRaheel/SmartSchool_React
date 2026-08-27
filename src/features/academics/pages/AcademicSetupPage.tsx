@@ -45,7 +45,7 @@ function unpack(payload: unknown): SetupItem[] {
   return data?.items ?? [];
 }
 
-export function AcademicSetupPage() {
+export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const tenantId = user?.roles.includes("SuperAdmin")
     ? sessionStorage.getItem("selected_tenant_id") ?? undefined
@@ -124,7 +124,7 @@ export function AcademicSetupPage() {
 
   return (
     <>
-      <PageHeader
+      {!embedded && <PageHeader
         title="Academic Setup"
         subtitle="Maintain branch academic years, classes and sections"
         action={(
@@ -132,9 +132,20 @@ export function AcademicSetupPage() {
             + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
           </button>
         )}
-      />
+      />}
 
       <section className="surface data-surface">
+        {embedded && (
+          <div className="surface-head academic-setup-head">
+            <div>
+              <h2>Academic setup</h2>
+              <p>Maintain branch academic years, classes and sections in one workspace.</p>
+            </div>
+            <button className="primary" disabled={!branchId} onClick={() => setModalOpen(true)}>
+              + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
+            </button>
+          </div>
+        )}
         <SchoolBranchSelector
           tenantId={tenantId ?? ""}
           schoolId={schoolId}

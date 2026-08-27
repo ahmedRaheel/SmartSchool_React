@@ -79,9 +79,9 @@ export function OrganizationPage() {
       action={<div className="page-actions"><button className="secondary" onClick={() => setCampusOpen(true)} disabled={!schools.length}><Plus size={16}/> Add branch</button><button className="primary" onClick={() => setSchoolOpen(true)}><Plus size={16}/> Add school</button></div>} />
 
     <div className="metric-grid platform-metrics">
-      <article className="metric-card"><span>Schools</span><strong>{schools.length}</strong><small>Organizations in this tenant</small></article>
-      <article className="metric-card"><span>Branches</span><strong>{campuses.length}</strong><small>Operating campuses</small></article>
-      <article className="metric-card"><span>Structure</span><strong><SchoolIcon size={24}/></strong><small>School → branch hierarchy</small></article>
+      <article className="metric-card"><span><Building2 size={20} /></span><strong>{schools.length}</strong><small>Schools in this tenant</small></article>
+      <article className="metric-card"><span><MapPin size={20} /></span><strong>{campuses.length}</strong><small>Operating branches</small></article>
+      <article className="metric-card"><span><SchoolIcon size={20} /></span><strong>Structured</strong><small>School → branch hierarchy</small></article>
     </div>
 
     <section className="surface data-surface">

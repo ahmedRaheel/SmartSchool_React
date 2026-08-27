@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
             { path: "ai", element: <AiPage /> },
             { path: "admissions", element: <AdmissionsPage /> },
             { path: "admission-criteria", element: <AdmissionCriteriaPage /> },
-            { path: "academic-setup", element: <AcademicSetupPage /> },
+            { path: "academic-setup", element: <AcademicsPage /> },
             { path: "activities", element: <RealModulePage module="activities" /> },
             { path: "inventory", element: <RealModulePage module="inventory" /> },
             { path: "learning", element: <RealModulePage module="learning" /> },

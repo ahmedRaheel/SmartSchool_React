@@ -1,3 +1,46 @@
-import { useState } from "react"; import { RealModulePage } from "../../../components/ui/RealModulePage";
-const sections=[{key:"academic-year",label:"Academic years"},{key:"class-section",label:"Classes & sections"},{key:"subject",label:"Subjects"},{key:"course-offering",label:"Courses"},{key:"teacher-assignment",label:"Teacher assignments"},{key:"timetable",label:"Timetables"},{key:"timetable-entry",label:"Timetable entries"}] as const;
-export function AcademicsPage(){const[resource,setResource]=useState<(typeof sections)[number]["key"]>("academic-year");return <div className="page-stack"><div className="section-tabs">{sections.map(x=><button key={x.key} className={resource===x.key?"active":""} onClick={()=>setResource(x.key)}>{x.label}</button>)}</div><RealModulePage module="academics" initialResource={resource} key={resource} title={sections.find(x=>x.key===resource)?.label??"Academics"} subtitle="School academic setup and timetable management"/></div>}
+import { useState } from "react";
+import { RealModulePage } from "../../../components/ui/RealModulePage";
+import { AcademicSetupPage } from "./AcademicSetupPage";
+
+type AcademicWorkspace = "setup" | "subject" | "course-offering" | "teacher-assignment" | "timetable";
+
+const workspaces: ReadonlyArray<{ key: AcademicWorkspace; label: string }> = [
+  { key: "setup", label: "Academic setup" },
+  { key: "subject", label: "Subjects" },
+  { key: "course-offering", label: "Courses" },
+  { key: "teacher-assignment", label: "Teacher assignments" },
+  { key: "timetable", label: "Timetables" },
+];
+
+export function AcademicsPage() {
+  const [workspace, setWorkspace] = useState<AcademicWorkspace>("setup");
+
+  return (
+    <div className="page-stack">
+      <nav className="workspace-tabs" aria-label="Academic workspaces">
+        {workspaces.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={workspace === item.key ? "active" : ""}
+            onClick={() => setWorkspace(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      {workspace === "setup" ? (
+        <AcademicSetupPage embedded />
+      ) : (
+        <RealModulePage
+          module="academics"
+          initialResource={workspace}
+          key={workspace}
+          title={workspaces.find((item) => item.key === workspace)?.label ?? "Academics"}
+          subtitle="School academic setup and timetable management"
+        />
+      )}
+    </div>
+  );
+}
