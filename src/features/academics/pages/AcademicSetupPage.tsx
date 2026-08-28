@@ -152,35 +152,14 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
     // selection as the single source of truth; do not maintain a second modal campus state.
     const campusId = branchId;
 
-    let resolvedAcademicSystemId = academicSystemId;
-    if (setupType !== "years" && !resolvedAcademicSystemId) {
-      const campus = campuses.find(item => item.id === campusId);
-      resolvedAcademicSystemId = campus?.academicSystemId ?? "";
-
-      if (!resolvedAcademicSystemId && tenantId) {
-        try {
-          const policy = await organizationApi.getBranchPolicy(campusId, tenantId);
-          resolvedAcademicSystemId = policy.academicSystemId ?? "";
-        } catch {
-          // Validation below gives a user-facing configuration message.
-        }
-      }
-
-      if (resolvedAcademicSystemId) {
-        setAcademicSystemId(resolvedAcademicSystemId);
-      }
-    }
-
-    if (setupType !== "years" && !resolvedAcademicSystemId) {
-      notify({ kind: "error", title: "Academic system required", message: "This campus does not have an academic system configured. Configure the campus academic system first." });
-      return;
-    }
+    // Academic System is campus configuration/context. It is not part of the
+    // Create Class contract and must never block Class creation.
+    const resolvedAcademicSystemId = academicSystemId;
 
     const request = setupType === "years"
       ? {
           tenantId,
           campusId,
-          academicSystemId: resolvedAcademicSystemId,
           code: createCode(setupType, form.name),
           name: form.name,
           startDate: form.startDate,
@@ -190,7 +169,6 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
       : {
           tenantId,
           campusId,
-          academicSystemId: resolvedAcademicSystemId,
           code: createCode(setupType, form.name),
           name: form.name,
           ...(setupType === "classes" ? {
