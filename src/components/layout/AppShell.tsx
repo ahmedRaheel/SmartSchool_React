@@ -8,6 +8,7 @@ import { getNotifications, getUnreadCount, markAllRead, markRead, type Notificat
 import { createNotificationConnection } from "../../features/communication/realtime/communicationRealtime";
 import { effectiveTenantId } from "../../core/tenant/tenantContext";
 import { FloatingAiChatbot } from "../../features/ai/components/FloatingAiChatbot";
+import { PageErrorBoundary } from "../ui/PageErrorBoundary";
 const chats = [{ id: "parent", title: "Mrs. Yusuf", subtitle: "Amina • Grade 10 A", path: "/communication" }, { id: "teacher", title: "Sadia Iqbal", subtitle: "Mathematics Teacher", path: "/academics" }, { id: "finance", title: "Finance Office", subtitle: "Accounts & Fees", path: "/finance" }];
 export function AppShell() {
     const { user, logout, stopImpersonation } = useAuth();
@@ -137,7 +138,9 @@ export function AppShell() {
 </div>
 </header>
 <div className="content">
+<PageErrorBoundary>
 <Outlet />
+</PageErrorBoundary>
 </div>
 </main>
  {drawer && <>

@@ -1080,3 +1080,55 @@ body,
     padding: 18px;
   }
 }
+
+/* vNext: API requests are non-blocking. Never cover the application shell. */
+.global-api-loader {
+  position: fixed !important;
+  inset: 0 0 auto 0 !important;
+  z-index: 1600 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 3px !important;
+  min-height: 0 !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  overflow: hidden !important;
+}
+
+.global-api-loader::before {
+  display: none !important;
+}
+
+.global-api-loader > span {
+  display: block !important;
+  width: 35% !important;
+  height: 3px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 3px 3px 0 !important;
+  background: linear-gradient(90deg, #6d60ed, #9b93f7) !important;
+  box-shadow: none !important;
+  animation: smartschool-api-progress 1s ease-in-out infinite alternate !important;
+}
+
+@keyframes smartschool-api-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(285%); }
+}
+
+.page-error-panel {
+  min-height: 260px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.page-error-panel > svg { color: #d97706; flex: 0 0 auto; }
+.page-error-panel h2 { margin: 0 0 8px; font-size: 18px; }
+.page-error-panel p { margin: 0 0 18px; max-width: 680px; color: var(--muted); line-height: 1.6; }
