@@ -1,7 +1,7 @@
 import { GraduationCap, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../features/auth/auth";
-import { hasAnyRole, navigationSections } from "./navigation";
+import { navigationForRoles } from "./navigation";
 
 interface SidebarProps {
   open: boolean;
@@ -13,13 +13,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const userRoles = user?.roles?.length ? user.roles : [user?.role ?? ""];
   const isSuperAdmin = userRoles.includes("SuperAdmin");
 
-  const visibleSections = navigationSections
-    .filter((section) => hasAnyRole(section.roles, userRoles))
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => hasAnyRole(item.roles, userRoles)),
-    }))
-    .filter((section) => section.items.length > 0);
+  const visibleSections = navigationForRoles(userRoles);
 
   return (
     <>

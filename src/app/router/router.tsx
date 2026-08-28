@@ -22,6 +22,7 @@ import { AiPage } from "../../features/ai/pages/AiPage";
 import { ReportsPage } from "../../features/reports/pages/ReportsPage";
 import { RealModulePage } from "../../components/ui/RealModulePage";
 import { SettingsPage } from "../../features/settings/pages/SettingsPage";
+import { MasterSetupPage } from "../../features/settings/pages/MasterSetupPage";
 import { PlatformAdminPage } from "../../features/platform/pages/PlatformAdminPage";
 import { TenantManagementPage } from "../../features/tenancy/pages/TenantManagementPage";
 import { WorkflowCenterPage } from "../../features/workflow/pages/WorkflowCenterPage";
@@ -65,6 +66,9 @@ export const router = createBrowserRouter([
             { path: "tenancy", element: <TenantManagementPage /> },
             { path: "reports", element: <ReportsPage /> },
             { path: "settings", element: <SettingsPage /> },
+            { path: "setup", element: <MasterSetupPage /> },
+            { path: "setup/departments", element: <RealModulePage module="organization" initialResource="department" title="Departments" subtitle="Academic and administrative department master data" /> },
+            { path: "setup/fee-types", element: <RealModulePage module="finance" initialResource="fee-type" title="Fee Types" subtitle="Reusable fee categories for billing and fee structures" /> },
             { path: "notifications", element: <CommunicationPage /> },
             { path: "reference", element: <RealModulePage module="reference" /> },
             { path: "audit", element: <RealModulePage module="audit" /> },

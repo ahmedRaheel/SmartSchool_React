@@ -56,7 +56,9 @@ export function AppShell() {
 
         // Hydrate once. New notifications arrive through SignalR; there is no polling timer.
         void loadNotifications();
-        void hub.start().catch(error => console.error("Notification SignalR connection failed", error));
+        void hub.start().catch(error => {
+            if (!disposed && error?.name !== "AbortError") console.error("Notification SignalR connection failed", error);
+        });
 
         return () => {
             disposed = true;

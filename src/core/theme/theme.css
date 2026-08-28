@@ -911,3 +911,19 @@ body { background:var(--ref-bg); }
 .notification-count { background:#EF4444; }
 @media(max-width:900px){.sidebar{position:fixed;left:-230px;z-index:1200}.sidebar.open{left:0}.content{padding:18px}.global-search{display:none}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.content{padding:14px}.metric-grid{grid-template-columns:1fr}.profile-copy{display:none}.breadcrumb{display:none}}
+
+/* v115 — reference UI is the single design system for every role and module */
+:root{--ss-page:#F0F4F8;--ss-navy:#0F2241;--ss-accent:#00B4D8;--ss-text:#1A202C;--ss-muted:#64748B;--ss-border:#E2E8F0;--ss-card:#fff;--ss-radius:14px}
+body,#root,.app-shell,.main-shell{background:var(--ss-page);color:var(--ss-text)}
+.content,.page-content{background:var(--ss-page)}
+.surface,.data-surface,.dashboard-card,.metric-card,.module-card,.panel,.card{background:#fff;border:0;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.04)}
+.page-header h1,.section-title,.surface-head h3{color:var(--ss-text)}
+.page-header p,.surface-head p,.section-sub,.muted{color:var(--ss-muted)}
+.primary,.button.primary,.btn-primary{background:var(--ss-navy);color:#fff;border-color:var(--ss-navy)}
+.secondary,.button.secondary,.btn-ghost{background:#F1F5F9;color:var(--ss-text);border:1px solid var(--ss-border)}
+input,select,textarea,.form-input,.form-select,.form-textarea{border:1.5px solid var(--ss-border);border-radius:8px;background:#fff;color:var(--ss-text)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ss-accent);box-shadow:0 0 0 3px rgba(0,180,216,.08)}
+.premium-table th{color:var(--ss-muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--ss-border)}
+.premium-table td{color:var(--ss-text);border-bottom:1px solid #F1F5F9}.premium-table tbody tr:hover td{background:#F8FAFC}
+.modal-card,.modal{border-radius:18px}.section-tabs,.tab-bar{border-bottom:2px solid var(--ss-border)}
+.section-tab.active,.tab.active{color:var(--ss-navy);border-bottom-color:var(--ss-navy)}
