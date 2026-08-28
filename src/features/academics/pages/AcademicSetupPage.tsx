@@ -32,12 +32,16 @@ interface SetupItem {
   academicSystemId?: string;
 }
 
+interface SectionDraft { name: string; capacity: string; roomNo: string; }
+
 interface SetupForm {
   name: string;
   parentId: string;
   startDate: string;
   endDate: string;
   isCurrent: boolean;
+  academicYearId: string;
+  sections: SectionDraft[];
 }
 
 const emptyForm: SetupForm = {
@@ -46,6 +50,8 @@ const emptyForm: SetupForm = {
   startDate: "",
   endDate: "",
   isCurrent: false,
+  academicYearId: "",
+  sections: [{ name: "A", capacity: "30", roomNo: "" }],
 };
 
 function unpack(payload: unknown): SetupItem[] {
@@ -67,6 +73,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   const [setupType, setSetupType] = useState<SetupType>("years");
   const [items, setItems] = useState<SetupItem[]>([]);
   const [classes, setClasses] = useState<SetupItem[]>([]);
+  const [academicYears, setAcademicYears] = useState<SetupItem[]>([]);
   const [academicSystems, setAcademicSystems] = useState<LookupItem[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [campuses, setCampuses] = useState<Campus[]>([]);
@@ -133,6 +140,8 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
     }
 
     setAcademicSystemId(systemId);
+    const yearResponse = await api.get(setupRoutes.years, { params: { tenantId, campusId: selectedBranchId, page: 1, pageSize: 200 } });
+    setAcademicYears(unpack(yearResponse.data));
     await load(setupType, selectedBranchId);
   }
 
@@ -164,6 +173,15 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
           academicSystemId,
           code: createCode(setupType, form.name),
           name: form.name,
+          ...(setupType === "classes" ? {
+            academicYearId: form.academicYearId,
+            sections: form.sections.map((section, index) => ({
+              code: `SEC-${createCode("classes", form.name).replace("CLS-", "")}-${section.name.trim().toUpperCase() || index + 1}`,
+              name: section.name.trim(),
+              capacity: Number(section.capacity),
+              roomNo: section.roomNo.trim() || null,
+            })),
+          } : {}),
           ...(setupType === "sections" ? { classId: form.parentId } : {}),
         };
 
@@ -281,13 +299,19 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
             </>
           ) : (
             <>
-              <label className="human-field"><span>Name</span><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label>
-              
+              <label className="human-field"><span>{setupType === "classes" ? "Class name *" : "Name"}</span><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label>
+              {setupType === "classes" && <>
+                <label className="human-field"><span>Academic year *</span><select value={form.academicYearId} onChange={event => setForm(current => ({ ...current, academicYearId: event.target.value }))}><option value="">Select academic year</option>{academicYears.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                <div className="class-sections-editor">
+                  <div className="class-sections-head"><div><b>Sections</b><span>Add one or more sections for this class. Capacity and room belong to each section.</span></div><button type="button" className="secondary" onClick={() => setForm(current => ({...current, sections:[...current.sections,{name:"",capacity:"30",roomNo:""}]}))}>+ Add section</button></div>
+                  {form.sections.map((section,index)=><div className="section-editor-row" key={index}><label><span>Section *</span><input value={section.name} placeholder="A" onChange={e=>setForm(current=>({...current,sections:current.sections.map((x,i)=>i===index?{...x,name:e.target.value}:x)}))}/></label><label><span>Capacity *</span><input type="number" min="1" value={section.capacity} onChange={e=>setForm(current=>({...current,sections:current.sections.map((x,i)=>i===index?{...x,capacity:e.target.value}:x)}))}/></label><label><span>Room No.</span><input value={section.roomNo} placeholder="Room 101" onChange={e=>setForm(current=>({...current,sections:current.sections.map((x,i)=>i===index?{...x,roomNo:e.target.value}:x)}))}/></label><button type="button" className="icon-button danger" disabled={form.sections.length===1} onClick={()=>setForm(current=>({...current,sections:current.sections.filter((_,i)=>i!==index)}))}>×</button></div>)}
+                </div>
+              </>}
               {setupType === "sections" && <label className="human-field"><span>Class *</span><select value={form.parentId} onChange={event => setForm(current => ({ ...current, parentId: event.target.value }))}><option value="">Select class</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
             </>
           )}
         </div>
-        <div className="modal-actions"><button className="secondary" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary" disabled={!form.name || (setupType === "sections" && !form.parentId)} onClick={() => void save()}>Save</button></div>
+        <div className="modal-actions"><button className="secondary" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary" disabled={!form.name || (setupType === "classes" && (!form.academicYearId || form.sections.length === 0 || form.sections.some(x => !x.name.trim() || Number(x.capacity) <= 0))) || (setupType === "sections" && !form.parentId)} onClick={() => void save()}>Save</button></div>
       </Modal>
       <Modal open={viewOpen} title={setupType === "years" ? "Academic year details" : `${selectedItem?.name ?? "Details"} details`} onClose={() => setViewOpen(false)}>
         {setupType === "years" ? (

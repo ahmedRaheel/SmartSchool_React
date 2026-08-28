@@ -1243,3 +1243,6 @@ body,
 :root[data-theme="dark"] .floating-ai-workspace { color:var(--ref-muted); }
 :root[data-theme="dark"] .floating-ai-compose textarea { background:#16243a; color:var(--ref-text); border-color:#2b3b52; }
 :root[data-theme="dark"] .floating-ai-disclaimer { color:#71839a; }
+
+/* Class aggregate editor + modal-safe feedback */
+.toast-stack{z-index:12000!important}.modal-backdrop{z-index:1000!important}.class-sections-editor{grid-column:1/-1;border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface-2)}.class-sections-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:12px}.class-sections-head>div{display:grid;gap:3px}.class-sections-head span,.section-editor-row label span{font-size:9px;color:var(--muted)}.section-editor-row{display:grid;grid-template-columns:1fr 120px 1fr 38px;gap:10px;align-items:end;margin-top:9px}.section-editor-row label{display:grid;gap:5px}.section-editor-row input{width:100%}@media(max-width:720px){.section-editor-row{grid-template-columns:1fr 1fr}.class-sections-head{align-items:flex-start;flex-direction:column}}
