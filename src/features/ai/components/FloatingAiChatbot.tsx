@@ -33,7 +33,7 @@ export function FloatingAiChatbot() {
     const prompt=input.trim(); if(!prompt||busy)return;
     setMessages(current=>[...current,{id:crypto.randomUUID(),role:"user",text:prompt}]); setInput(""); setBusy(true);
     try{
-      const {data}=await api.post<AiAnswer>("/api/aicore/execute",{tenantId:effectiveTenantId(user),assistant:title,prompt,collections:collectionsFor(user.role),schoolId:user.schoolId,actorId:user.id});
+      const {data}=await api.post<AiAnswer>("/api/aicore/execute",{tenantId:effectiveTenantId(user),assistant:title,prompt,collections:collectionsFor(user.role),schoolId:user.schoolId,actorId:user.id},{timeout:180_000});
       setMessages(current=>[...current,{id:crypto.randomUUID(),role:"assistant",text:data.answer}]);
     }catch(error){setMessages(current=>[...current,{id:crypto.randomUUID(),role:"assistant",text:`I couldn't complete that request. ${getErrorMessage(error)}`}]);}
     finally{setBusy(false);}

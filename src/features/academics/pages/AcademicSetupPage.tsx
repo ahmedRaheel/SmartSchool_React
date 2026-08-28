@@ -8,6 +8,8 @@ import { useAuth } from "../../auth/auth";
 import { Campus, LookupItem, organizationApi, School } from "../../organization/api/organizationApi";
 
 type SetupType = "years" | "classes" | "sections";
+const setupLabels: Record<SetupType, string> = { years: "academic year", classes: "class", sections: "section" };
+
 const setupRoutes: Record<SetupType, string> = {
   years: "/api/academics/academic-year",
   classes: "/api/academics/grade-level",
@@ -146,21 +148,39 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   }
 
   async function save(): Promise<void> {
-    if (!branchId) {
-      notify({ kind: "error", title: "Campus required", message: "Select a school and campus first." });
-      return;
+    // The modal can only be opened after a branch/campus is selected. Use the page-level
+    // selection as the single source of truth; do not maintain a second modal campus state.
+    const campusId = branchId;
+
+    let resolvedAcademicSystemId = academicSystemId;
+    if (setupType !== "years" && !resolvedAcademicSystemId) {
+      const campus = campuses.find(item => item.id === campusId);
+      resolvedAcademicSystemId = campus?.academicSystemId ?? "";
+
+      if (!resolvedAcademicSystemId && tenantId) {
+        try {
+          const policy = await organizationApi.getBranchPolicy(campusId, tenantId);
+          resolvedAcademicSystemId = policy.academicSystemId ?? "";
+        } catch {
+          // Validation below gives a user-facing configuration message.
+        }
+      }
+
+      if (resolvedAcademicSystemId) {
+        setAcademicSystemId(resolvedAcademicSystemId);
+      }
     }
 
-    if (setupType !== "years" && !academicSystemId) {
-      notify({ kind: "error", title: "Academic system required", message: "Select the academic system for this campus before saving." });
+    if (setupType !== "years" && !resolvedAcademicSystemId) {
+      notify({ kind: "error", title: "Academic system required", message: "This campus does not have an academic system configured. Configure the campus academic system first." });
       return;
     }
 
     const request = setupType === "years"
       ? {
           tenantId,
-          campusId: branchId,
-          academicSystemId,
+          campusId,
+          academicSystemId: resolvedAcademicSystemId,
           code: createCode(setupType, form.name),
           name: form.name,
           startDate: form.startDate,
@@ -169,8 +189,8 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         }
       : {
           tenantId,
-          campusId: branchId,
-          academicSystemId,
+          campusId,
+          academicSystemId: resolvedAcademicSystemId,
           code: createCode(setupType, form.name),
           name: form.name,
           ...(setupType === "classes" ? {
@@ -187,10 +207,10 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
 
     if (selectedItem) {
       await api.put(`${setupRoutes[setupType]}/${selectedItem.id}`, { ...request, id: selectedItem.id });
-      notify({ kind: "success", title: "Changes saved", message: `${setupType === "years" ? "Academic year" : setupType.slice(0, -1)} updated successfully.` });
+      notify({ kind: "success", title: "Changes saved", message: `${setupLabels[setupType]} updated successfully.` });
     } else {
       await api.post(setupRoutes[setupType], request);
-      notify({ kind: "success", title: "Created successfully", message: `${setupType === "years" ? "Academic year" : setupType.slice(0, -1)} created successfully.` });
+      notify({ kind: "success", title: "Created successfully", message: `${setupLabels[setupType]} created successfully.` });
     }
 
     setModalOpen(false);
@@ -238,7 +258,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         subtitle="Maintain branch academic years, classes and sections"
         action={(
           <button className="primary" disabled={!branchId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
-            + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
+            + Add {setupLabels[setupType]}
           </button>
         )}
       />}
@@ -251,7 +271,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
               <p>Maintain branch academic years, classes and sections in one workspace.</p>
             </div>
             <button className="primary" disabled={!branchId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
-              + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
+              + Add {setupLabels[setupType]}
             </button>
           </div>
         )}
@@ -288,7 +308,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         </div>
       </section>
 
-      <Modal open={modalOpen} title={`${selectedItem ? "Edit" : "Add"} ${setupType === "years" ? "academic year" : setupType.slice(0, -1)}`} onClose={() => { setModalOpen(false); setSelectedItem(null); }}>
+      <Modal open={modalOpen} title={`${selectedItem ? "Edit" : "Add"} ${setupLabels[setupType]}`} onClose={() => { setModalOpen(false); setSelectedItem(null); }}>
         <div className="human-form-grid">
           {setupType === "years" ? (
             <>

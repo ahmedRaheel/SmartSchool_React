@@ -22,7 +22,7 @@ export function AiPage() {
       const { data } = await api.post<Answer>("/api/aicore/execute", {
         tenantId: effectiveTenantId(user), assistant: user.role || "SmartSchool Assistant", prompt,
         collections: collectionsFor(user.role), schoolId: user.schoolId, actorId: user.id,
-      });
+      }, { timeout: 180_000 });
       setResult(data); notify({ kind: "success", title: "AI response ready", message: data.contextSource === "cag" ? "Answered from the authorized context cache." : "Knowledge was retrieved and grounded before answering." });
     } catch (error) { setResult(null); notify({ kind: "error", title: "AI request failed", message: getErrorMessage(error) }); }
     finally { setBusy(false); }
