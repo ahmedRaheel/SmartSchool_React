@@ -9,6 +9,7 @@ export interface LookupItem {
 export interface BranchPolicy {
   branchGenderTypeId: string;
   genderCode: string;
+  academicSystemId?: string;
   educationLevels: LookupItem[];
 }
 
@@ -37,7 +38,7 @@ export interface Campus {
   name: string;
   branchType: "HEAD_OFFICE" | "REGIONAL_HEAD_OFFICE" | "REGIONAL_BRANCH";
   branchGenderTypeId: string;
-  educationLevelIds?: string[];
+  academicSystemId?: string;
   address?: string;
   city?: string;
   province?: string;
@@ -50,8 +51,8 @@ export interface Campus {
 }
 
 export type CreateSchoolRequest = Omit<School, "id" | "code">;
-export type CreateCampusRequest = Omit<Campus, "id" | "code"> & {
-  educationLevelIds: string[];
+export type CreateCampusRequest = Omit<Campus, "id" | "code" | "educationLevelIds"> & {
+  academicSystemId: string;
 };
 
 function items<T>(payload: unknown): T[] {
@@ -85,8 +86,12 @@ export const organizationApi = {
     return items<LookupItem>((await api.get("/api/organization/lookups/branch-gender-types")).data);
   },
 
-  async getEducationLevels(): Promise<LookupItem[]> {
-    return items<LookupItem>((await api.get("/api/organization/lookups/education-levels")).data);
+
+  async getAcademicSystems(tenantId: string): Promise<LookupItem[]> {
+    const response = await api.get("/api/academics/academic-system", {
+      params: { tenantId, page: 1, pageSize: 100 },
+    });
+    return items<LookupItem>(response.data);
   },
 
   async getBranchPolicy(branchId: string, tenantId: string): Promise<BranchPolicy> {

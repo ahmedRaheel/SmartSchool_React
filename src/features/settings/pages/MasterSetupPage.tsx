@@ -5,7 +5,7 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 const groups = [
   { title: "Organization", description: "Core school structure used by admissions, HR and academics.", items: [
     { label: "Schools", description: "School profile, registration and contact information", path: "/organization", icon: School },
-    { label: "Branches", description: "Branches, gender policy and education levels", path: "/organization", icon: MapPin },
+    { label: "Branches", description: "Branches, gender policy and academic system", path: "/organization", icon: MapPin },
     { label: "Departments", description: "Academic and administrative departments", path: "/setup/departments", icon: Building2 },
   ]},
   { title: "Academic setup", description: "The hierarchy used by students, admissions, timetable and examinations.", items: [

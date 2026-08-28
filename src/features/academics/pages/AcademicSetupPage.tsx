@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { SchoolBranchSelector } from "../../../components/forms/SchoolBranchSelector";
 import { Modal } from "../../../components/ui/Modal";
+import { useUi } from "../../../components/ui/InteractiveUi";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { api } from "../../../core/api/ApiClient";
 import { useAuth } from "../../auth/auth";
-import { LookupItem, organizationApi } from "../../organization/api/organizationApi";
+import { LookupItem } from "../../organization/api/organizationApi";
 
 type SetupType = "years" | "classes" | "sections";
 const setupRoutes: Record<SetupType, string> = {
@@ -28,14 +29,12 @@ interface SetupItem {
   startDate?: string;
   endDate?: string;
   isCurrent?: boolean;
-  educationLevelId?: string;
-  educationLevelName?: string;
+  academicSystemId?: string;
 }
 
 interface SetupForm {
   name: string;
   parentId: string;
-  educationLevelId: string;
   startDate: string;
   endDate: string;
   isCurrent: boolean;
@@ -44,7 +43,6 @@ interface SetupForm {
 const emptyForm: SetupForm = {
   name: "",
   parentId: "",
-  educationLevelId: "",
   startDate: "",
   endDate: "",
   isCurrent: false,
@@ -59,6 +57,7 @@ function unpack(payload: unknown): SetupItem[] {
 
 export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
+  const { notify, confirm } = useUi();
   const tenantId = user?.roles.includes("SuperAdmin")
     ? sessionStorage.getItem("selected_tenant_id") ?? undefined
     : user?.tenantId;
@@ -68,13 +67,16 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   const [setupType, setSetupType] = useState<SetupType>("years");
   const [items, setItems] = useState<SetupItem[]>([]);
   const [classes, setClasses] = useState<SetupItem[]>([]);
-  const [educationLevels, setEducationLevels] = useState<LookupItem[]>([]);
-  const [branchLevelIds, setBranchLevelIds] = useState<string[]>([]);
+  const [academicSystems, setAcademicSystems] = useState<LookupItem[]>([]);
+  const [academicSystemId, setAcademicSystemId] = useState("");
+  const [selectedItem, setSelectedItem] = useState<SetupItem | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
   const [form, setForm] = useState<SetupForm>(emptyForm);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    void organizationApi.getEducationLevels().then(setEducationLevels);
+    void api.get("/api/academics/academic-system", { params: { tenantId, page: 1, pageSize: 100 } })
+      .then(response => setAcademicSystems(unpack(response.data)));
   }, []);
 
   async function load(type = setupType, selectedBranchId = branchId): Promise<void> {
@@ -102,12 +104,9 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
 
     if (!selectedBranchId) {
       setItems([]);
-      setBranchLevelIds([]);
       return;
     }
 
-    const policy = await organizationApi.getBranchPolicy(selectedBranchId, tenantId ?? "");
-    setBranchLevelIds(policy.educationLevels.map(level => level.id));
     await load(setupType, selectedBranchId);
   }
 
@@ -116,6 +115,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
       ? {
           tenantId,
           campusId: branchId,
+          academicSystemId,
           code: createCode(setupType, form.name),
           name: form.name,
           startDate: form.startDate,
@@ -124,13 +124,23 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         }
       : {
           tenantId,
+          campusId: branchId,
+          academicSystemId,
           code: createCode(setupType, form.name),
           name: form.name,
+          ...(setupType === "sections" ? { classId: form.parentId } : {}),
         };
 
-    await api.post(setupRoutes[setupType], request);
+    if (selectedItem) {
+      await api.put(`${setupRoutes[setupType]}/${selectedItem.id}`, { ...request, id: selectedItem.id });
+      notify({ kind: "success", title: "Changes saved", message: `${setupType === "years" ? "Academic year" : setupType.slice(0, -1)} updated successfully.` });
+    } else {
+      await api.post(setupRoutes[setupType], request);
+      notify({ kind: "success", title: "Created successfully", message: `${setupType === "years" ? "Academic year" : setupType.slice(0, -1)} created successfully.` });
+    }
 
     setModalOpen(false);
+    setSelectedItem(null);
     setForm(emptyForm);
     await load();
   }
@@ -142,7 +152,20 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   }
 
   const currentYear = new Date().getFullYear();
-  const availableLevels = educationLevels.filter(level => branchLevelIds.includes(level.id));
+
+  function editItem(item: SetupItem): void {
+    setSelectedItem(item);
+    setForm({ name: item.name, parentId: item.parentId ?? "", startDate: item.startDate?.slice(0, 10) ?? "", endDate: item.endDate?.slice(0, 10) ?? "", isCurrent: item.isCurrent ?? false });
+    setModalOpen(true);
+  }
+
+  async function deleteItem(item: SetupItem): Promise<void> {
+    const ok = await confirm({ title: `Delete ${item.name}?`, message: "This action cannot be undone.", confirmText: "Delete", danger: true });
+    if (!ok) return;
+    await api.delete(`${setupRoutes[setupType]}/${item.id}`, { params: { tenantId } });
+    notify({ kind: "success", title: "Deleted", message: `${item.name} was deleted successfully.` });
+    await load();
+  }
 
   return (
     <>
@@ -150,7 +173,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         title="Academic Setup"
         subtitle="Maintain branch academic years, classes and sections"
         action={(
-          <button className="primary" disabled={!branchId} onClick={() => setModalOpen(true)}>
+          <button className="primary" disabled={!branchId || !academicSystemId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
             + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
           </button>
         )}
@@ -163,7 +186,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
               <h2>Academic setup</h2>
               <p>Maintain branch academic years, classes and sections in one workspace.</p>
             </div>
-            <button className="primary" disabled={!branchId} onClick={() => setModalOpen(true)}>
+            <button className="primary" disabled={!branchId || !academicSystemId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
               + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
             </button>
           </div>
@@ -179,6 +202,13 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
           }}
           onBranchChange={value => void changeBranch(value)}
         />
+        <label className="field academic-system-context">
+          <span>Academic system *</span>
+          <select value={academicSystemId} onChange={event => setAcademicSystemId(event.target.value)}>
+            <option value="">Select academic system</option>
+            {academicSystems.map(item => <option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}
+          </select>
+        </label>
 
         <div className="section-tabs">
           <button className={setupType === "years" ? "active" : ""} onClick={() => selectType("years")}>Academic years</button>
@@ -188,13 +218,13 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
 
         <div className="premium-table-wrap">
           <table className="premium-table">
-            <thead><tr><th>Name</th><th>Code</th>{setupType === "classes" && <th>Education level</th>}{setupType === "years" && <th>Period</th>}<th>Status</th></tr></thead>
-            <tbody>{items.map(item => <tr key={item.id}><td><b>{item.name}</b></td><td>{item.code ?? "System generated"}</td>{setupType === "classes" && <td>{item.educationLevelName ?? "Not assigned"}</td>}{setupType === "years" && <td>{item.startDate} — {item.endDate}</td>}<td><span className="status-pill">{item.isCurrent ? "Current" : "Active"}</span></td></tr>)}</tbody>
+            <thead><tr><th>Name</th><th>Code</th>{setupType === "years" && <th>Period</th>}<th>Status</th><th>Actions</th></tr></thead>
+            <tbody>{items.map(item => <tr key={item.id}><td><b>{item.name}</b></td><td>{item.code ?? "System generated"}</td>{setupType === "years" && <td>{item.startDate && item.endDate ? `${item.startDate.slice(0,10)} — ${item.endDate.slice(0,10)}` : "Period not configured"}</td>}<td><span className="status-pill">{item.isCurrent ? "Current" : "Active"}</span></td><td><div className="row-actions"><button className="text-button" onClick={() => { setSelectedItem(item); setViewOpen(true); }}>View</button><button className="text-button" onClick={() => editItem(item)}>Edit</button><button className="text-button danger-text" onClick={() => void deleteItem(item)}>Delete</button></div></td></tr>)}</tbody>
           </table>
         </div>
       </section>
 
-      <Modal open={modalOpen} title={`Add ${setupType === "years" ? "academic year" : setupType.slice(0, -1)}`} onClose={() => setModalOpen(false)}>
+      <Modal open={modalOpen} title={`${selectedItem ? "Edit" : "Add"} ${setupType === "years" ? "academic year" : setupType.slice(0, -1)}`} onClose={() => { setModalOpen(false); setSelectedItem(null); }}>
         <div className="human-form-grid">
           {setupType === "years" ? (
             <>
@@ -206,12 +236,15 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
           ) : (
             <>
               <label className="human-field"><span>Name</span><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label>
-              {setupType === "classes" && <label className="human-field"><span>Education level *</span><select value={form.educationLevelId} onChange={event => setForm(current => ({ ...current, educationLevelId: event.target.value }))}><option value="">Select education level</option>{availableLevels.map(level => <option key={level.id} value={level.id}>{level.name}</option>)}</select></label>}
+              
               {setupType === "sections" && <label className="human-field"><span>Class *</span><select value={form.parentId} onChange={event => setForm(current => ({ ...current, parentId: event.target.value }))}><option value="">Select class</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
             </>
           )}
         </div>
-        <div className="modal-actions"><button className="secondary" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary" disabled={!form.name || (setupType === "classes" && !form.educationLevelId) || (setupType === "sections" && !form.parentId)} onClick={() => void save()}>Save</button></div>
+        <div className="modal-actions"><button className="secondary" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary" disabled={!form.name || (setupType === "sections" && !form.parentId)} onClick={() => void save()}>Save</button></div>
+      </Modal>
+      <Modal open={viewOpen} title={selectedItem?.name ?? "Details"} onClose={() => setViewOpen(false)}>
+        <div className="detail-grid"><div><span>Name</span><b>{selectedItem?.name}</b></div><div><span>Code</span><b>{selectedItem?.code ?? "—"}</b></div>{setupType === "years" && <><div><span>Start date</span><b>{selectedItem?.startDate?.slice(0,10) ?? "—"}</b></div><div><span>End date</span><b>{selectedItem?.endDate?.slice(0,10) ?? "—"}</b></div></>}</div>
       </Modal>
     </>
   );
