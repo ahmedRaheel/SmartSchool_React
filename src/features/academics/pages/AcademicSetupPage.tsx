@@ -7,6 +7,18 @@ import { useAuth } from "../../auth/auth";
 import { LookupItem, organizationApi } from "../../organization/api/organizationApi";
 
 type SetupType = "years" | "classes" | "sections";
+const setupRoutes: Record<SetupType, string> = {
+  years: "/api/academics/academic-year",
+  classes: "/api/academics/grade-level",
+  sections: "/api/academics/class-section",
+};
+
+function createCode(type: SetupType, name: string): string {
+  const prefix = type === "years" ? "AY" : type === "classes" ? "CLS" : "SEC";
+  const normalized = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `${prefix}-${normalized}`.slice(0, 100);
+}
+
 
 interface SetupItem {
   id: string;
@@ -71,14 +83,14 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
       return;
     }
 
-    const response = await api.get(`/api/academics/setup/${type}`, {
-      params: { tenantId, branchId: selectedBranchId },
+    const response = await api.get(setupRoutes[type], {
+      params: { tenantId, campusId: selectedBranchId, page: 1, pageSize: 200 },
     });
     setItems(unpack(response.data));
 
     if (type === "sections") {
-      const classResponse = await api.get("/api/academics/setup/classes", {
-        params: { tenantId, branchId: selectedBranchId },
+      const classResponse = await api.get(setupRoutes.classes, {
+        params: { tenantId, page: 1, pageSize: 200 },
       });
       setClasses(unpack(classResponse.data));
     }
@@ -100,13 +112,23 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   }
 
   async function save(): Promise<void> {
-    await api.post("/api/academics/setup", {
-      tenantId,
-      schoolId,
-      branchId,
-      kind: setupType,
-      ...form,
-    });
+    const request = setupType === "years"
+      ? {
+          tenantId,
+          campusId: branchId,
+          code: createCode(setupType, form.name),
+          name: form.name,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          isCurrent: form.isCurrent,
+        }
+      : {
+          tenantId,
+          code: createCode(setupType, form.name),
+          name: form.name,
+        };
+
+    await api.post(setupRoutes[setupType], request);
 
     setModalOpen(false);
     setForm(emptyForm);

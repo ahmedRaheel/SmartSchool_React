@@ -1132,3 +1132,114 @@ body,
 .page-error-panel > svg { color: #d97706; flex: 0 0 auto; }
 .page-error-panel h2 { margin: 0 0 8px; font-size: 18px; }
 .page-error-panel p { margin: 0 0 18px; max-width: 680px; color: var(--muted); line-height: 1.6; }
+
+/* v121 — authoritative dark theme.
+   Keep semantic surfaces synchronized so switching theme never produces
+   light cards with light text or a light AI workspace in night mode. */
+:root[data-theme="dark"] {
+  --ref-navy: #0b1628;
+  --ref-accent: #22c7e8;
+  --ref-bg: #0b1220;
+  --ref-text: #eef4fb;
+  --ref-muted: #9aabc0;
+  --ref-line: #27364a;
+  --ref-soft: #182438;
+  --ss-page: #0b1220;
+  --ss-navy: #10213a;
+  --ss-accent: #22c7e8;
+  --ss-text: #eef4fb;
+  --ss-muted: #9aabc0;
+  --ss-border: #27364a;
+  --ss-card: #111c2f;
+  --surface: #111c2f;
+  --surface-2: #0b1220;
+  --text: #eef4fb;
+  --muted: #9aabc0;
+  --line: #27364a;
+}
+
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] #root,
+:root[data-theme="dark"] .app,
+:root[data-theme="dark"] .app-shell,
+:root[data-theme="dark"] .main,
+:root[data-theme="dark"] .main-shell,
+:root[data-theme="dark"] .content,
+:root[data-theme="dark"] .page-content {
+  background: var(--ref-bg);
+  color: var(--ref-text);
+}
+
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .surface,
+:root[data-theme="dark"] .data-surface,
+:root[data-theme="dark"] .dashboard-card,
+:root[data-theme="dark"] .metric-card,
+:root[data-theme="dark"] .module-card,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .modal-card,
+:root[data-theme="dark"] .profile-trigger,
+:root[data-theme="dark"] .global-search {
+  background: var(--ss-card);
+  color: var(--ref-text);
+  border-color: var(--ref-line);
+}
+
+:root[data-theme="dark"] .page-header h1,
+:root[data-theme="dark"] .page-head h1,
+:root[data-theme="dark"] .section-title,
+:root[data-theme="dark"] .surface-head h3,
+:root[data-theme="dark"] .breadcrumb strong,
+:root[data-theme="dark"] .profile-copy b,
+:root[data-theme="dark"] .field label,
+:root[data-theme="dark"] .form-label {
+  color: var(--ref-text);
+}
+
+:root[data-theme="dark"] .page-header p,
+:root[data-theme="dark"] .page-head p,
+:root[data-theme="dark"] .surface-head p,
+:root[data-theme="dark"] .section-sub,
+:root[data-theme="dark"] .muted,
+:root[data-theme="dark"] .breadcrumb,
+:root[data-theme="dark"] .profile-copy small {
+  color: var(--ref-muted);
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .form-input,
+:root[data-theme="dark"] .form-select,
+:root[data-theme="dark"] .form-textarea,
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .field textarea {
+  background: #16243a;
+  color: var(--ref-text);
+  border-color: var(--ref-line);
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder { color: #71839a; }
+
+:root[data-theme="dark"] .secondary,
+:root[data-theme="dark"] .button.secondary,
+:root[data-theme="dark"] .btn-ghost,
+:root[data-theme="dark"] .top-icon:hover { background: var(--ref-soft); color: var(--ref-text); border-color: var(--ref-line); }
+
+:root[data-theme="dark"] .premium-table th { color: var(--ref-muted); border-color: var(--ref-line); }
+:root[data-theme="dark"] .premium-table td { color: var(--ref-text); border-color: var(--ref-line); }
+:root[data-theme="dark"] .premium-table tbody tr:hover td { background: #16243a; }
+
+:root[data-theme="dark"] .floating-ai-panel { background:#111c2f; border-color:var(--ref-line); box-shadow:0 22px 60px rgba(0,0,0,.42); }
+:root[data-theme="dark"] .floating-ai-header { background:#10213a; }
+:root[data-theme="dark"] .floating-ai-messages { background:#0d1728; }
+:root[data-theme="dark"] .floating-ai-bubble { background:#16243a; border-color:#2b3b52; color:var(--ref-text); }
+:root[data-theme="dark"] .floating-ai-message.user .floating-ai-bubble { background:#17375b; color:#fff; }
+:root[data-theme="dark"] .floating-ai-footer { background:#111c2f; border-color:var(--ref-line); }
+:root[data-theme="dark"] .floating-ai-workspace { color:var(--ref-muted); }
+:root[data-theme="dark"] .floating-ai-compose textarea { background:#16243a; color:var(--ref-text); border-color:#2b3b52; }
+:root[data-theme="dark"] .floating-ai-disclaimer { color:#71839a; }

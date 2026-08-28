@@ -6,6 +6,20 @@ function rows<T>(data:any):T[]{const value=data?.value??data;return Array.isArra
 export const admissionsApi={async list(tenantId?:string){return rows<AdmissionApplication>((await api.get("/api/admissions/workflow/applications",{params:{tenantId}})).data)},async create(request:CreateAdmissionRequest){return (await api.post("/api/admissions/workflow/applications",request)).data},async status(id:string,status:AdmissionStatus,tenantId?:string,notes?:string){return (await api.put(`/api/admissions/workflow/applications/${id}/status`,{tenantId,status,notes})).data},async criteria(tenantId?:string){return rows<any>((await api.get("/api/admissions/criteria",{params:{tenantId}})).data)},async createCriteria(request:any){return (await api.post("/api/admissions/criteria",request)).data},async academicYears(tenantId?:string){return rows<any>((await api.get("/api/academics/academic-year",{params:{tenantId,page:1,pageSize:100}})).data)},async classSections(tenantId?:string){return rows<any>((await api.get("/api/academics/class-section",{params:{tenantId,page:1,pageSize:200}})).data)}};
 
 export interface AcademicLookup { id:string; name:string; code?:string; parentId?:string; educationLevelId?:string; educationLevelName?:string; }
-export async function getAcademicSetup(kind:"years"|"classes"|"sections", branchId:string, tenantId?:string):Promise<AcademicLookup[]> {
-  return rows<AcademicLookup>((await api.get(`/api/academics/setup/${kind}`, { params:{ tenantId, branchId } })).data);
+const academicLookupRoutes = {
+  years: "/api/academics/academic-year",
+  classes: "/api/academics/grade-level",
+  sections: "/api/academics/class-section",
+} as const;
+
+export async function getAcademicSetup(
+  kind: "years" | "classes" | "sections",
+  _branchId: string,
+  tenantId?: string,
+): Promise<AcademicLookup[]> {
+  const response = await api.get(academicLookupRoutes[kind], {
+    params: { tenantId, page: 1, pageSize: 200 },
+  });
+
+  return rows<AcademicLookup>(response.data);
 }
