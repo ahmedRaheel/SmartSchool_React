@@ -7,6 +7,7 @@ import { Sidebar } from "./Sidebar";
 import { getNotifications, getUnreadCount, markAllRead, markRead, type NotificationItem } from "../../features/communication/api/notifications";
 import { createNotificationConnection } from "../../features/communication/realtime/communicationRealtime";
 import { effectiveTenantId } from "../../core/tenant/tenantContext";
+import { FloatingAiChatbot } from "../../features/ai/components/FloatingAiChatbot";
 const chats = [{ id: "parent", title: "Mrs. Yusuf", subtitle: "Amina • Grade 10 A", path: "/communication" }, { id: "teacher", title: "Sadia Iqbal", subtitle: "Mathematics Teacher", path: "/academics" }, { id: "finance", title: "Finance Office", subtitle: "Accounts & Fees", path: "/finance" }];
 export function AppShell() {
     const { user, logout, stopImpersonation } = useAuth();
@@ -201,6 +202,7 @@ export function AppShell() {
 </button>)}</div>
 </div>
 </Modal>
+<FloatingAiChatbot />
 </div>;
 }
 

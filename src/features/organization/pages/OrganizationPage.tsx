@@ -82,7 +82,7 @@ export function OrganizationPage() {
     <div className="metric-grid platform-metrics">
       <StatCard icon={<Building2 size={20} />} value={schools.length} label="Schools" description="Schools in this tenant" />
       <StatCard icon={<MapPin size={20} />} value={campuses.length} label="Branches" description="Operating branches" />
-      <StatCard icon={<SchoolIcon size={20} />} value="Structured" label="Organization" description="School → branch hierarchy" />
+      <StatCard icon={<SchoolIcon size={20} />}  label="Organization" description="School → branch hierarchy" />
     </div>
 
     <section className="surface data-surface">
