@@ -57,13 +57,21 @@ export function AppShell() {
 
         // Hydrate once. New notifications arrive through SignalR; there is no polling timer.
         void loadNotifications();
-        void hub.start().catch(error => {
-            if (!disposed && error?.name !== "AbortError") console.error("Notification SignalR connection failed", error);
-        });
+        const startTimer = window.setTimeout(() => {
+            if (disposed) return;
+            void hub.start().catch(error => {
+                if (!disposed && error?.name !== "AbortError") {
+                    console.error("Notification SignalR connection failed", error);
+                }
+            });
+        }, 100);
 
         return () => {
             disposed = true;
-            void hub.stop();
+            window.clearTimeout(startTimer);
+            if (hub.state !== "Disconnected") {
+                void hub.stop();
+            }
         };
     }, [user?.id, tenantId]);
     const searchableModules = useMemo(() => [

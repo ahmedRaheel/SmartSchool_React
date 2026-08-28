@@ -14,6 +14,7 @@ interface AddEmployeeDialogProps {
 interface EmployeeFormState {
   schoolId: string;
   branchId: string;
+  departmentId: string;
   firstName: string;
   lastName: string;
   cnicNumber: string;
@@ -34,6 +35,7 @@ interface EmployeeFormState {
 const initialState: EmployeeFormState = {
   schoolId: "",
   branchId: "",
+  departmentId: "",
   firstName: "",
   lastName: "",
   cnicNumber: "",
@@ -57,6 +59,7 @@ export function AddEmployeeDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [employmentTypes, setEmploymentTypes] = useState<LookupOption[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -75,6 +78,11 @@ export function AddEmployeeDialog({
 
     void loadEmploymentTypes();
   }, []);
+
+  useEffect(() => {
+    if (!form.branchId) { setDepartments([]); return; }
+    void import("../../../core/api/ApiClient").then(({ api }) => api.get<any>("/api/organization/department", { params: { tenantId, branchId: form.branchId, page: 1, pageSize: 250 } }).then(r => setDepartments(r.data?.items ?? r.data?.value?.items ?? r.data ?? [])).catch(() => setDepartments([])));
+  }, [tenantId, form.branchId]);
 
   const updateField = (field: keyof EmployeeFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -105,6 +113,7 @@ export function AddEmployeeDialog({
         tenantId,
         schoolId: form.schoolId,
         branchId: form.branchId,
+        departmentId: form.departmentId || undefined,
         firstName: form.firstName.trim(),
         lastName: optional(form.lastName),
         cnicNumber: optional(form.cnicNumber),
@@ -158,6 +167,7 @@ export function AddEmployeeDialog({
 
               <div className="form-grid">
                 <SchoolBranchSelector tenantId={tenantId} schoolId={form.schoolId} branchId={form.branchId} onSchoolChange={(value) => updateField("schoolId", value)} onBranchChange={(value) => updateField("branchId", value)} />
+                <SelectField label="Department" value={form.departmentId} onChange={(value) => updateField("departmentId", value)} options={departments.map((item:any) => [String(item.id ?? item.departmentId), String(item.name ?? item.code)])} placeholder="Select department" />
                 <SelectField
                   label="Employment type"
                   value={form.employmentTypeCode}

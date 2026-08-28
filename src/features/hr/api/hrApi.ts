@@ -32,6 +32,7 @@ export interface CreateEmployeeRequest {
   tenantId?: string;
   schoolId: string;
   branchId: string;
+  departmentId?: string;
   userId?: string | null;
   firstName: string;
   lastName?: string | null;
