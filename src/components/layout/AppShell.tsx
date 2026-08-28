@@ -80,13 +80,13 @@ export function AppShell() {
 <main className="main">
 {user?.impersonated && <div className="impersonation-banner" role="status"><div><ShieldCheck size={16}/><span><b>Support session:</b> you are viewing SmartSchool as {user.name} ({user.role}). Actions are audited.</span></div><button onClick={() => { stopImpersonation(); window.location.assign("/"); }}>Return to administrator</button></div>}
 <header className="topbar">
-<button className="mobile-menu" onClick={() => setSidebarOpen(true)}>
-<Menu size={21}/>
-</button>
+<div className="tb-left">
+<button className="mobile-menu tb-toggle" onClick={() => setSidebarOpen(true)}><Menu size={19}/></button>
+<div className="breadcrumb">SmartSchool / <strong>Workspace</strong></div>
+</div>
+<div className="tb-right">
 <button className="global-search global-search-button" onClick={() => setSearchOpen(true)}>
-<Search size={18}/>
-<span>Search students, classes, invoices...</span>
-<kbd>⌘ K</kbd>
+<Search size={16}/><span>Search...</span>
 </button>
 <div className="top-actions">
 <button className="top-icon" onClick={() => setDrawer("chat")}>
@@ -122,6 +122,7 @@ export function AppShell() {
 <button className="logout-item" onClick={() => { logout(); nav("/login", { replace: true }); }}>
 <LogOut size={17}/> Log out</button>
 </div>}</div>
+</div>
 </div>
 </header>
 <div className="content">

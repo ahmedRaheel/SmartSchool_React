@@ -1,4 +1,4 @@
-import { Activity, GraduationCap, X } from "lucide-react";
+import { GraduationCap, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../features/auth/auth";
 import { hasAnyRole, navigationSections } from "./navigation";
@@ -76,14 +76,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <footer className="sidebar-upgrade">
-          <Activity size={20} />
-          <b>Platform services</b>
-          <span>PostgreSQL • Redis • Kafka • AI</span>
-          <div className="health-line">
-            <i /> Observability enabled
-          </div>
-        </footer>
+        <footer className="sb-footer"><div className="sb-status"><i /> System online</div></footer>
       </aside>
     </>
   );
