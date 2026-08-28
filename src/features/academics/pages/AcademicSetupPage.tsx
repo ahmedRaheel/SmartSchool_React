@@ -5,7 +5,7 @@ import { useUi } from "../../../components/ui/InteractiveUi";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { api } from "../../../core/api/ApiClient";
 import { useAuth } from "../../auth/auth";
-import { LookupItem } from "../../organization/api/organizationApi";
+import { Campus, LookupItem, organizationApi, School } from "../../organization/api/organizationApi";
 
 type SetupType = "years" | "classes" | "sections";
 const setupRoutes: Record<SetupType, string> = {
@@ -68,6 +68,8 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   const [items, setItems] = useState<SetupItem[]>([]);
   const [classes, setClasses] = useState<SetupItem[]>([]);
   const [academicSystems, setAcademicSystems] = useState<LookupItem[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
   const [academicSystemId, setAcademicSystemId] = useState("");
   const [selectedItem, setSelectedItem] = useState<SetupItem | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
@@ -75,9 +77,17 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    void api.get("/api/academics/academic-system", { params: { tenantId, page: 1, pageSize: 100 } })
-      .then(response => setAcademicSystems(unpack(response.data)));
-  }, []);
+    if (!tenantId) return;
+    void Promise.all([
+      organizationApi.getAcademicSystems(tenantId),
+      organizationApi.getSchools(tenantId),
+      organizationApi.getCampuses(tenantId),
+    ]).then(([systems, schoolRows, campusRows]) => {
+      setAcademicSystems(systems);
+      setSchools(schoolRows);
+      setCampuses(campusRows);
+    });
+  }, [tenantId]);
 
   async function load(type = setupType, selectedBranchId = branchId): Promise<void> {
     if (!selectedBranchId) {
@@ -103,14 +113,40 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
     setForm(emptyForm);
 
     if (!selectedBranchId) {
+      setAcademicSystemId("");
       setItems([]);
       return;
     }
 
+    // Academic System belongs to the selected campus. Prefer the campus payload,
+    // then use the policy endpoint as a compatibility fallback.
+    const selectedCampus = campuses.find(item => item.id === selectedBranchId);
+    let systemId = selectedCampus?.academicSystemId ?? "";
+
+    if (!systemId && tenantId) {
+      try {
+        const policy = await organizationApi.getBranchPolicy(selectedBranchId, tenantId);
+        systemId = policy.academicSystemId ?? "";
+      } catch {
+        // The page can still load academic years when a legacy campus has no policy.
+      }
+    }
+
+    setAcademicSystemId(systemId);
     await load(setupType, selectedBranchId);
   }
 
   async function save(): Promise<void> {
+    if (!branchId) {
+      notify({ kind: "error", title: "Campus required", message: "Select a school and campus first." });
+      return;
+    }
+
+    if (setupType !== "years" && !academicSystemId) {
+      notify({ kind: "error", title: "Academic system required", message: "Select the academic system for this campus before saving." });
+      return;
+    }
+
     const request = setupType === "years"
       ? {
           tenantId,
@@ -167,13 +203,23 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
     await load();
   }
 
+  const selectedSchool = schools.find(item => item.id === schoolId);
+  const selectedCampus = campuses.find(item => item.id === branchId);
+  const selectedAcademicSystem = academicSystems.find(item => item.id === academicSystemId);
+
+  function formatDate(value?: string): string {
+    if (!value) return "Not configured";
+    const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? value.slice(0, 10) : date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  }
+
   return (
     <>
       {!embedded && <PageHeader
         title="Academic Setup"
         subtitle="Maintain branch academic years, classes and sections"
         action={(
-          <button className="primary" disabled={!branchId || !academicSystemId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
+          <button className="primary" disabled={!branchId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
             + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
           </button>
         )}
@@ -186,7 +232,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
               <h2>Academic setup</h2>
               <p>Maintain branch academic years, classes and sections in one workspace.</p>
             </div>
-            <button className="primary" disabled={!branchId || !academicSystemId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
+            <button className="primary" disabled={!branchId} onClick={() => { setSelectedItem(null); setModalOpen(true); }}>
               + Add {setupType === "years" ? "academic year" : setupType.slice(0, -1)}
             </button>
           </div>
@@ -243,8 +289,36 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         </div>
         <div className="modal-actions"><button className="secondary" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary" disabled={!form.name || (setupType === "sections" && !form.parentId)} onClick={() => void save()}>Save</button></div>
       </Modal>
-      <Modal open={viewOpen} title={selectedItem?.name ?? "Details"} onClose={() => setViewOpen(false)}>
-        <div className="detail-grid"><div><span>Name</span><b>{selectedItem?.name}</b></div><div><span>Code</span><b>{selectedItem?.code ?? "—"}</b></div>{setupType === "years" && <><div><span>Start date</span><b>{selectedItem?.startDate?.slice(0,10) ?? "—"}</b></div><div><span>End date</span><b>{selectedItem?.endDate?.slice(0,10) ?? "—"}</b></div></>}</div>
+      <Modal open={viewOpen} title={setupType === "years" ? "Academic year details" : `${selectedItem?.name ?? "Details"} details`} onClose={() => setViewOpen(false)}>
+        {setupType === "years" ? (
+          <div className="academic-year-detail">
+            <div className="academic-year-hero">
+              <div>
+                <span className="detail-eyebrow">ACADEMIC YEAR</span>
+                <h2>{selectedItem?.name}</h2>
+                <p>{selectedItem?.code ?? "System generated code"}</p>
+              </div>
+              <span className={`status-pill ${selectedItem?.isCurrent ? "current" : ""}`}>{selectedItem?.isCurrent ? "Current" : "Active"}</span>
+            </div>
+            <div className="academic-year-period">
+              <div><span>Start date</span><strong>{formatDate(selectedItem?.startDate)}</strong></div>
+              <div className="period-arrow">→</div>
+              <div><span>End date</span><strong>{formatDate(selectedItem?.endDate)}</strong></div>
+            </div>
+            <div className="detail-grid compact">
+              <div><span>School</span><b>{selectedSchool ? `${selectedSchool.code} — ${selectedSchool.name}` : "Not available"}</b></div>
+              <div><span>Campus</span><b>{selectedCampus ? `${selectedCampus.code} — ${selectedCampus.name}` : "Not available"}</b></div>
+              <div><span>Academic system</span><b>{selectedAcademicSystem ? `${selectedAcademicSystem.code} — ${selectedAcademicSystem.name}` : "Not configured"}</b></div>
+              <div><span>Current academic year</span><b>{selectedItem?.isCurrent ? "Yes" : "No"}</b></div>
+            </div>
+            <div className="modal-actions">
+              <button className="secondary" onClick={() => setViewOpen(false)}>Close</button>
+              <button className="primary" onClick={() => { if (selectedItem) { setViewOpen(false); editItem(selectedItem); } }}>Edit academic year</button>
+            </div>
+          </div>
+        ) : (
+          <div className="detail-grid"><div><span>Name</span><b>{selectedItem?.name}</b></div><div><span>Code</span><b>{selectedItem?.code ?? "—"}</b></div></div>
+        )}
       </Modal>
     </>
   );
