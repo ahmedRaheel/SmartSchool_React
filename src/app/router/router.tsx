@@ -23,7 +23,6 @@ import { OrganizationPage } from "../../features/organization/pages/Organization
 import { HrPage as PayrollPage } from "../../features/hr/pages/HrPage";
 import { ModulePlaceholder } from "../../components/ui/ModulePlaceholder";
 import { MockDataProvider } from "../../mocks/MockDataProvider";
-import { requireAuth }      from "../../features/auth/auth";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -31,7 +30,6 @@ export const router = createBrowserRouter([
     path: "/",
     element: <MockDataProvider><AppShell /></MockDataProvider>,
     errorElement: <RouteErrorPage />,
-    loader: requireAuth,
     children: [
       { index: true,           element: <DashboardPage /> },
       { path: "students",      element: <StudentsPage /> },
