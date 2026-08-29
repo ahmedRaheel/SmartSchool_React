@@ -21,6 +21,8 @@ export interface CreateStudentRequest {
   tenantId?: string;
   schoolId: string;
   branchId: string;
+  academicYearId: string;
+  classSectionId: string;
   userId?: string | null;
   firstName: string;
   lastName?: string | null;
@@ -58,6 +60,14 @@ export const studentsApi = {
     );
 
     return response.data;
+  },
+
+  async createGuardian(request: { tenantId: string; fullName: string; cnicNumber: string; email?: string | null; phone?: string | null }) {
+    return (await api.post<any>("/api/students/guardian", request)).data;
+  },
+
+  async linkGuardian(request: { tenantId: string; studentId: string; guardianId: string; relationship: string }) {
+    return (await api.post<any>("/api/students/student-guardian/link", request)).data;
   },
 
   async approve(studentId: string, tenantId: string, email: string) {

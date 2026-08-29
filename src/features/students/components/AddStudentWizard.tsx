@@ -14,6 +14,7 @@ interface StudentFormState extends CreateStudentRequest {
   academicYearId: string;
   classSectionId: string;
   guardianName: string;
+  guardianCnic: string;
   guardianPhone: string;
   guardianEmail: string;
   address: string;
@@ -65,6 +66,7 @@ function createInitialForm(tenantId: string): StudentFormState {
     academicYearId: "",
     classSectionId: "",
     guardianName: "",
+    guardianCnic: "",
     guardianPhone: "",
     guardianEmail: "",
     address: "",
@@ -83,6 +85,9 @@ export function AddStudentWizard({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [birthCertificateFile, setBirthCertificateFile] = useState<File | null>(null);
+  const [identityFile, setIdentityFile] = useState<File | null>(null);
+  const [guardianCnicFile, setGuardianCnicFile] = useState<File | null>(null);
 
   const isReviewStep = currentStep === wizardSteps.length - 1;
 
@@ -95,7 +100,9 @@ export function AddStudentWizard({
 
   function canContinue() {
     if (currentStep === 0) return Boolean(form.firstName.trim());
-    if (currentStep === 1) return Boolean(form.schoolId && form.branchId);
+    if (currentStep === 1) return Boolean(form.schoolId && form.branchId && form.academicYearId && form.classSectionId);
+    if (currentStep === 2) return Boolean(form.guardianName.trim() && form.guardianCnic.trim() && form.guardianPhone.trim());
+    if (currentStep === 3) return Boolean(photoFile && birthCertificateFile && identityFile && guardianCnicFile);
     return true;
   }
 
@@ -140,22 +147,18 @@ export function AddStudentWizard({
 
     try {
       const student = await studentsApi.create(buildStudentRequest(form));
+      const guardian = await studentsApi.createGuardian({ tenantId, fullName: form.guardianName.trim(), cnicNumber: form.guardianCnic.trim(), email: form.guardianEmail || null, phone: form.guardianPhone || null });
+      await studentsApi.linkGuardian({ tenantId, studentId: student.id, guardianId: guardian.id, relationship: "GUARDIAN" });
 
       if (photoFile) {
         await documentApi.upload({ tenantId, schoolId: form.schoolId, branchId: form.branchId, entityType: "STUDENT", entityId: student.id, purpose: "PROFILE_PHOTO", category: "STUDENT", documentType: "PHOTO", title: "Student photograph", isPrimary: true, file: photoFile });
       }
 
-      if (form.academicYearId && form.classSectionId) {
-        await studentsApi.enroll({
-          tenantId,
-          studentId: student.id,
-          academicYearId: form.academicYearId,
-          classSectionId: form.classSectionId,
-          enrollmentDate: form.admissionDate ?? today(),
-          status: "PENDING_APPROVAL",
-        });
-      }
+      if (birthCertificateFile) await documentApi.upload({ tenantId, schoolId: form.schoolId, branchId: form.branchId, entityType: "STUDENT", entityId: student.id, purpose: "ADMISSION", category: "STUDENT", documentType: "BIRTH_CERTIFICATE", title: "Birth certificate", file: birthCertificateFile });
+      if (identityFile) await documentApi.upload({ tenantId, schoolId: form.schoolId, branchId: form.branchId, entityType: "STUDENT", entityId: student.id, purpose: "ADMISSION", category: "STUDENT", documentType: "CNIC_BFORM", title: "CNIC / B-Form", file: identityFile });
+      if (guardianCnicFile) await documentApi.upload({ tenantId, schoolId: form.schoolId, branchId: form.branchId, entityType: "GUARDIAN", entityId: guardian.id, purpose: "IDENTITY", category: "GUARDIAN", documentType: "CNIC", title: "Guardian CNIC", file: guardianCnicFile });
 
+      // Enrollment is intentionally NOT created here. Backend creates it atomically when admission is approved.
       onCreated();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -188,6 +191,12 @@ export function AddStudentWizard({
               <DocumentsStep
                 fileName={form.photoFileName}
                 onPhotoSelected={handlePhotoSelected}
+                onBirthCertificateSelected={(e) => setBirthCertificateFile(e.target.files?.[0] ?? null)}
+                onIdentitySelected={(e) => setIdentityFile(e.target.files?.[0] ?? null)}
+                onGuardianCnicSelected={(e) => setGuardianCnicFile(e.target.files?.[0] ?? null)}
+                birthCertificateName={birthCertificateFile?.name}
+                identityName={identityFile?.name}
+                guardianCnicName={guardianCnicFile?.name}
               />
             )}
 
@@ -351,6 +360,12 @@ function GuardianStep({
         onChange={(value) => onChange("guardianName", value)}
       />
       <TextField
+        label="Guardian CNIC / national ID"
+        value={form.guardianCnic}
+        onChange={(value) => onChange("guardianCnic", value)}
+        required
+      />
+      <TextField
         label="Guardian phone"
         value={form.guardianPhone}
         onChange={(value) => onChange("guardianPhone", value)}
@@ -370,20 +385,18 @@ function GuardianStep({
   );
 }
 
-function DocumentsStep({
-  fileName,
-  onPhotoSelected,
-}: {
-  fileName?: string | null;
-  onPhotoSelected: (event: ChangeEvent<HTMLInputElement>) => void;
+function DocumentsStep({ fileName, onPhotoSelected, onBirthCertificateSelected, onIdentitySelected, onGuardianCnicSelected, birthCertificateName, identityName, guardianCnicName }: {
+  fileName?: string | null; onPhotoSelected: (event: ChangeEvent<HTMLInputElement>) => void;
+  onBirthCertificateSelected: (event: ChangeEvent<HTMLInputElement>) => void; onIdentitySelected: (event: ChangeEvent<HTMLInputElement>) => void; onGuardianCnicSelected: (event: ChangeEvent<HTMLInputElement>) => void;
+  birthCertificateName?: string; identityName?: string; guardianCnicName?: string;
 }) {
   return (
-    <label className="upload-zone">
-      <Upload />
-      <b>Student photograph</b>
-      <span>{fileName ?? "Choose a PNG or JPEG photograph."}</span>
-      <input type="file" accept="image/png,image/jpeg" onChange={onPhotoSelected} />
-    </label>
+    <div className="document-requirements-grid">
+      <label className="upload-zone"><Upload /><b>Student photograph *</b><span>{fileName ?? "PNG or JPEG"}</span><input type="file" accept="image/png,image/jpeg" onChange={onPhotoSelected} /></label>
+      <label className="upload-zone"><Upload /><b>Birth certificate *</b><span>{birthCertificateName ?? "PDF or image"}</span><input type="file" accept="image/*,.pdf" onChange={onBirthCertificateSelected} /></label>
+      <label className="upload-zone"><Upload /><b>CNIC / B-Form *</b><span>{identityName ?? "PDF or image"}</span><input type="file" accept="image/*,.pdf" onChange={onIdentitySelected} /></label>
+      <label className="upload-zone"><Upload /><b>Guardian CNIC *</b><span>{guardianCnicName ?? "PDF or image"}</span><input type="file" accept="image/*,.pdf" onChange={onGuardianCnicSelected} /></label>
+    </div>
   );
 }
 
@@ -503,6 +516,10 @@ function ReviewCard({ title, lines }: ReviewCardProps) {
 function buildStudentRequest(form: StudentFormState): CreateStudentRequest {
   return {
     tenantId: form.tenantId,
+    schoolId: form.schoolId,
+    branchId: form.branchId,
+    academicYearId: form.academicYearId,
+    classSectionId: form.classSectionId,
     userId: form.userId,
     firstName: form.firstName.trim(),
     lastName: form.lastName?.trim() || null,

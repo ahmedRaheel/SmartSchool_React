@@ -14,7 +14,12 @@ export interface UploadDocumentInput {
   file: File;
 }
 
+export interface RequiredDocument { id: string; actorType: string; staffType?: string | null; documentType: string; displayName: string; isRequired: boolean; conditionCode?: string | null; minCount: number; }
+
 export const documentApi = {
+  async requirements(tenantId: string, actorType: string, staffType?: string) {
+    return (await api.get<RequiredDocument[]>(`/api/documents/files/requirements/${actorType}`, { params: { tenantId, staffType } })).data;
+  },
   async upload(input: UploadDocumentInput) {
     const form = new FormData();
     form.append("file", input.file);

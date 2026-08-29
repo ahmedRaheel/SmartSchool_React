@@ -37,3 +37,13 @@ html,body,#root{min-height:100%;background:#F0F4F8;color:#1A202C}
 /* Academic year read-only detail */
 .academic-year-detail{display:grid;gap:18px}.academic-year-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:4px 2px 16px;border-bottom:1px solid var(--line)}.academic-year-hero h2{margin:5px 0 2px;font-size:28px;line-height:1.1}.academic-year-hero p{margin:0;color:var(--muted);font-weight:600}.detail-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--primary)}.academic-year-period{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)}.academic-year-period>div:not(.period-arrow){display:grid;gap:5px}.academic-year-period span{font-size:12px;color:var(--muted)}.academic-year-period strong{font-size:16px}.period-arrow{color:var(--muted);font-size:22px}.detail-grid.compact>div{min-height:54px}.status-pill.current{font-weight:800}
 @media(max-width:620px){.academic-year-period{grid-template-columns:1fr}.period-arrow{display:none}.academic-year-hero{align-items:center}.academic-year-hero h2{font-size:23px}}
+
+/* Actor wizard document requirements */
+.document-requirements-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 720px) {
+  .document-requirements-grid { grid-template-columns: 1fr; }
+}
