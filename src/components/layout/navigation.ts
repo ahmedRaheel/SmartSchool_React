@@ -1,28 +1,140 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity, BarChart3, Bell, BookOpen, Bot, BriefcaseBusiness, Bus, CalendarCheck,
-  ClipboardCheck, FileCheck2, GraduationCap, HeartPulse, LayoutDashboard, MessageCircle,
-  Settings, ShieldCheck, SlidersHorizontal, UserCog, Users, Wallet, Workflow, Building2,
-  ChartNoAxesCombined, Library, CalendarDays, Wrench
+  Activity, BarChart3, Bell, BookOpen, Bot, BriefcaseBusiness, Bus,
+  CalendarCheck, CalendarDays, ClipboardCheck, FileCheck2, GraduationCap,
+  HeartPulse, LayoutDashboard, Library, MessageCircle, Route, Settings,
+  ShieldCheck, Users, Wallet, Workflow, Building2, ChartNoAxesCombined,
+  Wrench, Cpu, Puzzle, ScrollText, Zap, UserCheck2,
 } from "lucide-react";
 
-export interface NavigationItem { path:string; label:string; icon:LucideIcon; badge?:string; }
-export interface NavigationSection { title:string; items:NavigationItem[]; }
+export interface NavigationItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: string;
+  end?: boolean;
+}
+export interface NavigationSection {
+  title: string;
+  items: NavigationItem[];
+}
 
-const D:NavigationItem={path:"/",label:"Dashboard",icon:LayoutDashboard};
-const menus:Record<string,NavigationItem[]>={
-  superadmin:[D,{path:"/tenancy",label:"Tenants",icon:GraduationCap},{path:"/observability",label:"Observability",icon:HeartPulse},{path:"/audit",label:"Error & Audit Logs",icon:ShieldCheck},{path:"/reports",label:"Analytics",icon:BarChart3},{path:"/workflow",label:"Support",icon:Workflow},{path:"/ai",label:"AI Control",icon:Bot},{path:"/settings",label:"System Config",icon:Settings},{path:"/observability",label:"API Health",icon:HeartPulse}],
-  tenant:[D,{path:"/setup",label:"School Setup",icon:Wrench},{path:"/organization",label:"Schools & Branches",icon:Building2},{path:"/setup/departments",label:"Departments",icon:Activity},{path:"/academics",label:"Academic Setup",icon:BookOpen},{path:"/setup/fee-types",label:"Fee Types",icon:Wallet},{path:"/hr",label:"Staff",icon:Users},{path:"/payroll",label:"Payroll",icon:Wallet},{path:"/finance",label:"Finance",icon:Wallet},{path:"/reports",label:"Reports",icon:BarChart3},{path:"/ai",label:"AI Insights",icon:Bot}],
-  principal:[D,{path:"/setup",label:"School Setup",icon:Wrench},{path:"/academics",label:"Academic",icon:BookOpen},{path:"/setup/departments",label:"Departments",icon:Building2},{path:"/reports",label:"Performance",icon:ChartNoAxesCombined},{path:"/academics",label:"Timetable",icon:CalendarDays},{path:"/examinations",label:"Exams",icon:ClipboardCheck},{path:"/ai",label:"AI Insights",icon:Bot}],
-  admin:[D,{path:"/setup",label:"School Setup",icon:Wrench},{path:"/students",label:"Students",icon:GraduationCap},{path:"/admissions",label:"Admissions",icon:ClipboardCheck},{path:"/finance",label:"Fees & Finance",icon:Wallet},{path:"/academics",label:"Timetable",icon:CalendarDays},{path:"/attendance",label:"Attendance",icon:CalendarCheck},{path:"/transport",label:"Transport",icon:Bus},{path:"/library",label:"Library",icon:Library},{path:"/communication",label:"Communication",icon:MessageCircle,badge:"3"},{path:"/activities",label:"Events",icon:Activity},{path:"/hr",label:"HR",icon:BriefcaseBusiness},{path:"/payroll",label:"Payroll",icon:Wallet}],
-  teacher:[D,{path:"/academics",label:"My Classes",icon:Building2},{path:"/attendance",label:"Attendance",icon:CalendarCheck},{path:"/examinations",label:"Grade Book",icon:ClipboardCheck},{path:"/learning",label:"Assignments",icon:FileCheck2},{path:"/academics",label:"Timetable",icon:CalendarDays},{path:"/communication",label:"Messages",icon:MessageCircle,badge:"3"},{path:"/ai",label:"AI Assistant",icon:Bot}],
-  student:[D,{path:"/academics",label:"My Courses",icon:BookOpen},{path:"/academics",label:"Timetable",icon:CalendarDays},{path:"/learning",label:"Assignments",icon:FileCheck2},{path:"/examinations",label:"My Grades",icon:ClipboardCheck},{path:"/attendance",label:"Attendance",icon:CalendarCheck},{path:"/finance",label:"Fee Status",icon:Wallet},{path:"/activities",label:"Events",icon:Activity},{path:"/ai",label:"AI Tutor",icon:Bot}],
-  parent:[D,{path:"/students",label:"My Children",icon:Users},{path:"/reports",label:"Progress",icon:ChartNoAxesCombined},{path:"/attendance",label:"Attendance",icon:CalendarCheck},{path:"/finance",label:"Fees",icon:Wallet},{path:"/transport",label:"Transport",icon:Bus},{path:"/communication",label:"Messages",icon:MessageCircle,badge:"3"},{path:"/ai",label:"AI Report",icon:Bot}],
-  driver:[D,{path:"/transport",label:"My Route",icon:Bus},{path:"/transport",label:"Assigned Students",icon:Users},{path:"/academics",label:"School Timings",icon:CalendarDays},{path:"/communication",label:"Messages",icon:MessageCircle},{path:"/notifications",label:"Notifications",icon:Bell}],
+const D: NavigationItem = { path: "/", label: "Dashboard", icon: LayoutDashboard, end: true };
+
+const menus: Record<string, NavigationItem[]> = {
+  superadmin: [
+    D,
+    { path: "/tenancy",      label: "Tenants",       icon: Building2 },
+    { path: "/reports",      label: "Analytics",     icon: BarChart3 },
+    { path: "/audit",        label: "Audit & Logs",  icon: ShieldCheck },
+    { path: "/workflow",     label: "Support",       icon: Workflow },
+    { path: "/ai",           label: "AI Control",    icon: Bot },
+    { path: "/platform",     label: "API Health",    icon: HeartPulse },
+    { path: "/settings",     label: "System Config", icon: Settings },
+  ],
+  tenant: [
+    D,
+    { path: "/setup",          label: "School Setup",   icon: Wrench },
+    { path: "/organization",   label: "Schools & Campuses", icon: Building2 },
+    { path: "/hr",             label: "Staff",          icon: Users },
+    { path: "/academics",      label: "Academic Setup", icon: BookOpen },
+    { path: "/finance",        label: "Finance",        icon: Wallet },
+    { path: "/reports",        label: "Reports",        icon: BarChart3 },
+    { path: "/ai",             label: "AI Insights",    icon: Bot },
+  ],
+  principal: [
+    D,
+    { path: "/academics",      label: "Academic",       icon: BookOpen },
+    { path: "/setup",          label: "Departments",    icon: Building2 },
+    { path: "/reports",        label: "Performance",    icon: ChartNoAxesCombined },
+    { path: "/academics",      label: "Timetable",      icon: CalendarDays },
+    { path: "/examinations",   label: "Exams",          icon: ClipboardCheck },
+    { path: "/ai",             label: "AI Insights",    icon: Bot },
+  ],
+  admin: [
+    D,
+    { path: "/students",       label: "Students",       icon: GraduationCap,   badge: "2" },
+    { path: "/admissions",     label: "Admissions",     icon: ClipboardCheck },
+    { path: "/finance",        label: "Fees & Finance", icon: Wallet },
+    { path: "/academics",      label: "Timetable",      icon: CalendarDays },
+    { path: "/attendance",     label: "Attendance",     icon: CalendarCheck },
+    { path: "/transport",      label: "Transport",      icon: Bus },
+    { path: "/library",        label: "Library",        icon: Library },
+    { path: "/communication",  label: "Communication",  icon: MessageCircle,   badge: "3" },
+    { path: "/hr",             label: "HR",             icon: BriefcaseBusiness },
+  ],
+  teacher: [
+    D,
+    { path: "/academics",      label: "My Classes",     icon: Building2 },
+    { path: "/attendance",     label: "Attendance",     icon: CalendarCheck },
+    { path: "/examinations",   label: "Grade Book",     icon: ClipboardCheck },
+    { path: "/learning",       label: "Assignments",    icon: FileCheck2 },
+    { path: "/academics",      label: "Timetable",      icon: CalendarDays },
+    { path: "/communication",  label: "Messages",       icon: MessageCircle,   badge: "3" },
+    { path: "/ai",             label: "AI Assistant",   icon: Bot },
+  ],
+  student: [
+    D,
+    { path: "/academics",      label: "My Courses",     icon: BookOpen },
+    { path: "/academics",      label: "Timetable",      icon: CalendarDays },
+    { path: "/learning",       label: "Assignments",    icon: FileCheck2 },
+    { path: "/examinations",   label: "My Grades",      icon: ClipboardCheck },
+    { path: "/attendance",     label: "Attendance",     icon: CalendarCheck },
+    { path: "/finance",        label: "Fee Status",     icon: Wallet },
+    { path: "/ai",             label: "AI Tutor",       icon: Bot },
+  ],
+  parent: [
+    D,
+    { path: "/students",       label: "My Children",    icon: Users },
+    { path: "/reports",        label: "Progress",       icon: ChartNoAxesCombined },
+    { path: "/attendance",     label: "Attendance",     icon: CalendarCheck },
+    { path: "/finance",        label: "Fees",           icon: Wallet },
+    { path: "/transport",      label: "Transport",      icon: Bus },
+    { path: "/communication",  label: "Messages",       icon: MessageCircle,   badge: "2" },
+    { path: "/ai",             label: "AI Report",      icon: Bot },
+  ],
+  driver: [
+    D,
+    { path: "/transport",      label: "My Route",       icon: Route },
+    { path: "/students",       label: "My Students",    icon: Users },
+    { path: "/academics",      label: "School Timings", icon: CalendarDays },
+    { path: "/communication",  label: "Messages",       icon: MessageCircle },
+    { path: "/notifications",  label: "Notifications",  icon: Bell },
+  ],
+  system: [
+    { path: "/",               label: "AI Dashboard",   icon: LayoutDashboard, end: true },
+    { path: "/ai",             label: "Chatbot Config",  icon: Bot },
+    { path: "/platform",       label: "Predictions",    icon: Zap },
+    { path: "/workflow",       label: "Integrations",   icon: Puzzle },
+    { path: "/audit",          label: "Logs",           icon: ScrollText },
+  ],
 };
 
-export function navigationForRoles(roles:readonly string[]):NavigationSection[]{
-  const r=roles.map(x=>x.toLowerCase());
-  const key=r.includes("superadmin")?"superadmin":r.includes("principal")?"principal":r.some(x=>["schooladmin","tenantadmin"].includes(x))?"tenant":r.some(x=>["admin","adminoffice","officeadmin"].includes(x))?"admin":r.includes("teacher")?"teacher":r.includes("student")?"student":r.some(x=>["parent","guardian"].includes(x))?"parent":r.includes("driver")?"driver":"tenant";
-  return [{title:key==="superadmin"?"Platform":key==="tenant"?"School Management":key==="principal"?"Principal Workspace":key==="admin"?"School Operations":key==="teacher"?"Teacher Workspace":key==="student"?"Student Workspace":key==="parent"?"Parent Workspace":"Transport Workspace",items:menus[key]}];
+const sectionTitles: Record<string, string> = {
+  superadmin: "Platform",
+  tenant:     "School Management",
+  principal:  "Principal Workspace",
+  admin:      "School Operations",
+  teacher:    "Teacher Workspace",
+  student:    "Student Workspace",
+  parent:     "Parent Workspace",
+  driver:     "Transport Workspace",
+  system:     "AI & System",
+};
+
+export function navigationForRoles(roles: readonly string[]): NavigationSection[] {
+  const r = roles.map(x => x.toLowerCase());
+  const key =
+    r.includes("superadmin") ? "superadmin" :
+    r.includes("principal")  ? "principal"  :
+    r.some(x => ["schooladmin","tenantadmin"].includes(x)) ? "tenant" :
+    r.some(x => ["admin","adminoffice","officeadmin"].includes(x)) ? "admin" :
+    r.includes("teacher")   ? "teacher"  :
+    r.includes("student")   ? "student"  :
+    r.some(x => ["parent","guardian"].includes(x)) ? "parent" :
+    r.includes("driver")    ? "driver"   :
+    r.includes("system")    ? "system"   :
+    "tenant";
+
+  return [{ title: sectionTitles[key] ?? "Workspace", items: menus[key] ?? [] }];
 }

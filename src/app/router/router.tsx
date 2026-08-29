@@ -1,81 +1,67 @@
-import { OrganizationPage } from "../../features/organization/pages/OrganizationPage";
-import { Navigate, createBrowserRouter, useLocation } from "react-router-dom";
-import { AppShell } from "../../components/layout/AppShell";
-import { useAuth } from "../../features/auth/auth";
-import { LoginPage } from "../../features/auth/pages/LoginPage";
-import { ProfilesPage } from "../../features/dashboard/pages/ProfilesPage";
-import { DashboardPage } from "../../features/dashboard/pages/DashboardPage";
-import { StudentsPage } from "../../features/students/pages/StudentsPage";
-import { TeachersPage } from "../../features/teachers/pages/TeachersPage";
-import { AcademicsPage } from "../../features/academics/pages/AcademicsPage";
-import { AdmissionsPage } from "../../features/admissions/pages/AdmissionsPage";
-import { AdmissionCriteriaPage } from "../../features/admissions/pages/AdmissionCriteriaPage";
-import { DocumentsPage } from "../../features/documents/pages/DocumentsPage";
+import { createBrowserRouter } from "react-router-dom";
+import { AppShell }         from "../../components/layout/AppShell";
+import { RouteErrorPage }   from "../../components/ui/RouteErrorPage";
+import { DashboardPage }    from "../../features/dashboard/pages/DashboardPage";
+import { LoginPage }        from "../../features/auth/pages/LoginPage";
+import { StudentsPage }     from "../../features/students/pages/StudentsPage";
+import { FinancePage }      from "../../features/finance/pages/FinancePage";
+import { AttendancePage }   from "../../features/attendance/pages/AttendancePage";
+import { TransportPage }    from "../../features/transport/pages/TransportPage";
+import { LibraryPage }      from "../../features/library/pages/LibraryPage";
 import { ExaminationsPage } from "../../features/examinations/pages/ExaminationsPage";
-import { AttendancePage } from "../../features/attendance/pages/AttendancePage";
-import { FinancePage } from "../../features/finance/pages/FinancePage";
-import { HrPage } from "../../features/hr/pages/HrPage";
-import { LibraryPage } from "../../features/library/pages/LibraryPage";
-import { TransportPage } from "../../features/transport/pages/TransportPage";
+import { HrPage }           from "../../features/hr/pages/HrPage";
+import { AiPage }           from "../../features/ai/pages/AiPage";
+import { AdmissionsPage }   from "../../features/admissions/pages/AdmissionsPage";
 import { CommunicationPage } from "../../features/communication/pages/CommunicationPage";
-import { AiPage } from "../../features/ai/pages/AiPage";
-import { ReportsPage } from "../../features/reports/pages/ReportsPage";
-import { RealModulePage } from "../../components/ui/RealModulePage";
-import { SettingsPage } from "../../features/settings/pages/SettingsPage";
-import { MasterSetupPage } from "../../features/settings/pages/MasterSetupPage";
-import { ScopedMasterPage } from "../../features/settings/pages/ScopedMasterPage";
-import { PlatformAdminPage } from "../../features/platform/pages/PlatformAdminPage";
+import { ReportsPage }      from "../../features/reports/pages/ReportsPage";
+import { AcademicsPage }    from "../../features/academics/pages/AcademicsPage";
 import { TenantManagementPage } from "../../features/tenancy/pages/TenantManagementPage";
+import { SettingsPage }     from "../../features/settings/pages/SettingsPage";
+import { ProfilesPage }     from "../../features/dashboard/pages/ProfilesPage";
 import { WorkflowCenterPage } from "../../features/workflow/pages/WorkflowCenterPage";
-import { RouteErrorPage } from "../../components/ui/RouteErrorPage";
-function ProtectedShell() {
-    const { user } = useAuth();
-    const location = useLocation();
-    return user ? <AppShell /> : <Navigate to="/login" replace state={{ from: location.pathname }}/>;
-}
-export const router = createBrowserRouter([
-    { path: "/login", element: <LoginPage /> },
-    {
-        path: "/",
-        element: <ProtectedShell />,
-        errorElement: <RouteErrorPage />,
-        children: [
-            { index: true, element: <DashboardPage /> },
-            { path: "profiles", element: <ProfilesPage /> },
-            { path: "platform", element: <PlatformAdminPage /> },
-            { path: "students", element: <StudentsPage /> },
-            { path: "teachers", element: <TeachersPage /> },
-            { path: "academics", element: <AcademicsPage /> },
-            { path: "examinations", element: <ExaminationsPage /> },
-            { path: "attendance", element: <AttendancePage /> },
-            { path: "finance", element: <FinancePage /> },
-            { path: "hr", element: <HrPage /> },
-            { path: "library", element: <LibraryPage /> },
-            { path: "transport", element: <TransportPage /> },
-            { path: "communication", element: <CommunicationPage /> },
-            { path: "ai", element: <AiPage /> },
-            { path: "admissions", element: <AdmissionsPage /> },
-            { path: "admission-criteria", element: <AdmissionCriteriaPage /> },
-            { path: "academic-setup", element: <Navigate to="/academics" replace /> },
-            { path: "activities", element: <RealModulePage module="activities" /> },
-            { path: "inventory", element: <RealModulePage module="inventory" /> },
-            { path: "learning", element: <RealModulePage module="learning" /> },
-            { path: "organization", element: <OrganizationPage /> },
-            { path: "payroll", element: <RealModulePage module="payroll" /> },
-            { path: "documents", element: <DocumentsPage /> },
-            { path: "workflow", element: <WorkflowCenterPage /> },
-            { path: "tenancy", element: <TenantManagementPage /> },
-            { path: "reports", element: <ReportsPage /> },
-            { path: "settings", element: <SettingsPage /> },
-            { path: "setup", element: <MasterSetupPage /> },
-            { path: "setup/departments", element: <ScopedMasterPage kind="department" /> },
-            { path: "setup/fee-types", element: <ScopedMasterPage kind="fee-type" /> },
-            { path: "notifications", element: <CommunicationPage /> },
-            { path: "reference", element: <RealModulePage module="reference" /> },
-            { path: "audit", element: <RealModulePage module="audit" /> },
-            { path: "observability", element: <RealModulePage module="observability" /> },
-            { path: "platform/features", element: <RealModulePage module="platform" /> },
-        ],
-    },
-]);
+import { OrganizationPage } from "../../features/organization/pages/OrganizationPage";
+import { HrPage as PayrollPage } from "../../features/hr/pages/HrPage";
+import { ModulePlaceholder } from "../../components/ui/ModulePlaceholder";
+import { MockDataProvider } from "../../mocks/MockDataProvider";
+import { requireAuth }      from "../../features/auth/auth";
 
+export const router = createBrowserRouter([
+  { path: "/login", element: <LoginPage /> },
+  {
+    path: "/",
+    element: <MockDataProvider><AppShell /></MockDataProvider>,
+    errorElement: <RouteErrorPage />,
+    loader: requireAuth,
+    children: [
+      { index: true,           element: <DashboardPage /> },
+      { path: "students",      element: <StudentsPage /> },
+      { path: "finance",       element: <FinancePage /> },
+      { path: "attendance",    element: <AttendancePage /> },
+      { path: "transport",     element: <TransportPage /> },
+      { path: "library",       element: <LibraryPage /> },
+      { path: "examinations",  element: <ExaminationsPage /> },
+      { path: "hr",            element: <HrPage /> },
+      { path: "payroll",       element: <PayrollPage /> },
+      { path: "ai",            element: <AiPage /> },
+      { path: "admissions",    element: <AdmissionsPage /> },
+      { path: "communication", element: <CommunicationPage /> },
+      { path: "reports",       element: <ReportsPage /> },
+      { path: "academics",     element: <AcademicsPage /> },
+      { path: "tenancy",       element: <TenantManagementPage /> },
+      { path: "settings",      element: <SettingsPage /> },
+      { path: "profiles",      element: <ProfilesPage /> },
+      { path: "workflow",      element: <WorkflowCenterPage /> },
+      { path: "organization",  element: <OrganizationPage /> },
+      { path: "setup",         element: <ModulePlaceholder module="School Setup" /> },
+      { path: "setup/*",       element: <ModulePlaceholder module="Setup" /> },
+      { path: "platform",      element: <ModulePlaceholder module="Platform Health" /> },
+      { path: "audit",         element: <ModulePlaceholder module="Audit & Logs" /> },
+      { path: "teachers",      element: <ModulePlaceholder module="Teachers" /> },
+      { path: "learning",      element: <ModulePlaceholder module="Learning & Assignments" /> },
+      { path: "activities",    element: <ModulePlaceholder module="Events & Activities" /> },
+      { path: "notifications", element: <ModulePlaceholder module="Notifications" /> },
+      { path: "observability", element: <ModulePlaceholder module="Observability" /> },
+      { path: "documents",     element: <ModulePlaceholder module="Documents" /> },
+    ],
+  },
+]);

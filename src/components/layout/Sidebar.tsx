@@ -1,4 +1,4 @@
-import { GraduationCap, X } from "lucide-react";
+import { Bot, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../features/auth/auth";
 import { navigationForRoles } from "./navigation";
@@ -8,12 +8,11 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+/** Role-adaptive sidebar with 9-actor navigation support. */
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { user } = useAuth();
   const userRoles = user?.roles?.length ? user.roles : [user?.role ?? ""];
-  const isSuperAdmin = userRoles.includes("SuperAdmin");
-
-  const visibleSections = navigationForRoles(userRoles);
+  const sections  = navigationForRoles(userRoles);
 
   return (
     <>
@@ -27,40 +26,47 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       )}
 
       <aside className={`sidebar ${open ? "open" : ""}`}>
+        {/* Brand */}
         <header className="sidebar-head">
           <div className="brand">
-            <span className="brand-mark">
-              <GraduationCap size={22} />
-            </span>
-            <span>
-              Smart<b>School</b>
-            </span>
+            <span className="brand-mark"><Bot size={18} /></span>
+            <span>Smart<b>School</b></span>
           </div>
-
-          <button className="sidebar-close" type="button" aria-label="Close navigation" onClick={onClose}>
-            <X size={20} />
+          <button
+            className="sidebar-close icon-button"
+            type="button"
+            aria-label="Close navigation"
+            onClick={onClose}
+            style={{ border: 0, background: "transparent", color: "rgba(255,255,255,.55)" }}
+          >
+            <X size={18} />
           </button>
         </header>
 
+        {/* School / user chip */}
         <div className="school-chip">
           <span>{user?.initials ?? "SS"}</span>
           <div>
             <b>{user?.name ?? "SmartSchool"}</b>
-            <small>{isSuperAdmin ? "Platform master workspace" : `${user?.role ?? "User"} workspace`}</small>
+            <small>{user?.role ?? "User"} workspace</small>
           </div>
         </div>
 
+        {/* Navigation */}
         <nav className="nav" aria-label="Main navigation">
-          {visibleSections.map((section) => (
+          {sections.map(section => (
             <div className="nav-section" key={section.title}>
               <div className="nav-label">{section.title}</div>
-
-              {section.items.map((item) => {
+              {section.items.map(item => {
                 const Icon = item.icon;
-
                 return (
-                  <NavLink key={item.path} to={item.path} end={item.path === "/"} onClick={onClose}>
-                    <Icon size={18} />
+                  <NavLink
+                    key={`${item.path}-${item.label}`}
+                    to={item.path}
+                    end={item.end ?? false}
+                    onClick={onClose}
+                  >
+                    <Icon size={15} />
                     <span>{item.label}</span>
                     {item.badge && <i className="nav-count">{item.badge}</i>}
                   </NavLink>
@@ -70,7 +76,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <footer className="sb-footer"><div className="sb-status"><i /> System online</div></footer>
+        {/* Footer */}
+        <footer className="sb-footer">
+          <div className="sb-status"><i />System online · SmartSchool v10</div>
+        </footer>
       </aside>
     </>
   );

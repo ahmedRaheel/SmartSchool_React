@@ -1,21 +1,35 @@
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 
 interface StatCardProps {
-  icon: ReactNode;
-  value: ReactNode;
   label: string;
-  description?: string;
+  value: string;
+  note?: string;
+  children: ReactNode;   // icon
+  color?: string;
+  bg?: string;
 }
 
-/** Shared KPI card. Keeps icon, value and copy in dedicated layout regions. */
-export function StatCard({ icon, value, label, description }: StatCardProps) {
+/**
+ * Reusable KPI stat card used across all 9 actor dashboards.
+ * Renders a colored icon, numeric value, label and optional trend note.
+ */
+export function StatCard({ label, value, note, children, color = "#2563EB", bg = "#EFF6FF" }: StatCardProps) {
+  const isUp   = note?.includes("↑");
+  const isDown = note?.includes("↓");
+
   return (
     <article className="stat-card">
-      <span className="stat-card-icon" aria-hidden="true">{icon}</span>
-      <div className="stat-card-content">
-        <strong className="stat-card-value">{value}</strong>
-        <span className="stat-card-label">{label}</span>
-        {description && <small className="stat-card-description">{description}</small>}
+      <div className="stat-icon" style={{ background: bg, color }}>
+        {children}
+      </div>
+      <div>
+        <div className="stat-label">{label}</div>
+        <div className="stat-value">{value}</div>
+        {note && (
+          <div className={`stat-note ${isUp ? "stat-up" : isDown ? "stat-down" : ""}`}>
+            {note}
+          </div>
+        )}
       </div>
     </article>
   );
