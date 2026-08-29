@@ -71,6 +71,14 @@ export const hrApi = {
     return response.data;
   },
 
+  async addEducation(employeeId: string, tenantId: string, row: any) {
+    return (await api.post(`/api/hr/employee/${employeeId}/education`, { tenantId, ...row, startDate: row.startDate || null, endDate: row.endDate || null, isHighest: false })).data;
+  },
+
+  async addExperience(employeeId: string, tenantId: string, row: any) {
+    return (await api.post(`/api/hr/employee/${employeeId}/experience`, { tenantId, ...row, endDate: row.endDate || null })).data;
+  },
+
   async updateRecruitmentStatus(employeeId: string, tenantId: string, status: "SUBMITTED" | "REJECTED" | "WAITING_LIST") {
     return (await api.put(`/api/hr/employee/${employeeId}/recruitment-status`, { tenantId, employeeId, status })).data;
   },
