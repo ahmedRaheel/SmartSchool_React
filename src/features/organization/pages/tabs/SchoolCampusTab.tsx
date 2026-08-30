@@ -1,135 +1,232 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
-
-interface School { id:string; name:string; reg:string; city:string; phone:string; email:string; }
-interface Campus { id:string; schoolId:string; name:string; type:string; city:string; isMain:boolean; }
-
-const MOCK_SCHOOLS: School[] = [
-  { id:"1", name:"Al-Noor Academy", reg:"REG-2020-001", city:"Karachi", phone:"021-1234567", email:"info@alnoor.edu.pk" },
-];
-const MOCK_CAMPUS: Campus[] = [
-  { id:"1", schoolId:"1", name:"Main Campus", type:"Main",    city:"Karachi",  isMain:true  },
-  { id:"2", schoolId:"1", name:"North Branch",type:"Branch",  city:"Karachi",  isMain:false },
-  { id:"3", schoolId:"1", name:"Gulshan Campus",type:"Branch",city:"Karachi",  isMain:false },
-];
+import { Building2, Plus, Trash2, X } from "lucide-react";
+import {
+  useSchools, useCreateSchool, useCampuses, useCreateCampus,
+  useDepartments, useCreateDepartment, useDeleteDepartment,
+  useBranchGenderTypes, useEducationLevels,
+} from "../../../../core/api/queries";
+import { useAuth } from "../../../auth/auth";
+import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
+import type { CreateSchoolRequest, CreateCampusRequest, CreateDepartmentRequest } from "../../../../core/api/backendContracts";
 
 export function SchoolCampusTab() {
-  const [schools, setSchools] = useState<School[]>(MOCK_SCHOOLS);
-  const [campuses, setCampuses] = useState<Campus[]>(MOCK_CAMPUS);
-  const [schoolModal, setSchoolModal] = useState(false);
-  const [campusModal, setCampusModal] = useState(false);
-  const [sf, setSf] = useState({ name:"",reg:"",city:"",phone:"",email:"" });
-  const [cf, setCf] = useState({ schoolId:"1",name:"",type:"Branch",city:"",isMain:"false" });
+  const { user } = useAuth();
+  const tid = effectiveTenantId(user);
 
-  function saveSchool() {
-    if(!sf.name) return;
-    setSchools(p=>[...p,{id:Date.now().toString(),...sf}]);
-    setSchoolModal(false); setSf({name:"",reg:"",city:"",phone:"",email:""});
+  const { data: schools, isLoading: sLoad } = useSchools();
+  const { data: campuses, isLoading: cLoad } = useCampuses();
+  const { data: departments, isLoading: dLoad } = useDepartments();
+  const { data: genderTypes } = useBranchGenderTypes();
+  const { data: eduLevels } = useEducationLevels();
+
+  const createSchool  = useCreateSchool();
+  const createCampus  = useCreateCampus();
+  const createDept    = useCreateDepartment();
+  const deleteDept    = useDeleteDepartment();
+
+  // Modal state
+  const [modal, setModal] = useState<"school"|"campus"|"dept"|null>(null);
+  const [error, setError] = useState("");
+
+  // Forms
+  const [schoolForm, setSchoolForm] = useState<Partial<CreateSchoolRequest>>({});
+  const [campusForm, setCampusForm] = useState<Partial<CreateCampusRequest>>({ branchType:"MIXED", educationLevelIds:[] });
+  const [deptForm,   setDeptForm]   = useState<Partial<CreateDepartmentRequest>>({});
+
+  const schoolItems  = (schools as any)?.items  ?? (schools as any) ?? [];
+  const campusItems  = (campuses as any)?.items ?? (campuses as any) ?? [];
+  const deptItems    = (departments as any)?.items ?? (departments as any) ?? [];
+  const gTypes = genderTypes ?? [];
+  const eLevels = eduLevels ?? [];
+
+  async function saveSchool() {
+    if (!schoolForm.name) { setError("School name required"); return; }
+    try { await createSchool.mutateAsync({ tenantId: tid, ...schoolForm }); setModal(null); setSchoolForm({}); setError(""); }
+    catch (e: any) { setError(e?.message ?? "Failed"); }
   }
-  function saveCampus() {
-    if(!cf.name) return;
-    setCampuses(p=>[...p,{id:Date.now().toString(),...cf,isMain:cf.isMain==="true"}]);
-    setCampusModal(false); setCf({schoolId:"1",name:"",type:"Branch",city:"",isMain:"false"});
+
+  async function saveCampus() {
+    if (!campusForm.name || !campusForm.schoolId || !campusForm.branchGenderTypeId || !campusForm.educationLevelIds?.length) {
+      setError("School, campus name, gender type and at least one education level required"); return;
+    }
+    try { await createCampus.mutateAsync({ tenantId: tid, ...campusForm } as any); setModal(null); setCampusForm({ branchType:"MIXED", educationLevelIds:[] }); setError(""); }
+    catch (e: any) { setError(e?.message ?? "Failed"); }
   }
+
+  async function saveDept() {
+    if (!deptForm.name || !deptForm.campusId) { setError("Campus and department name required"); return; }
+    try { await createDept.mutateAsync({ tenantId: tid, ...deptForm } as any); setModal(null); setDeptForm({}); setError(""); }
+    catch (e: any) { setError(e?.message ?? "Failed"); }
+  }
+
+  function sf(k: keyof CreateSchoolRequest) { return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setSchoolForm(p => ({ ...p, [k]: e.target.value })); }
+  function cf(k: keyof CreateCampusRequest) { return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setCampusForm(p => ({ ...p, [k]: e.target.value })); }
+  function df(k: keyof CreateDepartmentRequest) { return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setDeptForm(p => ({ ...p, [k]: e.target.value })); }
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
       {/* Schools */}
       <div className="surface">
         <div className="surface-head">
-          <div><h3>Schools</h3><p>Your registered school entities</p></div>
-          <button className="primary" onClick={()=>setSchoolModal(true)}><Plus size={14}/> Add school</button>
+          <div><h3>Schools</h3><p>Registered school entities under your tenant</p></div>
+          <button className="primary" onClick={() => { setModal("school"); setError(""); setSchoolForm({}); }}><Plus size={14}/> Add school</button>
         </div>
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead><tr><th>Name</th><th>Reg. No.</th><th>City</th><th>Email</th><th>Campuses</th></tr></thead>
-            <tbody>
-              {schools.map(s=>(
-                <tr key={s.id}>
-                  <td><b>{s.name}</b></td>
-                  <td><code style={{fontSize:11}}>{s.reg}</code></td>
-                  <td>{s.city}</td><td>{s.email}</td>
-                  <td>{campuses.filter(c=>c.schoolId===s.id).length}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {sLoad ? <div style={{ padding:20, color:"var(--muted)", fontSize:12 }}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Name</th><th>Code</th><th>City</th><th>Email</th><th>Phone</th></tr></thead>
+              <tbody>
+                {schoolItems.length === 0 ? <tr><td colSpan={5} style={{ textAlign:"center", padding:20, color:"var(--muted)" }}>No schools yet. Add your first school above.</td></tr>
+                : schoolItems.map((s: any) => (
+                  <tr key={s.id}><td><b>{s.name}</b></td><td><code style={{fontSize:11}}>{s.code}</code></td><td>{s.city ?? "—"}</td><td>{s.email ?? "—"}</td><td>{s.phone ?? "—"}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Campuses */}
       <div className="surface">
         <div className="surface-head">
-          <div><h3>Campuses / Branches</h3><p>Physical locations for each school</p></div>
-          <button className="primary" onClick={()=>setCampusModal(true)}><Plus size={14}/> Add campus</button>
+          <div><h3>Campuses / Branches</h3><p>Physical locations under your schools</p></div>
+          <button className="primary" onClick={() => { setModal("campus"); setError(""); setCampusForm({ branchType:"MIXED", educationLevelIds:[] }); }}><Plus size={14}/> Add campus</button>
         </div>
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead><tr><th>Campus</th><th>School</th><th>Type</th><th>City</th><th>Main?</th></tr></thead>
-            <tbody>
-              {campuses.map(c=>(
-                <tr key={c.id}>
-                  <td><b>{c.name}</b></td>
-                  <td>{schools.find(s=>s.id===c.schoolId)?.name}</td>
-                  <td><span className={`status-pill ${c.type==="Main"?"success":"info"}`}>{c.type}</span></td>
-                  <td>{c.city}</td>
-                  <td>{c.isMain?"✅":"—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {cLoad ? <div style={{ padding:20, color:"var(--muted)", fontSize:12 }}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Campus</th><th>Code</th><th>Type</th><th>City</th><th>Email</th></tr></thead>
+              <tbody>
+                {campusItems.length === 0 ? <tr><td colSpan={5} style={{ textAlign:"center", padding:20, color:"var(--muted)" }}>No campuses yet.</td></tr>
+                : campusItems.map((c: any) => (
+                  <tr key={c.id}><td><b>{c.name}</b></td><td><code style={{fontSize:11}}>{c.code}</code></td><td>{c.branchType}</td><td>{c.city ?? "—"}</td><td>{c.email ?? "—"}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {schoolModal && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setSchoolModal(false)}}>
-          <div className="modal-card" style={{width:"min(560px,96vw)"}}>
-            <div className="modal-head"><h2>Add school</h2><button className="icon-button" onClick={()=>setSchoolModal(false)}><X size={18}/></button></div>
-            <div className="human-form">
-              <div className="human-form-grid">
-                <label className="human-field field-wide"><span>School name *</span><input value={sf.name} onChange={e=>setSf(p=>({...p,name:e.target.value}))}/></label>
-                <label className="human-field"><span>Registration no.</span><input value={sf.reg} onChange={e=>setSf(p=>({...p,reg:e.target.value}))}/></label>
-                <label className="human-field"><span>City</span><input value={sf.city} onChange={e=>setSf(p=>({...p,city:e.target.value}))}/></label>
-                <label className="human-field"><span>Phone</span><input value={sf.phone} onChange={e=>setSf(p=>({...p,phone:e.target.value}))}/></label>
-                <label className="human-field field-wide"><span>Email</span><input type="email" value={sf.email} onChange={e=>setSf(p=>({...p,email:e.target.value}))}/></label>
-              </div>
+      {/* Departments */}
+      <div className="surface">
+        <div className="surface-head">
+          <div><h3>Departments</h3><p>Academic and administrative departments per campus</p></div>
+          <button className="primary" onClick={() => { setModal("dept"); setError(""); setDeptForm({}); }}><Plus size={14}/> Add department</button>
+        </div>
+        {dLoad ? <div style={{ padding:20, color:"var(--muted)", fontSize:12 }}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Department</th><th>Code</th><th>Email</th><th>Phone</th><th/></tr></thead>
+              <tbody>
+                {deptItems.length === 0 ? <tr><td colSpan={5} style={{ textAlign:"center", padding:20, color:"var(--muted)" }}>No departments yet.</td></tr>
+                : deptItems.map((d: any) => (
+                  <tr key={d.id}>
+                    <td><b>{d.name}</b></td><td><code style={{fontSize:11}}>{d.code}</code></td>
+                    <td>{JSON.parse(d.metadataJson ?? "{}").email ?? "—"}</td>
+                    <td>{JSON.parse(d.metadataJson ?? "{}").telephone ?? "—"}</td>
+                    <td><button className="table-action danger-button" style={{fontSize:10}} onClick={() => deleteDept.mutate(d.id)}><Trash2 size={11}/></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Add School Modal */}
+      {modal === "school" && (
+        <div className="modal-backdrop" onClick={e => { if (e.target===e.currentTarget) setModal(null); }}>
+          <div className="modal-card" style={{ width:"min(640px,96vw)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div className="modal-head"><h2>Add school</h2><button className="icon-button" onClick={() => setModal(null)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>School name *</span><input value={schoolForm.name ?? ""} onChange={sf("name")} placeholder="e.g. Al-Noor Academy"/></label>
+              <label className="human-field"><span>Registration no.</span><input value={schoolForm.registrationNumber ?? ""} onChange={sf("registrationNumber")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={schoolForm.email ?? ""} onChange={sf("email")}/></label>
+              <label className="human-field"><span>Phone</span><input value={schoolForm.phone ?? ""} onChange={sf("phone")}/></label>
+              <label className="human-field"><span>Website</span><input value={schoolForm.website ?? ""} onChange={sf("website")}/></label>
+              <label className="human-field"><span>City</span><input value={schoolForm.city ?? ""} onChange={sf("city")}/></label>
+              <label className="human-field"><span>Province</span><input value={schoolForm.province ?? ""} onChange={sf("province")}/></label>
+              <label className="human-field"><span>Country</span><input value={schoolForm.country ?? ""} onChange={sf("country")}/></label>
+              <label className="human-field field-wide"><span>Address</span><input value={schoolForm.address ?? ""} onChange={sf("address")}/></label>
             </div>
-            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              <button className="secondary" onClick={()=>setSchoolModal(false)}>Cancel</button>
-              <button className="primary" onClick={saveSchool} disabled={!sf.name}>Save school</button>
+            {error && <div style={{ color:"var(--danger)", fontSize:12 }}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={() => setModal(null)}>Cancel</button>
+              <button className="primary" onClick={saveSchool} disabled={createSchool.isPending}>{createSchool.isPending?"Saving…":"Save school"}</button>
             </div>
           </div>
         </div>
       )}
 
-      {campusModal && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setCampusModal(false)}}>
-          <div className="modal-card" style={{width:"min(520px,96vw)"}}>
-            <div className="modal-head"><h2>Add campus</h2><button className="icon-button" onClick={()=>setCampusModal(false)}><X size={18}/></button></div>
-            <div className="human-form">
-              <div className="human-form-grid">
-                <label className="human-field"><span>School</span>
-                  <select value={cf.schoolId} onChange={e=>setCf(p=>({...p,schoolId:e.target.value}))}>
-                    {schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </label>
-                <label className="human-field"><span>Campus name *</span><input value={cf.name} onChange={e=>setCf(p=>({...p,name:e.target.value}))}/></label>
-                <label className="human-field"><span>Type</span>
-                  <select value={cf.type} onChange={e=>setCf(p=>({...p,type:e.target.value}))}>
-                    <option>Main</option><option>Branch</option><option>Satellite</option>
-                  </select>
-                </label>
-                <label className="human-field"><span>City</span><input value={cf.city} onChange={e=>setCf(p=>({...p,city:e.target.value}))}/></label>
-                <label className="human-field"><span>Is main campus?</span>
-                  <select value={cf.isMain} onChange={e=>setCf(p=>({...p,isMain:e.target.value}))}>
-                    <option value="false">No</option><option value="true">Yes</option>
-                  </select>
-                </label>
-              </div>
+      {/* Add Campus Modal */}
+      {modal === "campus" && (
+        <div className="modal-backdrop" onClick={e => { if (e.target===e.currentTarget) setModal(null); }}>
+          <div className="modal-card" style={{ width:"min(680px,96vw)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div className="modal-head"><h2>Add campus / branch</h2><button className="icon-button" onClick={() => setModal(null)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>School *</span>
+                <select value={campusForm.schoolId ?? ""} onChange={cf("schoolId" as any)}>
+                  <option value="">— Select school —</option>
+                  {schoolItems.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </label>
+              <label className="human-field field-wide"><span>Campus name *</span><input value={campusForm.name ?? ""} onChange={cf("name")} placeholder="e.g. Main Campus"/></label>
+              <label className="human-field"><span>Branch type *</span>
+                <select value={campusForm.branchType} onChange={cf("branchType")}>
+                  <option value="MIXED">Mixed (Boys & Girls)</option>
+                  <option value="MALE">Boys Only</option>
+                  <option value="FEMALE">Girls Only</option>
+                </select>
+              </label>
+              <label className="human-field"><span>Gender type *</span>
+                <select value={campusForm.branchGenderTypeId ?? ""} onChange={cf("branchGenderTypeId" as any)}>
+                  <option value="">— Select —</option>
+                  {gTypes.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </label>
+              <label className="human-field field-wide"><span>Education levels * (hold Ctrl to multi-select)</span>
+                <select multiple size={4} value={campusForm.educationLevelIds}
+                  onChange={e => setCampusForm(p => ({ ...p, educationLevelIds: Array.from(e.target.selectedOptions, o => o.value) }))}>
+                  {eLevels.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </label>
+              <label className="human-field"><span>City</span><input value={campusForm.city ?? ""} onChange={cf("city")}/></label>
+              <label className="human-field"><span>Province</span><input value={campusForm.province ?? ""} onChange={cf("province")}/></label>
+              <label className="human-field"><span>Phone</span><input value={campusForm.phone ?? ""} onChange={cf("phone")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={campusForm.email ?? ""} onChange={cf("email")}/></label>
             </div>
-            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              <button className="secondary" onClick={()=>setCampusModal(false)}>Cancel</button>
-              <button className="primary" onClick={saveCampus} disabled={!cf.name}>Save campus</button>
+            {error && <div style={{ color:"var(--danger)", fontSize:12 }}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={() => setModal(null)}>Cancel</button>
+              <button className="primary" onClick={saveCampus} disabled={createCampus.isPending}>{createCampus.isPending?"Saving…":"Save campus"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Department Modal */}
+      {modal === "dept" && (
+        <div className="modal-backdrop" onClick={e => { if (e.target===e.currentTarget) setModal(null); }}>
+          <div className="modal-card" style={{ width:"min(500px,96vw)" }}>
+            <div className="modal-head"><h2>Add department</h2><button className="icon-button" onClick={() => setModal(null)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Campus *</span>
+                <select value={deptForm.campusId ?? ""} onChange={df("campusId" as any)}>
+                  <option value="">— Select campus —</option>
+                  {campusItems.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <label className="human-field field-wide"><span>Department name *</span><input value={deptForm.name ?? ""} onChange={df("name")} placeholder="e.g. Mathematics"/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={(deptForm as any).email ?? ""} onChange={df("email" as any)}/></label>
+              <label className="human-field"><span>Telephone</span><input value={(deptForm as any).telephone ?? ""} onChange={df("telephone" as any)}/></label>
+            </div>
+            {error && <div style={{ color:"var(--danger)", fontSize:12 }}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={() => setModal(null)}>Cancel</button>
+              <button className="primary" onClick={saveDept} disabled={createDept.isPending}>{createDept.isPending?"Saving…":"Save"}</button>
             </div>
           </div>
         </div>

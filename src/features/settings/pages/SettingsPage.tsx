@@ -2,43 +2,35 @@ import { useState } from "react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { DepartmentsTab }  from "./tabs/DepartmentsTab";
 import { FeeTypesTab }     from "./tabs/FeeTypesTab";
+import { LookupTab }       from "./tabs/LookupTab";
 import { SubjectsTab }     from "./tabs/SubjectsTab";
 import { RoomsTab }        from "./tabs/RoomsTab";
-import { LookupTab }       from "./tabs/LookupTab";
-import { FeeStructureTab } from "./tabs/FeeStructureTab";
 
-type Tab = "departments" | "fee-types" | "fee-structure" | "subjects" | "rooms" | "lookup";
+type SettingsTab = "departments"|"feetypes"|"lookups"|"subjects"|"rooms";
 
-const TABS: { key: Tab; label: string; emoji: string }[] = [
-  { key: "departments",   label: "Departments",    emoji: "🏛️" },
-  { key: "subjects",      label: "Subjects",       emoji: "📚" },
-  { key: "fee-types",     label: "Fee Types",      emoji: "💳" },
-  { key: "fee-structure", label: "Fee Structure",  emoji: "💰" },
-  { key: "rooms",         label: "Rooms",          emoji: "🚪" },
-  { key: "lookup",        label: "Lookup Values",  emoji: "🔧" },
+const TABS: { key: SettingsTab; label: string }[] = [
+  { key:"departments", label:"🏢 Departments"   },
+  { key:"feetypes",    label:"💰 Fee Types"      },
+  { key:"lookups",     label:"🔧 Lookup values"  },
+  { key:"subjects",    label:"📖 Subjects"       },
+  { key:"rooms",       label:"🚪 Rooms"          },
 ];
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("departments");
-
+  const [tab, setTab] = useState<SettingsTab>("departments");
   return (
     <>
-      <PageHeader title="Master Setup" subtitle="Configure departments, subjects, fee types, rooms and lookup values" />
-
-      <div className="section-tabs" style={{ marginBottom: 20 }}>
+      <PageHeader title="Settings" subtitle="School configuration — departments, fee types, lookup values"/>
+      <div className="section-tabs" style={{ marginBottom:16 }}>
         {TABS.map(t => (
-          <button key={t.key} className={tab === t.key ? "active" : ""} onClick={() => setTab(t.key)}>
-            {t.emoji} {t.label}
-          </button>
+          <button key={t.key} className={tab===t.key?"active":""} onClick={()=>setTab(t.key)}>{t.label}</button>
         ))}
       </div>
-
-      {tab === "departments"   && <DepartmentsTab />}
-      {tab === "subjects"      && <SubjectsTab />}
-      {tab === "fee-types"     && <FeeTypesTab />}
-      {tab === "fee-structure" && <FeeStructureTab />}
-      {tab === "rooms"         && <RoomsTab />}
-      {tab === "lookup"        && <LookupTab />}
+      {tab==="departments" && <DepartmentsTab/>}
+      {tab==="feetypes"    && <FeeTypesTab/>}
+      {tab==="lookups"     && <LookupTab/>}
+      {tab==="subjects"    && <SubjectsTab/>}
+      {tab==="rooms"       && <RoomsTab/>}
     </>
   );
 }

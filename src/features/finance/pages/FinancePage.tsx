@@ -1,204 +1,238 @@
-import { useState } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { useState, useMemo } from "react";
+import { DollarSign, Plus, Search, TrendingUp, Wallet, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useInvoices, useCreateInvoice, useRecordPayment } from "../../../core/api/queries";
+import { useInvoices, useCreateInvoice, useCreatePayment, useFeeTypes, useCreateFeeType, useAdminDashboard } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-import type { Invoice } from "../../../core/api/smartschoolApi";
 
-const PAYMENT_METHODS = ["Cash","Bank Transfer","Online Portal","Cheque","Wallet"];
+const STATUS_PILL: Record<string,string> = { PAID:"success", PENDING:"warning", OVERDUE:"danger", CANCELLED:"gray" };
+
+function parseMeta(json?: string|null) {
+  try { return JSON.parse(json ?? "{}"); } catch { return {}; }
+}
 
 export function FinancePage() {
   const { user } = useAuth();
-  const tenantId = effectiveTenantId(user);
-  const { data, isLoading, refetch } = useInvoices();
-  const createInvoice  = useCreateInvoice();
-  const recordPayment  = useRecordPayment();
+  const tid = effectiveTenantId(user) ?? "";
+  const [q, setQ]               = useState("");
+  const [statusFilter, setStatus]= useState("ALL");
+  const [invoiceModal, setIM]    = useState(false);
+  const [payModal, setPM]        = useState<string|null>(null);
+  const [feeModal, setFM]        = useState(false);
+  const [invForm, setInvForm]    = useState({ name:"", metadataJson:"" });
+  const [payAmount, setPayAmount] = useState("");
+  const [feeForm, setFeeForm]    = useState({ name:"", frequency:"Monthly", description:"" });
+  const [error, setError]        = useState("");
+  const [success, setSuccess]    = useState("");
 
-  const [q, setQ]             = useState("");
-  const [addOpen, setAddOpen] = useState(false);
-  const [payOpen, setPayOpen] = useState(false);
-  const [payTarget, setPayTarget] = useState<Invoice | null>(null);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState("");
+  const { data: dash }    = useAdminDashboard();
+  const { data, isLoading} = useInvoices();
+  const { data: fees }    = useFeeTypes();
+  const createInvoice = useCreateInvoice();
+  const createPayment = useCreatePayment();
+  const createFeeType = useCreateFeeType();
 
-  const [invForm, setInvForm] = useState({ studentId:"", amount:"", dueDate:"", feeTypeCode:"TUITION" });
-  const [payForm, setPayForm] = useState({ amount:"", paymentMethod:"Cash", referenceNumber:"", paymentDate: new Date().toISOString().slice(0, 10) });
+  const invoices  = (data as any)?.items ?? (data as any) ?? [];
+  const feeItems  = Array.isArray(fees) ? fees : (fees as any)?.items ?? [];
+  const total     = (data as any)?.totalCount ?? invoices.length;
 
-  const invoices = data?.items ?? [];
-  const filtered = invoices.filter(inv =>
-    (inv.invoiceNumber ?? "").toLowerCase().includes(q.toLowerCase()) ||
-    inv.studentId.toLowerCase().includes(q.toLowerCase())
-  );
+  const filtered  = useMemo(() =>
+    invoices.filter((inv:any) => {
+      const meta = parseMeta(inv.metadataJson);
+      const status = meta.status ?? "";
+      const matchQ = `${inv.name} ${inv.code}`.toLowerCase().includes(q.toLowerCase());
+      const matchS = statusFilter === "ALL" || status === statusFilter;
+      return matchQ && matchS;
+    }),
+    [invoices, q, statusFilter]);
 
-  const totals = invoices.reduce((a, inv) => ({
-    collected: a.collected + (inv.status === "PAID" ? inv.totalAmount : 0),
-    pending:   a.pending   + (inv.status === "PENDING" ? inv.totalAmount : 0),
-    overdue:   a.overdue   + (inv.status === "OVERDUE" ? inv.totalAmount : 0),
-  }), { collected: 0, pending: 0, overdue: 0 });
+  const collected  = dash?.CollectedAmount ?? 0;
+  const outstanding = dash?.OutstandingAmount ?? 0;
 
   async function saveInvoice() {
-    if (!invForm.studentId || !invForm.amount) { setError("Student ID and amount are required."); return; }
-    setSaving(true); setError("");
+    if (!invForm.name) { setError("Name required"); return; }
     try {
-      await createInvoice.mutateAsync({
-        tenantId, studentId: invForm.studentId,
-        amount: Number(invForm.amount), dueDate: invForm.dueDate || null,
-        feeTypeCode: invForm.feeTypeCode,
-      });
-      setAddOpen(false);
-      void refetch();
-    } catch (err: any) {
-      setError(err?.message ?? "Could not create invoice.");
-    } finally { setSaving(false); }
+      await createInvoice.mutateAsync({ tenantId: tid, name: invForm.name, metadataJson: invForm.metadataJson || undefined });
+      setIM(false); setInvForm({ name:"", metadataJson:"" }); setError(""); setSuccess("Invoice created");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch(e:any) { setError(e?.response?.data?.message ?? e?.message ?? "Failed"); }
   }
 
   async function savePayment() {
-    if (!payForm.amount || !payTarget) return;
-    setSaving(true); setError("");
+    if (!payModal || !payAmount) { setError("Amount required"); return; }
     try {
-      await recordPayment.mutateAsync({
-        tenantId, invoiceId: payTarget.studentInvoiceId,
-        amount: Number(payForm.amount), paymentMethod: payForm.paymentMethod,
-        referenceNumber: payForm.referenceNumber || null,
-        paymentDate: payForm.paymentDate,
-      });
-      setPayOpen(false);
-      void refetch();
-    } catch (err: any) {
-      setError(err?.message ?? "Could not record payment.");
-    } finally { setSaving(false); }
+      await createPayment.mutateAsync({ tenantId: tid, invoiceId: payModal, amount: Number(payAmount), name: `Payment for invoice` });
+      setPM(null); setPayAmount(""); setError(""); setSuccess("Payment recorded");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch(e:any) { setError(e?.response?.data?.message ?? e?.message ?? "Failed"); }
   }
 
-  const STATUS_PILL: Record<string, string> = {
-    PAID:"success", PENDING:"warning", OVERDUE:"danger", CANCELLED:"gray", PARTIAL:"info",
-  };
+  async function saveFeeType() {
+    if (!feeForm.name) { setError("Name required"); return; }
+    try {
+      await createFeeType.mutateAsync({ tenantId: tid, name: feeForm.name, frequency: feeForm.frequency, description: feeForm.description || undefined });
+      setFM(false); setFeeForm({ name:"", frequency:"Monthly", description:"" }); setError(""); setSuccess("Fee type created");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch(e:any) { setError(e?.response?.data?.message ?? e?.message ?? "Failed"); }
+  }
 
   return (
     <>
       <PageHeader
-        title="Fees & Finance"
-        subtitle="Invoices, payments and fee collection management"
+        title="Finance"
+        subtitle="Fee collection, invoices and payment records"
         action={
           <div className="page-actions">
-            <button className="secondary">Export</button>
-            <button className="primary" onClick={() => { setInvForm({ studentId:"", amount:"", dueDate:"", feeTypeCode:"TUITION" }); setAddOpen(true); setError(""); }}>
-              <Plus size={15}/> New invoice
-            </button>
+            <button className="secondary" onClick={() => { setFM(true); setError(""); }}>⚙️ Fee types</button>
+            <button className="secondary" onClick={() => { setIM(true); setError(""); }}>+ New invoice</button>
           </div>
         }
       />
 
-      <section className="metric-grid" style={{ marginBottom: 20 }}>
-        <StatCard label="Collected"       value={`PKR ${totals.collected.toLocaleString()}`} note="" color="#10B981" bg="#ECFDF5"><span style={{ fontSize: 20 }}>💰</span></StatCard>
-        <StatCard label="Pending"         value={`PKR ${totals.pending.toLocaleString()}`}   note={`${invoices.filter(i => i.status === "PENDING").length} invoices`} color="#D97706" bg="#FFFBEB"><span style={{ fontSize: 20 }}>⏳</span></StatCard>
-        <StatCard label="Overdue"         value={`PKR ${totals.overdue.toLocaleString()}`}   note="Action needed" color="#EF4444" bg="#FFF0F1"><span style={{ fontSize: 20 }}>🚨</span></StatCard>
-        <StatCard label="Collection rate" value={invoices.length ? `${Math.round(invoices.filter(i => i.status === "PAID").length / invoices.length * 100)}%` : "—"} note="" color="#2563EB" bg="#EFF6FF"><span style={{ fontSize: 20 }}>📊</span></StatCard>
+      {success && (
+        <div style={{ padding:"10px 16px", background:"#ECFDF5", border:"1px solid #a7f3d0", borderRadius:8, marginBottom:12, fontSize:12, color:"#065f46", fontWeight:600 }}>{success}</div>
+      )}
+
+      <section className="metric-grid" style={{ marginBottom:20 }}>
+        <StatCard label="Total invoices"     value={String(total)}                              note="All time"      color="#0F2241" bg="#EEF2FF"><Wallet size={20}/></StatCard>
+        <StatCard label="Collected"          value={`PKR ${(collected/1000).toFixed(0)}K`}     note="↑ This term"   color="#10B981" bg="#ECFDF5"><TrendingUp size={20}/></StatCard>
+        <StatCard label="Outstanding"        value={`PKR ${(outstanding/1000).toFixed(0)}K`}   note="Pending/Overdue"color="#D97706" bg="#FFFBEB"><DollarSign size={20}/></StatCard>
+        <StatCard label="Fee types"          value={String(feeItems.length)}                    note="Configured"    color="#8B5CF6" bg="#F5F3FF"><Plus size={20}/></StatCard>
       </section>
+
+      {/* Fee types summary */}
+      {feeItems.length > 0 && (
+        <div className="surface" style={{ marginBottom:16 }}>
+          <div className="surface-head"><h3>Fee types</h3><p>Configured fee categories</p></div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, padding:"0 20px 16px" }}>
+            {feeItems.map((ft:any) => (
+              <div key={ft.id} style={{ padding:"6px 12px", borderRadius:8, background:"var(--surface-2)", border:"1px solid var(--line)", fontSize:11 }}>
+                <b>{ft.name}</b>
+                <span style={{ marginLeft:6, color:"var(--muted)" }}>{ft.frequency}</span>
+                {ft.description && <span style={{ marginLeft:6, color:"var(--muted)" }}>— {ft.description}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="surface">
         <div className="surface-head">
-          <label className="search-box" style={{ maxWidth: 300 }}>
-            <Search size={14}/>
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search invoice or student…"/>
-          </label>
-          <button className="primary" onClick={() => { setInvForm({ studentId:"", amount:"", dueDate:"", feeTypeCode:"TUITION" }); setAddOpen(true); setError(""); }}>
-            <Plus size={14}/> New invoice
-          </button>
+          <div style={{ display:"flex", gap:8 }}>
+            <label className="search-box" style={{ maxWidth:260 }}>
+              <Search size={14}/>
+              <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search invoices…"/>
+            </label>
+            <select value={statusFilter} onChange={e=>setStatus(e.target.value)}
+              style={{ height:36, padding:"0 12px", border:"1.5px solid var(--line)", borderRadius:8, background:"var(--surface)", fontSize:12 }}>
+              <option value="ALL">All statuses</option>
+              <option value="PAID">Paid</option>
+              <option value="PENDING">Pending</option>
+              <option value="OVERDUE">Overdue</option>
+            </select>
+          </div>
         </div>
         {isLoading ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading invoices…</div>
+          <div style={{ padding:48, textAlign:"center", color:"var(--muted)" }}>Loading invoices…</div>
         ) : (
           <div className="table-wrap">
             <table className="premium-table">
               <thead>
-                <tr><th>Invoice no.</th><th>Student</th><th>Amount</th><th>Paid</th><th>Due date</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Fee type</th><th>Due date</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>No invoices found.</td></tr>
-                ) : filtered.map(inv => (
-                  <tr key={inv.studentInvoiceId}>
-                    <td><code style={{ fontSize: 11 }}>{inv.invoiceNumber ?? inv.studentInvoiceId.slice(0, 8)}</code></td>
-                    <td><code style={{ fontSize: 11 }}>{inv.studentId.slice(0, 12)}…</code></td>
-                    <td><b>PKR {inv.totalAmount.toLocaleString()}</b></td>
-                    <td>PKR {inv.paidAmount.toLocaleString()}</td>
-                    <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—"}</td>
-                    <td><span className={`status-pill ${STATUS_PILL[inv.status] ?? "gray"}`}>{inv.status}</span></td>
-                    <td>
-                      <div className="row-actions">
-                        {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
-                          <button className="table-action" style={{ color: "var(--text-success)" }}
-                            onClick={() => { setPayTarget(inv); setPayForm({ amount: String(inv.totalAmount - inv.paidAmount), paymentMethod:"Cash", referenceNumber:"", paymentDate: new Date().toISOString().slice(0,10) }); setPayOpen(true); setError(""); }}>
-                            Collect
-                          </button>
-                        )}
-                        {inv.status === "PAID" && <button className="table-action">Receipt</button>}
-                        <button className="table-action">View</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                  <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>No invoices found.</td></tr>
+                ) : filtered.map((inv:any) => {
+                  const meta = parseMeta(inv.metadataJson);
+                  const status = meta.status ?? "PENDING";
+                  return (
+                    <tr key={inv.id}>
+                      <td><code style={{ fontSize:11 }}>{inv.code}</code></td>
+                      <td>{inv.name.replace(/— .+$/, "").trim()}</td>
+                      <td><b>PKR {(meta.amount ?? 0).toLocaleString()}</b></td>
+                      <td>{meta.feeType ?? "—"}</td>
+                      <td style={{ color: status==="OVERDUE"?"var(--danger)":"inherit" }}>{meta.dueDate ?? "—"}</td>
+                      <td><span className={`status-pill ${STATUS_PILL[status] ?? "gray"}`}>{status}</span></td>
+                      <td>
+                        <div className="row-actions">
+                          {status !== "PAID" && (
+                            <button className="table-action" style={{ fontSize:10 }} onClick={() => { setPM(inv.id); setPayAmount(""); setError(""); }}>
+                              Collect
+                            </button>
+                          )}
+                          <button className="table-action" style={{ fontSize:10 }}>View</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-        <div className="table-footer"><span>{filtered.length} invoices shown</span></div>
+        <div className="table-footer"><span>{filtered.length} invoices</span></div>
       </div>
 
-      {/* New Invoice Modal */}
-      {addOpen && (
-        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setAddOpen(false); }}>
-          <div className="modal-card" style={{ width: "min(560px, 96vw)" }}>
-            <div className="modal-head"><h2>Create invoice</h2><button className="icon-button" onClick={() => setAddOpen(false)}><X size={18}/></button></div>
-            <div className="human-form">
-              <div className="human-form-grid">
-                <label className="human-field field-wide"><span>Student ID *</span><input value={invForm.studentId} onChange={e => setInvForm(p => ({ ...p, studentId: e.target.value }))} placeholder="Paste student UUID"/></label>
-                <label className="human-field"><span>Fee type</span>
-                  <select value={invForm.feeTypeCode} onChange={e => setInvForm(p => ({ ...p, feeTypeCode: e.target.value }))}>
-                    {["TUITION","TRANSPORT","LIBRARY","LAB","SPORTS","ADMISSION"].map(t => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()} Fee</option>)}
-                  </select>
-                </label>
-                <label className="human-field"><span>Amount (PKR) *</span><input type="number" value={invForm.amount} onChange={e => setInvForm(p => ({ ...p, amount: e.target.value }))}/></label>
-                <label className="human-field"><span>Due date</span><input type="date" value={invForm.dueDate} onChange={e => setInvForm(p => ({ ...p, dueDate: e.target.value }))}/></label>
-              </div>
-              {error && <div style={{ color: "var(--text-danger)", fontSize: 12 }}>{error}</div>}
+      {/* New invoice modal */}
+      {invoiceModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setIM(false)}}>
+          <div className="modal-card" style={{ width:"min(480px,96vw)" }}>
+            <div className="modal-head"><h2>New invoice</h2><button className="icon-button" onClick={()=>setIM(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Description *</span><input value={invForm.name} onChange={e=>setInvForm(p=>({...p,name:e.target.value}))} placeholder="e.g. September Tuition — Ahmed Hassan"/></label>
             </div>
-            <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setAddOpen(false)}>Cancel</button>
-              <button className="primary" onClick={() => void saveInvoice()} disabled={saving || !invForm.studentId || !invForm.amount}>{saving ? "Saving…" : "Create invoice"}</button>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setIM(false)}>Cancel</button>
+              <button className="primary" onClick={saveInvoice} disabled={createInvoice.isPending}>{createInvoice.isPending?"Creating…":"Create invoice"}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Record Payment Modal */}
-      {payOpen && payTarget && (
-        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setPayOpen(false); }}>
-          <div className="modal-card" style={{ width: "min(500px, 96vw)" }}>
-            <div className="modal-head"><h2>Record payment</h2><button className="icon-button" onClick={() => setPayOpen(false)}><X size={18}/></button></div>
-            <div className="human-form">
-              <div style={{ padding: "0 0 14px", borderBottom: "0.5px solid var(--border)", marginBottom: 14 }}>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Invoice</div>
-                <div style={{ fontSize: 14, fontWeight: 500 }}>{payTarget.invoiceNumber ?? payTarget.studentInvoiceId.slice(0,12)}</div>
-                <div style={{ fontSize: 12, color: "var(--text-danger)" }}>Outstanding: PKR {(payTarget.totalAmount - payTarget.paidAmount).toLocaleString()}</div>
-              </div>
-              <div className="human-form-grid">
-                <label className="human-field"><span>Amount (PKR) *</span><input type="number" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))}/></label>
-                <label className="human-field"><span>Payment method</span>
-                  <select value={payForm.paymentMethod} onChange={e => setPayForm(p => ({ ...p, paymentMethod: e.target.value }))}>
-                    {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
-                  </select>
-                </label>
-                <label className="human-field"><span>Payment date</span><input type="date" value={payForm.paymentDate} onChange={e => setPayForm(p => ({ ...p, paymentDate: e.target.value }))}/></label>
-                <label className="human-field"><span>Reference / transaction no.</span><input value={payForm.referenceNumber} onChange={e => setPayForm(p => ({ ...p, referenceNumber: e.target.value }))} placeholder="Bank reference if any"/></label>
-              </div>
-              {error && <div style={{ color: "var(--text-danger)", fontSize: 12 }}>{error}</div>}
+      {/* Collect payment modal */}
+      {payModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setPM(null)}}>
+          <div className="modal-card" style={{ width:"min(380px,96vw)" }}>
+            <div className="modal-head"><h2>Record payment</h2><button className="icon-button" onClick={()=>setPM(null)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Amount (PKR) *</span><input type="number" value={payAmount} onChange={e=>setPayAmount(e.target.value)} placeholder="0.00"/></label>
             </div>
-            <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setPayOpen(false)}>Cancel</button>
-              <button className="primary" onClick={() => void savePayment()} disabled={saving || !payForm.amount}>{saving ? "Saving…" : "Record payment"}</button>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setPM(null)}>Cancel</button>
+              <button className="primary" onClick={savePayment} disabled={createPayment.isPending}>{createPayment.isPending?"Saving…":"Record payment"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fee type modal */}
+      {feeModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setFM(false)}}>
+          <div className="modal-card" style={{ width:"min(480px,96vw)" }}>
+            <div className="modal-head"><h2>Add fee type</h2><button className="icon-button" onClick={()=>setFM(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Name *</span><input value={feeForm.name} onChange={e=>setFeeForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Tuition Fee"/></label>
+              <label className="human-field"><span>Frequency *</span>
+                <select value={feeForm.frequency} onChange={e=>setFeeForm(p=>({...p,frequency:e.target.value}))}>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Term">Per term</option>
+                  <option value="Annual">Annual</option>
+                  <option value="OneTime">One-time</option>
+                </select>
+              </label>
+              <label className="human-field field-wide"><span>Description</span><input value={feeForm.description} onChange={e=>setFeeForm(p=>({...p,description:e.target.value}))} placeholder="Optional"/></label>
+            </div>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setFM(false)}>Cancel</button>
+              <button className="primary" onClick={saveFeeType}>{createFeeType.isPending?"Saving…":"Save fee type"}</button>
             </div>
           </div>
         </div>

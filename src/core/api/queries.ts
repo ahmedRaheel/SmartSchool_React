@@ -1,448 +1,375 @@
 /**
- * TanStack Query hooks — all queries keyed precisely to backend endpoints.
- * Fallback to mock data when API is unavailable in development.
+ * TanStack Query hooks — all route through apiAdapter.
+ * Toggle VITE_USE_MOCKS in .env to switch between mock and real API.
+ * Zero code changes needed in pages.
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  dashboardApi, studentsApi, hrApi, financeApi, admissionsApi,
-  referenceApi, transportApi, libraryApi, examsApi, notificationApi,
-  chatApi, organizationApi, academicsApi, aiCoreApi, aiApi, aiTutorApi,
-  predictionApi, tenancyApi, identityApi, teachersApi,
-} from "./smartschoolApi";
-import { effectiveTenantId } from "../tenant/tenantContext";
+import * as A from "./apiAdapter";
 import { useAuth } from "../../features/auth/auth";
-import type { SessionUser } from "../../features/auth/auth";
+import { effectiveTenantId } from "../tenant/tenantContext";
 
-// ─── Query key factory ────────────────────────────────────────────────────────
-export const QK = {
-  dashboard: (role: string, id?: string) => ["dashboard", role, id],
-  students:  (tenantId: string, page = 1) => ["students", tenantId, page],
-  student:   (id: string, tenantId: string) => ["student", id, tenantId],
-  employees: (tenantId: string, page = 1) => ["employees", tenantId, page],
-  invoices:  (tenantId: string, page = 1) => ["invoices", tenantId, page],
-  admissions:(tenantId: string, page = 1) => ["admissions", tenantId, page],
-  schools:   (tenantId: string) => ["schools", tenantId],
-  campuses:  (tenantId: string) => ["campuses", tenantId],
-  academicYears: (tenantId: string) => ["academic-years", tenantId],
-  grades:    (tenantId: string) => ["grades", tenantId],
-  sections:  (tenantId: string) => ["sections", tenantId],
-  vehicles:  (tenantId: string) => ["vehicles", tenantId],
-  books:     (tenantId: string) => ["books", tenantId],
-  exams:     (tenantId: string) => ["exams", tenantId],
-  notifications:(tenantId: string, userId: string) => ["notifications", tenantId, userId],
-  unreadCount: (tenantId: string, userId: string) => ["unread-count", tenantId, userId],
-  conversations: () => ["conversations"],
-  messages:  (convId: string) => ["messages", convId],
-  feeTypes:  (tenantId: string) => ["fee-types", tenantId],
-  lookupTypes:(tenantId?: string) => ["lookup-types", tenantId],
-  lookupValues:(typeCode: string, tenantId?: string) => ["lookup-values", typeCode, tenantId],
-  modelConfigs: (tenantId: string) => ["model-configs", tenantId],
-  collections: (tenantId: string) => ["rag-collections", tenantId],
-  execLogs:  (tenantId: string) => ["exec-logs", tenantId],
-  tenants:   () => ["tenants"],
-  users:     (tenantId?: string) => ["users", tenantId],
-  workload:  (eid: string, tid: string) => ["workload", eid, tid],
-  timetable: (eid: string, tid: string) => ["timetable", eid, tid],
-};
-
-function useTenant(user: SessionUser | null): string {
-  return effectiveTenantId(user);
+function useTid() {
+  const { user } = useAuth();
+  return effectiveTenantId(user) ?? "";
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+// ─── Dashboard ──────────────────────────────────────────────────────────────
 export function useAdminDashboard() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.dashboard("admin", tenantId),
-    queryFn: () => dashboardApi.admin(tenantId).then(r => r.data),
-    staleTime: 60_000,
-  });
+  const tid = useTid();
+  return useQuery({ queryKey: ["dashboard","admin",tid], queryFn: () => A.adminDashboard(tid), staleTime: 60_000 });
 }
-export function useStudentDashboard(studentId?: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  const sid = studentId ?? user?.studentId ?? "";
-  return useQuery({
-    queryKey: QK.dashboard("student", sid),
-    queryFn: () => dashboardApi.student(sid, tenantId).then(r => r.data),
-    enabled: !!sid,
-  });
+export function useStudentDashboard(sid?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = sid ?? user?.studentId ?? "";
+  return useQuery({ queryKey: ["dashboard","student",id], queryFn: () => A.studentDashboard(id, tid), enabled: !!id });
 }
-export function useTeacherDashboard(employeeId?: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  const eid = employeeId ?? user?.employeeId ?? "";
-  return useQuery({
-    queryKey: QK.dashboard("teacher", eid),
-    queryFn: () => dashboardApi.teacher(eid, tenantId).then(r => r.data),
-    enabled: !!eid,
-  });
+export function useTeacherDashboard(eid?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = eid ?? user?.employeeId ?? "";
+  return useQuery({ queryKey: ["dashboard","teacher",id], queryFn: () => A.teacherDashboard(id, tid), enabled: !!id });
 }
-export function useParentDashboard(guardianId?: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  const gid = guardianId ?? user?.businessEntityId ?? "";
-  return useQuery({
-    queryKey: QK.dashboard("parent", gid),
-    queryFn: () => dashboardApi.parent(gid, tenantId).then(r => r.data),
-    enabled: !!gid,
-  });
+export function useParentDashboard(gid?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = gid ?? user?.businessEntityId ?? "";
+  return useQuery({ queryKey: ["dashboard","parent",id], queryFn: () => A.parentDashboard(id, tid), enabled: !!id });
 }
-export function useDriverDashboard(driverId?: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  const did = driverId ?? user?.driverId ?? "";
-  return useQuery({
-    queryKey: QK.dashboard("driver", did),
-    queryFn: () => dashboardApi.driver(did, tenantId).then(r => r.data),
-    enabled: !!did,
-  });
+export function useDriverDashboard(did?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = did ?? user?.driverId ?? "";
+  return useQuery({ queryKey: ["dashboard","driver",id], queryFn: () => A.driverDashboard(id, tid), enabled: !!id });
 }
 
-// ─── Students ─────────────────────────────────────────────────────────────────
+// ─── Students ───────────────────────────────────────────────────────────────
 export function useStudents(page = 1) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.students(tenantId, page),
-    queryFn: () => studentsApi.page(tenantId, { page }).then(r => r.data),
-  });
+  const tid = useTid();
+  return useQuery({ queryKey: ["students",tid,page], queryFn: () => A.getStudentsPage(tid, page) });
 }
 export function useCreateStudent() {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (body: object) => studentsApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.students(tenantId) }),
-  });
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createStudent(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["students",tid] }) });
+}
+export function useApproveStudent() {
+  return useMutation({ mutationFn: ({ id, body }: { id: string; body: object }) => A.approveStudent(id, body) });
 }
 
-// ─── HR / Employees ───────────────────────────────────────────────────────────
+// ─── HR ─────────────────────────────────────────────────────────────────────
 export function useEmployees(page = 1) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.employees(tenantId, page),
-    queryFn: () => hrApi.page(tenantId, { page }).then(r => r.data),
-  });
+  const tid = useTid();
+  return useQuery({ queryKey: ["employees",tid,page], queryFn: () => A.getEmployeesPage(tid, page) });
 }
 export function useCreateEmployee() {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (body: object) => hrApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.employees(tenantId) }),
-  });
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createEmployee(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["employees",tid] }) });
 }
 
-// ─── Finance ─────────────────────────────────────────────────────────────────
+// ─── Finance ────────────────────────────────────────────────────────────────
 export function useInvoices(page = 1) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.invoices(tenantId, page),
-    queryFn: () => financeApi.invoices(tenantId, { page }).then(r => r.data),
-  });
+  const tid = useTid();
+  return useQuery({ queryKey: ["invoices",tid,page], queryFn: () => A.getInvoicesPage(tid, page) });
 }
 export function useCreateInvoice() {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (body: object) => financeApi.createInvoice(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.invoices(tenantId) }),
-  });
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createInvoice(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices",tid] }) });
 }
-export function useRecordPayment() {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (body: object) => financeApi.recordPayment(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.invoices(tenantId) }),
-  });
+export function useCreatePayment() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createPayment(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices",tid] }) });
 }
-
-// ─── Admissions ───────────────────────────────────────────────────────────────
-export function useAdmissions(page = 1) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.admissions(tenantId, page),
-    queryFn: () => admissionsApi.page(tenantId, { page }).then(r => r.data),
-  });
+export function useFeeTypes() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["fee-types",tid], queryFn: () => A.getFeeTypes(tid) });
 }
-export function useCreateAdmission() {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (body: object) => admissionsApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.admissions(tenantId) }),
-  });
+export function useCreateFeeType() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createFeeType(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["fee-types",tid] }) });
+}
+export function useFeeStructure() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["fee-structure",tid], queryFn: () => A.getFeeStructure(tid) });
+}
+export function useCreateFeeStructure() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createFeeStructure(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["fee-structure",tid] }) });
 }
 
-// ─── Organization ─────────────────────────────────────────────────────────────
+// ─── Admissions ─────────────────────────────────────────────────────────────
+export function useInquiries(page = 1) {
+  const tid = useTid();
+  return useQuery({ queryKey: ["inquiries",tid,page], queryFn: () => A.getInquiriesPage(tid, page) });
+}
+export function useCreateInquiry() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createInquiry(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["inquiries",tid] }) });
+}
+export function useUpdateInquiry() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: ({ id, body }: { id: string; body: object }) => A.updateInquiry(id, body), onSuccess: () => qc.invalidateQueries({ queryKey: ["inquiries",tid] }) });
+}
+
+// ─── Organization ───────────────────────────────────────────────────────────
 export function useSchools() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.schools(tenantId),
-    queryFn: () => organizationApi.schools(tenantId).then(r => r.data),
-  });
-}
-export function useCampuses() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.campuses(tenantId),
-    queryFn: () => organizationApi.campuses(tenantId).then(r => r.data),
-  });
+  const tid = useTid();
+  return useQuery({ queryKey: ["schools",tid], queryFn: () => A.getSchools(tid) });
 }
 export function useCreateSchool() {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (body: object) => organizationApi.createSchool(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.schools(tenantId) }),
-  });
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createSchool(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["schools",tid] }) });
+}
+export function useCampuses() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["campuses",tid], queryFn: () => A.getCampuses(tid) });
+}
+export function useCreateCampus() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createCampus(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["campuses",tid] }) });
+}
+export function useDepartments() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["departments",tid], queryFn: () => A.getDepartments(tid) });
+}
+export function useCreateDepartment() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createDepartment(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["departments",tid] }) });
+}
+export function useDeleteDepartment() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (id: string) => A.deleteDepartment(id, tid), onSuccess: () => qc.invalidateQueries({ queryKey: ["departments",tid] }) });
+}
+export function useBranchGenderTypes() {
+  return useQuery({ queryKey: ["branch-gender-types"], queryFn: () => A.getBranchGenderTypes(), staleTime: 3_600_000 });
+}
+export function useEducationLevels() {
+  return useQuery({ queryKey: ["education-levels"], queryFn: () => A.getEducationLevels(), staleTime: 3_600_000 });
 }
 
-// ─── Academics ────────────────────────────────────────────────────────────────
-export function useAcademicYears() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.academicYears(tenantId),
-    queryFn: () => academicsApi.academicYears(tenantId).then(r => r.data),
-  });
+// ─── Academics ──────────────────────────────────────────────────────────────
+export function useAcademicYears(campusId?: string) {
+  const tid = useTid();
+  return useQuery({ queryKey: ["academic-years",tid,campusId], queryFn: () => A.getAcademicYears(tid, campusId) });
 }
-
-// ─── Reference / Lookup ───────────────────────────────────────────────────────
-export function useLookupTypes() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.lookupTypes(tenantId),
-    queryFn: () => referenceApi.types(tenantId).then(r => r.data),
-  });
+export function useCreateAcademicYear() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createAcademicYear(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["academic-years",tid] }) });
 }
-export function useLookupValues(typeCode: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.lookupValues(typeCode, tenantId),
-    queryFn: () => referenceApi.byType(typeCode, tenantId).then(r => r.data),
-    enabled: !!typeCode,
-  });
+export function useDeleteAcademicYear() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (id: string) => A.deleteAcademicYear(id, tid), onSuccess: () => qc.invalidateQueries({ queryKey: ["academic-years",tid] }) });
 }
-
-// ─── Notifications ────────────────────────────────────────────────────────────
-export function useNotifications() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.notifications(tenantId, user?.id ?? ""),
-    queryFn: () => notificationApi.list(tenantId, user!.id).then(r => r.data),
-    enabled: !!user?.id,
-    refetchInterval: 30_000,
-  });
+export function useGradeLevels() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["grade-levels",tid], queryFn: () => A.getGradeLevels(tid) });
 }
-export function useUnreadCount() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.unreadCount(tenantId, user?.id ?? ""),
-    queryFn: () => notificationApi.unreadCount(tenantId, user!.id).then(r => r.data.unreadCount),
-    enabled: !!user?.id,
-    refetchInterval: 30_000,
-  });
+export function useCreateGradeLevel() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createGradeLevel(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["grade-levels",tid] }) });
 }
-
-// ─── Chat ─────────────────────────────────────────────────────────────────────
-export function useConversations() {
-  return useQuery({
-    queryKey: QK.conversations(),
-    queryFn: () => chatApi.conversations().then(r => r.data),
-  });
+export function useClassSections() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["sections",tid], queryFn: () => A.getClassSections(tid) });
 }
-export function useMessages(conversationId?: string) {
-  return useQuery({
-    queryKey: QK.messages(conversationId ?? ""),
-    queryFn: () => chatApi.messages(conversationId!).then(r => r.data),
-    enabled: !!conversationId,
-    refetchInterval: 5_000,
-  });
+export function useCreateClassSection() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createClassSection(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["sections",tid] }) });
 }
-export function useSendMessage(conversationId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (message: string) => chatApi.send(conversationId, message),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.messages(conversationId) }),
-  });
+export function useSubjects() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["subjects",tid], queryFn: () => A.getSubjects(tid) });
 }
-
-// ─── Transport ────────────────────────────────────────────────────────────────
-export function useVehicles() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.vehicles(tenantId),
-    queryFn: () => transportApi.vehicles(tenantId).then(r => r.data),
-  });
-}
-
-// ─── Library ──────────────────────────────────────────────────────────────────
-export function useBooks() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.books(tenantId),
-    queryFn: () => libraryApi.books(tenantId).then(r => r.data),
-  });
-}
-
-// ─── Examinations ─────────────────────────────────────────────────────────────
-export function useExams() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.exams(tenantId),
-    queryFn: () => examsApi.exams(tenantId).then(r => r.data),
-  });
-}
-
-// ─── AI Core ─────────────────────────────────────────────────────────────────
-export function useModelConfigs() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.modelConfigs(tenantId),
-    queryFn: () => aiCoreApi.modelConfigs(tenantId).then(r => r.data),
-  });
-}
-export function useKnowledgeCollections() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.collections(tenantId),
-    queryFn: () => aiCoreApi.collections(tenantId).then(r => r.data),
-  });
-}
-export function useExecutionLogs() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useQuery({
-    queryKey: QK.execLogs(tenantId),
-    queryFn: () => aiCoreApi.executionLogs(tenantId).then(r => r.data),
-    refetchInterval: 15_000,
-  });
-}
-
-// ─── Teacher workspace ────────────────────────────────────────────────────────
-export function useTeacherWorkload(employeeId?: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  const eid = employeeId ?? user?.employeeId ?? "";
-  return useQuery({
-    queryKey: QK.workload(eid, tenantId),
-    queryFn: () => teachersApi.workload(eid, tenantId).then(r => r.data),
-    enabled: !!eid,
-  });
-}
-export function useTeacherTimetable(employeeId?: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  const eid = employeeId ?? user?.employeeId ?? "";
-  return useQuery({
-    queryKey: QK.timetable(eid, tenantId),
-    queryFn: () => teachersApi.timetable(eid, tenantId).then(r => r.data),
-    enabled: !!eid,
-  });
+export function useCreateSubject() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createSubject(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["subjects",tid] }) });
 }
 
 // ─── Tenancy ─────────────────────────────────────────────────────────────────
 export function useTenants() {
-  return useQuery({
-    queryKey: QK.tenants(),
-    queryFn: () => tenancyApi.list().then(r => r.data),
-  });
+  return useQuery({ queryKey: ["tenants"], queryFn: () => A.getTenants() });
 }
 export function useCreateTenant() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: object) => tenancyApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.tenants() }),
-  });
+  return useMutation({ mutationFn: (b: object) => A.createTenant(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["tenants"] }) });
 }
 
-// ─── AI mutation helpers ──────────────────────────────────────────────────────
-export function useAskChatbot(bot: "student" | "teacher" | "parent" | "admissions" | "admin") {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (question: string) =>
-      aiApi.chatbot(bot, { question, tenantId }).then(r => r.data),
+// ─── Transport ───────────────────────────────────────────────────────────────
+export function useVehicles() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["vehicles",tid], queryFn: () => A.getVehicles(tid) });
+}
+export function useCreateVehicle() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createVehicle(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["vehicles",tid] }) });
+}
+export function useRoutes() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["routes",tid], queryFn: () => A.getRoutes(tid) });
+}
+export function useDrivers() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["drivers",tid], queryFn: () => A.getDrivers(tid) });
+}
+
+// ─── Library ─────────────────────────────────────────────────────────────────
+export function useBooks() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["books",tid], queryFn: () => A.getBooks(tid) });
+}
+export function useCreateBook() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createBook(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["books",tid] }) });
+}
+
+// ─── Examinations ────────────────────────────────────────────────────────────
+export function useExams() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["exams",tid], queryFn: () => A.getExams(tid) });
+}
+export function useCreateExam() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createExam(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["exams",tid] }) });
+}
+
+// ─── Communication ───────────────────────────────────────────────────────────
+export function useNotifications() {
+  const { user } = useAuth(); const tid = useTid();
+  return useQuery({ queryKey: ["notifications",tid,user?.id], queryFn: () => A.getNotifications(tid, user!.id), enabled: !!user?.id, refetchInterval: 30_000 });
+}
+export function useUnreadCount() {
+  const { user } = useAuth(); const tid = useTid();
+  return useQuery({
+    queryKey: ["unread-count",tid,user?.id],
+    queryFn: () => A.getUnreadCount(tid, user!.id).then(r => r.unreadCount ?? 0),
+    enabled: !!user?.id, refetchInterval: 30_000,
   });
+}
+export function useMarkRead() {
+  const qc = useQueryClient(); const { user } = useAuth(); const tid = useTid();
+  return useMutation({
+    mutationFn: (id: string) => A.markNotificationRead(id, tid, user!.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); qc.invalidateQueries({ queryKey: ["unread-count"] }); },
+  });
+}
+export function useMarkAllRead() {
+  const qc = useQueryClient(); const { user } = useAuth(); const tid = useTid();
+  return useMutation({
+    mutationFn: () => A.markAllRead(tid, user!.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); qc.invalidateQueries({ queryKey: ["unread-count"] }); },
+  });
+}
+export function useConversations() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["conversations",tid], queryFn: () => A.getConversations(tid) });
+}
+export function useMessages(convId?: string) {
+  const tid = useTid();
+  return useQuery({ queryKey: ["messages",tid,convId], queryFn: () => A.getMessages(tid, convId!), enabled: !!convId, refetchInterval: 5_000 });
+}
+export function useSendMessage(convId: string) {
+  const qc = useQueryClient(); const { user } = useAuth(); const tid = useTid();
+  return useMutation({ mutationFn: (msg: string) => A.sendMessage(tid, convId, msg, user?.id ?? ""), onSuccess: () => qc.invalidateQueries({ queryKey: ["messages",tid,convId] }) });
+}
+export function useCreateConversation() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createConversation(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["conversations",tid] }) });
+}
+
+// ─── AI Core ─────────────────────────────────────────────────────────────────
+export function useModelConfigs() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["model-configs",tid], queryFn: () => A.getModelConfigs(tid) });
+}
+export function useCreateModelConfig() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createModelConfig(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["model-configs",tid] }) });
+}
+export function useKnowledgeCollections() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["rag-collections",tid], queryFn: () => A.getKnowledgeCollections(tid) });
+}
+export function useCreateKnowledgeCollection() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createKnowledgeCollection(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["rag-collections",tid] }) });
+}
+export function useExecutionLogs() {
+  const tid = useTid();
+  return useQuery({ queryKey: ["exec-logs",tid], queryFn: () => A.getExecutionLogs(tid), refetchInterval: 15_000 });
+}
+
+// ─── Reference ───────────────────────────────────────────────────────────────
+export function useLookupTypes() {
+  return useQuery({ queryKey: ["lookup-types"], queryFn: () => A.getLookupTypes() });
+}
+export function useLookupValues(typeCode: string) {
+  return useQuery({ queryKey: ["lookup-values",typeCode], queryFn: () => A.getLookupValues(typeCode), enabled: !!typeCode });
+}
+export function useCreateLookup() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (b: object) => A.createLookupValue(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["lookup-values"] }) });
+}
+export function useDeleteLookup() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => A.deleteLookupValue(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["lookup-values"] }) });
+}
+
+// ─── AI mutations ─────────────────────────────────────────────────────────────
+export function useAskChatbot(bot: "student"|"teacher"|"parent"|"admissions"|"admin") {
+  const tid = useTid();
+  return useMutation({ mutationFn: (q: string) => A.askChatbot(bot, { question: q, tenantId: tid }) });
 }
 export function useAskAssistant() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (question: string) =>
-      aiApi.ask({ question, tenantId }).then(r => r.data),
-  });
+  const tid = useTid();
+  return useMutation({ mutationFn: (q: string) => A.askAssistant({ question: q, tenantId: tid }) });
 }
 export function useStartTutorSession() {
-  return useMutation({
-    mutationFn: (body: { studentId: string; subject: string; topic?: string; tenantId?: string }) =>
-      aiTutorApi.start(body).then(r => r.data),
-  });
+  return useMutation({ mutationFn: (b: object) => A.startTutorSession(b) });
 }
 export function useAskTutor() {
-  return useMutation({
-    mutationFn: (body: {
-      sessionId: string; studentId: string; subject: string;
-      topic: string; message: string; tenantId?: string;
-    }) => aiTutorApi.ask(body).then(r => r.data),
-  });
+  return useMutation({ mutationFn: (b: object) => A.askTutor(b) });
 }
 export function useGenerateQuiz() {
-  return useMutation({
-    mutationFn: (body: {
-      studentId: string; subject: string; topic: string;
-      questionCount?: number; difficulty?: string; tenantId?: string;
-    }) => aiTutorApi.generateQuiz(body).then(r => r.data),
-  });
+  return useMutation({ mutationFn: (b: object) => A.generateQuiz(b) });
 }
 export function useStudentPrediction() {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
-  return useMutation({
-    mutationFn: (body: {
-      kind: "DropoutRisk" | "GradeDecline" | "FeeDefault" | "AttendanceAnomaly";
-      studentId: string; subjectId?: string;
-    }) => predictionApi.student(body.kind, { tenantId, ...body }).then(r => r.data),
-  });
+  const tid = useTid();
+  return useMutation({ mutationFn: ({ kind, ...rest }: { kind: string; [k: string]: unknown }) => A.predictStudent(kind, { tenantId: tid, ...rest }) });
 }
 export function useEarlyWarning(studentId: string) {
-  const { user } = useAuth();
-  const tenantId = useTenant(user);
+  const tid = useTid();
   return useQuery({
-    queryKey: ["early-warning", studentId, tenantId],
-    queryFn: () => predictionApi.earlyWarning({ tenantId, studentId }).then(r => r.data),
-    enabled: !!studentId && !!tenantId,
+    queryKey: ["early-warning",tid,studentId],
+    queryFn: () => A.getEarlyWarnings({ tenantId: tid, studentId }),
+    enabled: !!studentId && !!tid,
     staleTime: 300_000,
   });
 }
 export function useImpersonate() {
   const { impersonate } = useAuth();
-  return useMutation({
-    mutationFn: ({ targetUserId, reason }: { targetUserId: string; reason: string }) =>
-      impersonate(targetUserId, reason),
-  });
+  return useMutation({ mutationFn: ({ targetUserId, reason }: { targetUserId: string; reason: string }) => impersonate(targetUserId, reason) });
+}
+
+// ─── Teachers ────────────────────────────────────────────────────────────────
+export function useTeacherStudents(eid?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = eid ?? user?.employeeId ?? "";
+  return useQuery({ queryKey: ["teacher-students",id,tid], queryFn: () => A.getTeacherStudents(id, tid), enabled: !!id });
+}
+export function useTeacherClasses(eid?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = eid ?? user?.employeeId ?? "";
+  return useQuery({ queryKey: ["teacher-classes",id,tid], queryFn: () => A.getTeacherClasses(id, tid), enabled: !!id });
+}
+export function useTeacherTimetable(eid?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = eid ?? user?.employeeId ?? "";
+  return useQuery({ queryKey: ["teacher-timetable",id,tid], queryFn: () => A.getTeacherTimetable(id, tid), enabled: !!id });
+}
+export function useTeacherWorkload(eid?: string) {
+  const { user } = useAuth(); const tid = useTid();
+  const id = eid ?? user?.employeeId ?? "";
+  return useQuery({ queryKey: ["teacher-workload",id,tid], queryFn: () => A.getTeacherWorkload(id, tid), enabled: !!id });
+}
+export function useCreateTeacherAssignment(eid: string) {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createTeacherAssignment(eid, b), onSuccess: () => qc.invalidateQueries({ queryKey: ["teacher-assignments",eid,tid] }) });
+}
+export function useApplyTeacherLeave(eid: string) {
+  return useMutation({ mutationFn: (b: object) => A.applyTeacherLeave(eid, b) });
 }

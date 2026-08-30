@@ -1,119 +1,125 @@
 import { useState } from "react";
+import { Brain, Plus, X } from "lucide-react";
+import { useKnowledgeCollections, useCreateKnowledgeCollection } from "../../../../core/api/queries";
+import { useAuth } from "../../../auth/auth";
+import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
-const ROLES = ["Teacher","Student","Parent","Admin Officer","Principal","Driver"];
-const COLLECTIONS = ["School handbook","Syllabus guide","Fee policy","Exam calendar","Transport schedule","HR policy"];
-
-interface ChatbotConfig { role:string; persona:string; systemPrompt:string; collections:string[]; }
-
-const DEFAULT_CONFIGS: ChatbotConfig[] = [
-  { role:"Student",   persona:"Friendly AI Tutor",          systemPrompt:"You are the Al-Noor AI Tutor. Help students understand their subjects with clear, encouraging explanations. Always relate to the school curriculum.", collections:["Syllabus guide","Exam calendar"] },
-  { role:"Parent",    persona:"Helpful Parent Assistant",   systemPrompt:"You are the Al-Noor Parent Assistant. Answer queries about your child's progress, fees, transport, and school events warmly and accurately.", collections:["Fee policy","Transport schedule"] },
-  { role:"Teacher",   persona:"Professional Teacher AI",    systemPrompt:"You are the Al-Noor Teacher Assistant. Help with lesson planning, student analysis, attendance insights, and grade book queries.", collections:["Syllabus guide","School handbook"] },
-  { role:"Admin Officer",persona:"Efficient Admin AI",      systemPrompt:"You are the Al-Noor Admin Assistant. Answer queries about students, fees, admissions, timetables, and operations concisely.", collections:["Fee policy","School handbook"] },
+const CHATBOT_ROLES = [
+  { role:"student",    label:"Student AI",     system:"You are a helpful study assistant for students. Use only verified school knowledge.", collections:["academic","policy","learning"] },
+  { role:"teacher",    label:"Teacher AI",     system:"You assist teachers with lesson planning, class management and approved school policy.", collections:["academic","teacher","policy"] },
+  { role:"parent",     label:"Parent AI",      system:"You assist parents with school information without exposing other students' data.", collections:["parent","policy","fees","academic"] },
+  { role:"admissions", label:"Admissions AI",  system:"You answer admissions questions only from approved school knowledge.", collections:["admissions","fees","policy"] },
+  { role:"admin",      label:"Admin AI",       system:"You assist administrators using operational and policy knowledge.", collections:["operations","policy","academic","fees","hr"] },
 ];
 
 export function AiConfigTab() {
-  const [configs, setConfigs] = useState<ChatbotConfig[]>(DEFAULT_CONFIGS);
-  const [selected, setSelected] = useState<ChatbotConfig>(configs[0]);
-  const [saving, setSaving]   = useState(false);
-  const [saved, setSaved]     = useState(false);
+  const { user } = useAuth();
+  const tid = effectiveTenantId(user);
+  const { data: collections, isLoading } = useKnowledgeCollections();
+  const createCollection = useCreateKnowledgeCollection();
 
-  async function save() {
-    setSaving(true);
-    await new Promise(r=>setTimeout(r,600));
-    setConfigs(p=>p.map(c=>c.role===selected.role?selected:c));
-    setSaving(false); setSaved(true);
-    setTimeout(()=>setSaved(false),2000);
+  const [collModal, setCollModal] = useState(false);
+  const [form, setForm] = useState({ name:"", description:"", slug:"" });
+  const [error, setError] = useState("");
+
+  const items = (collections as any)?.items ?? (collections as any) ?? [];
+
+  async function saveCollection() {
+    if (!form.name) { setError("Name required"); return; }
+    try {
+      await createCollection.mutateAsync({
+        tenantId: tid,
+        name: form.name,
+        metadataJson: JSON.stringify({ slug: form.slug || form.name.toLowerCase().replace(/\s+/g,"-"), description: form.description, documentCount:0, chunkCount:0, isActive:true }),
+      });
+      setCollModal(false); setForm({ name:"", description:"", slug:"" }); setError("");
+    } catch(e: any) { setError(e?.message ?? "Failed"); }
   }
 
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div className="surface" style={{padding:20}}>
-        <div style={{marginBottom:14}}>
-          <h3 style={{fontSize:14,fontWeight:700,margin:"0 0 4px"}}>AI chatbot configuration</h3>
-          <p style={{fontSize:12,color:"var(--muted)",margin:0}}>Configure the AI persona and knowledge base for each user role. The AI will only answer questions within the selected knowledge collections.</p>
-        </div>
-
-        <div style={{display:"grid",gridTemplateColumns:"180px 1fr",gap:14}}>
-          {/* Role selector */}
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            {configs.map(c=>(
-              <button
-                key={c.role}
-                onClick={()=>setSelected(c)}
-                style={{
-                  padding:"10px 12px", borderRadius:9, border:"1.5px solid var(--line)",
-                  background:selected.role===c.role?"var(--navy)":"var(--surface)",
-                  color:selected.role===c.role?"#fff":"var(--text)",
-                  fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",
-                }}
-              >
-                {c.role}
-              </button>
-            ))}
-          </div>
-
-          {/* Config form */}
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <label className="human-field">
-              <span>Persona name</span>
-              <input value={selected.persona} onChange={e=>setSelected(p=>({...p,persona:e.target.value}))}/>
-            </label>
-            <label className="human-field">
-              <span>System prompt</span>
-              <textarea
-                value={selected.systemPrompt}
-                onChange={e=>setSelected(p=>({...p,systemPrompt:e.target.value}))}
-                style={{minHeight:120}}
-              />
-            </label>
-            <div>
-              <span style={{fontSize:12,fontWeight:700,color:"var(--text)",display:"block",marginBottom:8}}>Knowledge collections</span>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {COLLECTIONS.map(col => {
-                  const active = selected.collections.includes(col);
-                  return (
-                    <button
-                      key={col}
-                      onClick={()=>setSelected(p=>({...p,collections:active?p.collections.filter(c=>c!==col):[...p.collections,col]}))}
-                      style={{
-                        padding:"5px 12px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",
-                        border:`1.5px solid ${active?"var(--navy)":"var(--line)"}`,
-                        background:active?"var(--navy)":"var(--surface)",
-                        color:active?"#fff":"var(--muted)",
-                      }}
-                    >
-                      {col}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div style={{display:"flex",gap:8,marginTop:4}}>
-              <button className="primary" onClick={save} disabled={saving}>
-                {saving?"Saving…":saved?"Saved ✓":"Save configuration"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Prediction models */}
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      {/* Chatbot personas */}
       <div className="surface">
-        <div className="surface-head"><div><h3>Prediction models</h3><p>AI models active for your school</p></div></div>
-        <div style={{padding:"0 20px 20px"}}>
-          {[
-            {name:"Dropout Risk v3",type:"DROPOUT_RISK",acc:"91.4%",status:"Active"},
-            {name:"Fee Default Predictor",type:"FEE_DEFAULT",acc:"87.2%",status:"Active"},
-            {name:"Grade Predictor v2",type:"PERFORMANCE",acc:"88.9%",status:"Active"},
-          ].map(m=>(
-            <div key={m.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--surface-2)",fontSize:12}}>
-              <div><div style={{fontWeight:600}}>{m.name}</div><div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{m.type} · Accuracy {m.acc}</div></div>
-              <span className="status-pill success">{m.status}</span>
+        <div className="surface-head"><div><h3>Chatbot personas</h3><p>System prompts and knowledge collections per actor role</p></div></div>
+        <div style={{ padding:"0 20px 20px" }}>
+          {CHATBOT_ROLES.map(r => (
+            <div key={r.role} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", padding:"14px 0", borderBottom:"1px solid var(--surface-2)", gap:16 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
+                  <Brain size={14} style={{ color:"var(--navy)" }}/>
+                  <b style={{ fontSize:13 }}>{r.label}</b>
+                  <code style={{ fontSize:10, padding:"2px 6px", background:"var(--surface-2)", borderRadius:4 }}>{r.role}</code>
+                </div>
+                <div style={{ fontSize:11, color:"var(--muted)", marginBottom:6, lineHeight:1.55 }}>{r.system}</div>
+                <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                  {r.collections.map(c => (
+                    <span key={c} style={{ padding:"2px 8px", borderRadius:5, background:"#EEF2FF", color:"#3730a3", fontSize:10, fontWeight:500 }}>{c}</span>
+                  ))}
+                </div>
+              </div>
+              <button className="table-action" style={{ fontSize:10, flexShrink:0 }}>Edit persona</button>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Knowledge Collections */}
+      <div className="surface">
+        <div className="surface-head">
+          <div><h3>Knowledge collections</h3><p>RAG knowledge base — documents indexed for school AI context</p></div>
+          <button className="primary" onClick={() => { setCollModal(true); setError(""); setForm({ name:"", description:"", slug:"" }); }}><Plus size={14}/> New collection</button>
+        </div>
+        {isLoading ? <div style={{ padding:20, color:"var(--muted)" }}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Collection</th><th>Slug</th><th>Documents</th><th>Chunks</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {items.length===0
+                  ? <tr><td colSpan={6} style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>No collections yet. Create your first knowledge base.</td></tr>
+                  : items.map((c: any) => {
+                    let meta: any = {};
+                    try { meta = JSON.parse(c.metadataJson ?? "{}"); } catch {}
+                    return (
+                      <tr key={c.id}>
+                        <td><b>{c.name}</b><div style={{fontSize:10,color:"var(--muted)"}}>{meta.description?.slice(0,50)}</div></td>
+                        <td><code style={{fontSize:11}}>{meta.slug ?? c.code}</code></td>
+                        <td>{meta.documentCount ?? 0}</td>
+                        <td>{meta.chunkCount ?? 0}</td>
+                        <td><span className={`status-pill ${meta.isActive!==false?"success":"gray"}`}>{meta.isActive!==false?"Active":"Inactive"}</span></td>
+                        <td>
+                          <div className="row-actions">
+                            <button className="table-action" style={{fontSize:10}}>Upload doc</button>
+                            <button className="table-action" style={{fontSize:10}}>Index</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                }
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {collModal && (
+        <div className="modal-backdrop" onClick={e=>{ if(e.target===e.currentTarget) setCollModal(false); }}>
+          <div className="modal-card" style={{ width:"min(480px,96vw)" }}>
+            <div className="modal-head"><h2>New knowledge collection</h2><button className="icon-button" onClick={()=>setCollModal(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Name *</span><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. School Handbook 2026"/></label>
+              <label className="human-field field-wide"><span>Slug (auto-generated if blank)</span><input value={form.slug} onChange={e=>setForm(p=>({...p,slug:e.target.value}))} placeholder="e.g. handbook-2026"/></label>
+              <label className="human-field field-wide"><span>Description</span><textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} style={{minHeight:64}} placeholder="What knowledge does this collection contain?"/></label>
+            </div>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setCollModal(false)}>Cancel</button>
+              <button className="primary" onClick={saveCollection} disabled={createCollection.isPending}>{createCollection.isPending?"Creating…":"Create collection"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

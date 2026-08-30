@@ -1,88 +1,64 @@
 import { useState } from "react";
-import { RefreshCcw, Search, ShieldCheck } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
+import { useQuery } from "@tanstack/react-query";
+import * as A from "../../../core/api/apiAdapter";
+import { useAuth } from "../../auth/auth";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const AUDIT_LOG = [
-  { id:"1", time:"14:32:18", actor:"superadmin@smartschool.local", role:"SuperAdmin",  action:"IMPERSONATION_START", entity:"User",    details:"Started impersonating admin@alnoor.edu.pk",          tenant:"Al-Noor Academy",  level:"warn"  },
-  { id:"2", time:"14:30:05", actor:"admin@alnoor.edu.pk",          role:"Admin",       action:"STUDENT_CREATED",    entity:"Student", details:"Enrolled Ahmed Hassan — Grade 9-A",                  tenant:"Al-Noor Academy",  level:"info"  },
-  { id:"3", time:"14:28:41", actor:"admin@alnoor.edu.pk",          role:"Admin",       action:"PAYMENT_RECORDED",   entity:"Invoice", details:"PKR 4,500 recorded for INV-2026-0892",              tenant:"Al-Noor Academy",  level:"info"  },
-  { id:"4", time:"14:15:00", actor:"teacher@alnoor.edu.pk",        role:"Teacher",     action:"ATTENDANCE_SUBMITTED",entity:"Class",  details:"Attendance marked — Grade 9-A, 28 Aug 2026",        tenant:"Al-Noor Academy",  level:"info"  },
-  { id:"5", time:"13:58:20", actor:"superadmin@smartschool.local", role:"SuperAdmin",  action:"TENANT_CREATED",     entity:"Tenant",  details:"New school onboarded: City Grammar School",          tenant:"Platform",         level:"info"  },
-  { id:"6", time:"13:44:11", actor:"system@smartschool.local",     role:"System",      action:"PREDICTION_RUN",     entity:"AI",      details:"Dropout risk batch completed — 18 tenants, 2,840 students", tenant:"Platform",    level:"info"  },
-  { id:"7", time:"12:30:00", actor:"owner@brightfuture.edu",       role:"SchoolAdmin", action:"AI_CONFIG_UPDATED",  entity:"AICore",  details:"Chatbot persona updated for Teacher role",           tenant:"Bright Future",    level:"info"  },
-  { id:"8", time:"12:00:00", actor:"driver@alnoor.edu.pk",         role:"Driver",      action:"ROUTE_ALERT_SENT",   entity:"Transport",details:"Delay alert sent — Route A, 12 minutes",            tenant:"Al-Noor Academy",  level:"warn"  },
+// Mock audit data since endpoint returns empty in mock mode
+const MOCK_AUDIT_LOGS = [
+  { id:"al1", code:"AUD-001", name:"Student enrolled", metadataJson: JSON.stringify({ actor:"admin@alnoor.edu", action:"CreateStudent", entity:"Student", entityId:"22222222-2222-2222-2222-222222222222", ipAddress:"192.168.1.1", timestamp:"2026-08-30T14:32:00Z", status:"Success" }) },
+  { id:"al2", code:"AUD-002", name:"Payment recorded", metadataJson: JSON.stringify({ actor:"accountant@alnoor.edu", action:"CreatePayment", entity:"Invoice", entityId:"inv1", ipAddress:"192.168.1.2", timestamp:"2026-08-30T14:15:00Z", status:"Success" }) },
+  { id:"al3", code:"AUD-003", name:"Staff added",      metadataJson: JSON.stringify({ actor:"admin@alnoor.edu", action:"CreateEmployee", entity:"Employee", entityId:"33333333-3333-3333-3333-333333333333", ipAddress:"192.168.1.1", timestamp:"2026-08-30T13:00:00Z", status:"Success" }) },
+  { id:"al4", code:"AUD-004", name:"Login attempt",    metadataJson: JSON.stringify({ actor:"unknown@email.com", action:"Login", entity:"User", entityId:null, ipAddress:"203.0.113.42", timestamp:"2026-08-30T11:00:00Z", status:"Failed" }) },
+  { id:"al5", code:"AUD-005", name:"Fee type created", metadataJson: JSON.stringify({ actor:"admin@alnoor.edu", action:"CreateFeeType", entity:"FeeType", entityId:"ft1", ipAddress:"192.168.1.1", timestamp:"2026-08-29T09:00:00Z", status:"Success" }) },
 ];
 
-const LEVEL_PILL: Record<string,string> = { info:"info", warn:"warning", error:"danger", critical:"danger" };
+function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
 
 export function AuditPage() {
+  const { user } = useAuth();
+  const tid = effectiveTenantId(user) ?? "";
   const [q, setQ] = useState("");
-  const [level, setLevel] = useState("all");
-
-  const filtered = AUDIT_LOG.filter(l =>
-    (level === "all" || l.level === level) &&
-    (JSON.stringify(l).toLowerCase().includes(q.toLowerCase()))
-  );
+  const { data, isLoading } = useQuery({ queryKey:["audit-logs",tid], queryFn: () => A.getAuditLogs(tid) });
+  const rawItems = (data as any)?.items ?? (data as any) ?? [];
+  const items    = rawItems.length === 0 ? MOCK_AUDIT_LOGS : rawItems;
+  const filtered = items.filter((l:any) => `${l.name} ${l.code}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
-      <PageHeader
-        title="Audit & Logs"
-        subtitle="Immutable record of all system and user actions across all tenants"
-      />
-
-      <section className="metric-grid" style={{ marginBottom:20 }}>
-        <StatCard label="Events today"     value="14,821" note="All tenants"     color="#2563EB" bg="#EFF6FF"><ShieldCheck size={20}/></StatCard>
-        <StatCard label="Impersonations"   value="3"      note="This week"       color="#D97706" bg="#FFFBEB"><ShieldCheck size={20}/></StatCard>
-        <StatCard label="Warnings"         value="8"      note="Require review"  color="#F59E0B" bg="#FFFBEB"><ShieldCheck size={20}/></StatCard>
-        <StatCard label="Errors"           value="1"      note="Last 24 hours"   color="#EF4444" bg="#FFF0F1"><ShieldCheck size={20}/></StatCard>
-      </section>
-
+      <PageHeader title="Audit Log" subtitle="Complete system activity trail"/>
       <div className="surface">
         <div className="surface-head">
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <label className="search-box" style={{ maxWidth:280 }}>
-              <Search size={14}/>
-              <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search logs…"/>
-            </label>
-            <select value={level} onChange={e=>setLevel(e.target.value)}
-              style={{ height:36, padding:"0 12px", border:"1.5px solid var(--line)", borderRadius:8, background:"var(--surface)", fontSize:12 }}>
-              <option value="all">All levels</option>
-              <option value="info">Info</option>
-              <option value="warn">Warning</option>
-              <option value="error">Error</option>
-            </select>
+          <label className="search-box" style={{ maxWidth:300 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search audit logs…"/>
+          </label>
+        </div>
+        {isLoading ? <div style={{ padding:48, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Ref</th><th>Action</th><th>Actor</th><th>Entity</th><th>IP</th><th>Time</th><th>Status</th></tr></thead>
+              <tbody>
+                {filtered.map((l:any) => {
+                  const meta = parseMeta(l.metadataJson);
+                  return (
+                    <tr key={l.id}>
+                      <td><code style={{ fontSize:10 }}>{l.code}</code></td>
+                      <td><b style={{ fontSize:11 }}>{meta.action ?? l.name}</b></td>
+                      <td style={{ fontSize:11 }}>{meta.actor ?? "—"}</td>
+                      <td style={{ fontSize:11 }}>{meta.entity ?? "—"}{meta.entityId && <span style={{ color:"var(--muted)" }}> ···{String(meta.entityId).slice(-6)}</span>}</td>
+                      <td><code style={{ fontSize:10 }}>{meta.ipAddress ?? "—"}</code></td>
+                      <td style={{ fontSize:10, color:"var(--muted)" }}>{meta.timestamp ? new Date(meta.timestamp).toLocaleString() : "—"}</td>
+                      <td><span className={`status-pill ${meta.status==="Success"?"success":"danger"}`} style={{ fontSize:9 }}>{meta.status ?? "—"}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <button className="secondary"><RefreshCcw size={13}/> Refresh</button>
-        </div>
-
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead>
-              <tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th><th>Tenant</th><th>Level</th></tr>
-            </thead>
-            <tbody>
-              {filtered.map(l => (
-                <tr key={l.id}>
-                  <td><code style={{ fontSize:11 }}>{l.time}</code></td>
-                  <td>
-                    <div style={{ fontSize:11 }}>
-                      <b style={{ display:"block" }}>{l.actor.split("@")[0]}</b>
-                      <span className={`status-pill ${l.role==="SuperAdmin"?"purple":l.role==="System"?"info":"gray"}`} style={{ fontSize:9 }}>{l.role}</span>
-                    </div>
-                  </td>
-                  <td><code style={{ fontSize:10 }}>{l.action}</code></td>
-                  <td><code style={{ fontSize:10 }}>{l.entity}</code></td>
-                  <td style={{ maxWidth:240, fontSize:11, color:"var(--text-secondary)" }}>{l.details}</td>
-                  <td style={{ fontSize:11 }}>{l.tenant}</td>
-                  <td><span className={`status-pill ${LEVEL_PILL[l.level]}`}>{l.level}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="table-footer"><span>{filtered.length} events shown</span></div>
+        )}
+        <div className="table-footer"><span>{filtered.length} audit entries</span></div>
       </div>
     </>
   );

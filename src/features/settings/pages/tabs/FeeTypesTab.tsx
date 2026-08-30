@@ -1,76 +1,78 @@
 import { useState } from "react";
-import { Modal, Field, Input, Select, DataTable, ActionCell, ModalActions, StatusPill } from "./_helpers";
-
-interface FeeType { id: string; name: string; code: string; frequency: string; isActive: boolean; }
-
-const MOCK: FeeType[] = [
-  { id:"1", name:"Tuition Fee",    code:"TUITION",   frequency:"Monthly", isActive:true  },
-  { id:"2", name:"Transport Fee",  code:"TRANSPORT", frequency:"Monthly", isActive:true  },
-  { id:"3", name:"Library Fee",    code:"LIBRARY",   frequency:"Annual",  isActive:true  },
-  { id:"4", name:"Lab Fee",        code:"LAB",       frequency:"Term",    isActive:true  },
-  { id:"5", name:"Sports Fee",     code:"SPORTS",    frequency:"Annual",  isActive:true  },
-  { id:"6", name:"Admission Fee",  code:"ADMISSION", frequency:"OneTime", isActive:true  },
-];
-
-const empty = { name:"", code:"", frequency:"Monthly", isActive:true };
+import { Plus, X } from "lucide-react";
+import { useFeeTypes, useCreateFeeType } from "../../../../core/api/queries";
+import { useAuth } from "../../../auth/auth";
+import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
 export function FeeTypesTab() {
-  const [rows, setRows] = useState<FeeType[]>(MOCK);
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<FeeType|null>(null);
-  const [form, setForm] = useState(empty);
-  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+  const tid = effectiveTenantId(user);
+  const { data: feeTypes, isLoading } = useFeeTypes();
+  const create = useCreateFeeType();
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({ name:"", amount:"", frequency:"MONTHLY", isRequired:"false" });
+  const [error, setError] = useState("");
 
-  const filtered = rows.filter(r => r.name.toLowerCase().includes(q.toLowerCase()));
-  const f = (k: keyof typeof form) => (v: string|boolean) => setForm(p=>({...p,[k]:v}));
-
-  function openAdd() { setEditing(null); setForm(empty); setOpen(true); }
-  function openEdit(r: FeeType) { setEditing(r); setForm({name:r.name,code:r.code,frequency:r.frequency,isActive:r.isActive}); setOpen(true); }
-  function remove(r: FeeType) { if(confirm(`Delete "${r.name}"?`)) setRows(p=>p.filter(x=>x.id!==r.id)); }
+  const items = Array.isArray(feeTypes) ? feeTypes : (feeTypes as any)?.items ?? [];
 
   async function save() {
-    if(!form.name||!form.code) return;
-    setSaving(true);
-    await new Promise(r=>setTimeout(r,400));
-    if(editing) setRows(p=>p.map(x=>x.id===editing.id?{...x,...form}:x));
-    else setRows(p=>[...p,{id:Date.now().toString(),...form}]);
-    setSaving(false); setOpen(false);
+    if (!form.name||!form.amount) { setError("Name and amount required"); return; }
+    try {
+      await create.mutateAsync({ tenantId:tid, name:form.name, metadataJson: JSON.stringify({ amount:Number(form.amount), frequency:form.frequency, isRequired:form.isRequired==="true" }) });
+      setModal(false); setForm({ name:"", amount:"", frequency:"MONTHLY", isRequired:"false" }); setError("");
+    } catch(e: any) { setError(e?.message ?? "Failed"); }
   }
 
   return (
     <>
-      <DataTable headers={["Fee Type","Code","Frequency","Status","Actions"]} onSearch={setQ} onAdd={openAdd} addLabel="Add Fee Type">
-        {filtered.map(r=>(
-          <tr key={r.id}>
-            <td><b>{r.name}</b></td>
-            <td><code style={{fontSize:11}}>{r.code}</code></td>
-            <td><span className="status-pill info">{r.frequency}</span></td>
-            <td><StatusPill active={r.isActive}/></td>
-            <td><ActionCell onEdit={()=>openEdit(r)} onDelete={()=>remove(r)}/></td>
-          </tr>
-        ))}
-      </DataTable>
-
-      <Modal open={open} title={editing?"Edit Fee Type":"Add Fee Type"} onClose={()=>setOpen(false)}>
-        <div className="human-form">
-          <div className="human-form-grid">
-            <Field label="Fee Type Name" required><Input value={form.name} onChange={f("name")} placeholder="e.g. Tuition Fee"/></Field>
-            <Field label="Code" required><Input value={form.code} onChange={v=>f("code")(v.toUpperCase())} placeholder="e.g. TUITION"/></Field>
-            <Field label="Frequency" required>
-              <Select value={form.frequency} onChange={f("frequency")}>
-                <option>Monthly</option><option>Term</option><option>Annual</option><option>OneTime</option>
-              </Select>
-            </Field>
-            <Field label="Status">
-              <Select value={form.isActive?"1":"0"} onChange={v=>f("isActive")(v==="1")}>
-                <option value="1">Active</option><option value="0">Inactive</option>
-              </Select>
-            </Field>
+      <div className="surface">
+        <div className="surface-head">
+          <div><h3>Fee types</h3></div>
+          <button className="primary" onClick={()=>{setModal(true);setError("");}}><Plus size={14}/> Add fee type</button>
+        </div>
+        {isLoading ? <div style={{padding:20,color:"var(--muted)"}}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Name</th><th>Code</th><th>Amount</th><th>Frequency</th><th>Required</th></tr></thead>
+              <tbody>
+                {items.length===0 ? <tr><td colSpan={5} style={{textAlign:"center",padding:24,color:"var(--muted)"}}>No fee types yet.</td></tr>
+                : items.map((ft:any)=>{
+                  let meta:any={}; try{meta=JSON.parse(ft.metadataJson??"{}") }catch{}
+                  return <tr key={ft.id}><td><b>{ft.name}</b></td><td><code style={{fontSize:11}}>{ft.code}</code></td><td>PKR {meta.amount?.toLocaleString()??0}</td><td>{meta.frequency??"-"}</td><td><span className={`status-pill ${meta.isRequired?"success":"gray"}`}>{meta.isRequired?"Required":"Optional"}</span></td></tr>
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {modal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setModal(false)}}>
+          <div className="modal-card" style={{ width:"min(460px,96vw)" }}>
+            <div className="modal-head"><h2>Add fee type</h2><button className="icon-button" onClick={()=>setModal(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Name *</span><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Tuition Fee"/></label>
+              <label className="human-field"><span>Amount (PKR) *</span><input type="number" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))}/></label>
+              <label className="human-field"><span>Frequency</span>
+                <select value={form.frequency} onChange={e=>setForm(p=>({...p,frequency:e.target.value}))}>
+                  <option value="MONTHLY">Monthly</option><option value="TERM">Per term</option>
+                  <option value="ANNUAL">Annual</option><option value="ONCE">One-time</option>
+                </select>
+              </label>
+              <label className="human-field"><span>Required?</span>
+                <select value={form.isRequired} onChange={e=>setForm(p=>({...p,isRequired:e.target.value}))}>
+                  <option value="false">Optional</option><option value="true">Required</option>
+                </select>
+              </label>
+            </div>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setModal(false)}>Cancel</button>
+              <button className="primary" onClick={save} disabled={create.isPending}>{create.isPending?"Saving…":"Save"}</button>
+            </div>
           </div>
         </div>
-        <ModalActions onCancel={()=>setOpen(false)} onSave={save} saving={saving} disabled={!form.name||!form.code}/>
-      </Modal>
+      )}
     </>
   );
 }

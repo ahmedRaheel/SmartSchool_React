@@ -1,56 +1,78 @@
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard } from "../../../components/ui/StatCard";
-import { CreditCard, TrendingUp, Users, Zap } from "lucide-react";
+import { useTenants } from "../../../core/api/queries";
+import { DollarSign } from "lucide-react";
 
-const PLANS = [
-  { name:"Starter",    price:"$240/mo",  students:"Up to 500",   modules:["Students","Finance","HR","Attendance"],          tenants:4  },
-  { name:"Pro",        price:"$960/mo",  students:"Up to 2,000", modules:["All Starter + Admissions, Library, Transport, AI Chatbot"], tenants:18 },
-  { name:"Enterprise", price:"$3,200/mo",students:"Unlimited",   modules:["All Pro + AI Tutor, Predictions, Custom RAG, Priority Support"], tenants:5 },
-];
+function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
 
 export function SubscriptionsPage() {
+  const { data, isLoading } = useTenants();
+  const tenants = (data as any)?.items ?? (data as any) ?? [];
+
+  const PLANS: Record<string,{price:number;color:string;bg:string}> = {
+    Starter:    { price:  99, color:"#6B7280", bg:"#F9FAFB" },
+    Pro:        { price: 249, color:"#2563EB", bg:"#EFF6FF" },
+    Enterprise: { price: 799, color:"#7C3AED", bg:"#F5F3FF" },
+    Trial:      { price:   0, color:"#D97706", bg:"#FFFBEB" },
+  };
+
+  const mrr = tenants.reduce((a:number, t:any) => {
+    const meta = parseMeta(t.metadataJson);
+    const plan = PLANS[meta.subscriptionPlan ?? "Starter"];
+    return a + (meta.status==="ACTIVE" ? (plan?.price ?? 0) : 0);
+  }, 0);
+
   return (
     <>
-      <PageHeader title="Subscription Plans" subtitle="Manage SaaS plans, billing and module access gates"/>
-
+      <PageHeader title="Subscriptions" subtitle="SaaS subscription and billing management"/>
       <section className="metric-grid" style={{ marginBottom:20 }}>
-        <StatCard label="Monthly Recurring Revenue" value="$52.4K" note="↑ 14% YoY"        color="#10B981" bg="#ECFDF5"><TrendingUp size={20}/></StatCard>
-        <StatCard label="Active subscriptions"       value="27"    note="Across all plans"  color="#2563EB" bg="#EFF6FF"><CreditCard size={20}/></StatCard>
-        <StatCard label="Trial accounts"             value="5"     note="Conversion pipeline"color="#D97706" bg="#FFFBEB"><Users size={20}/></StatCard>
-        <StatCard label="Annual run rate"            value="$628K" note="Projected"          color="#8B5CF6" bg="#F5F3FF"><Zap size={20}/></StatCard>
+        <StatCard label="Monthly MRR"   value={`$${mrr.toLocaleString()}`} note="Active plans" color="#10B981" bg="#ECFDF5"><DollarSign size={20}/></StatCard>
+        <StatCard label="Active schools" value={String(tenants.filter((t:any)=>parseMeta(t.metadataJson).status==="ACTIVE").length)} note="" color="#2563EB" bg="#EFF6FF"><DollarSign size={20}/></StatCard>
+        <StatCard label="Trial"         value={String(tenants.filter((t:any)=>parseMeta(t.metadataJson).status==="TRIAL").length)} note="" color="#D97706" bg="#FFFBEB"><DollarSign size={20}/></StatCard>
+        <StatCard label="Total tenants" value={String(tenants.length)} note="" color="#0F2241" bg="#EEF2FF"><DollarSign size={20}/></StatCard>
       </section>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:20 }}>
-        {PLANS.map(p => (
-          <div key={p.name} className="surface" style={{ padding:20 }}>
-            <div style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>{p.name}</div>
-            <div style={{ fontSize:22, fontWeight:800, color:"var(--navy)", marginBottom:8 }}>{p.price}</div>
-            <div style={{ fontSize:11, color:"var(--muted)", marginBottom:12 }}>{p.students} students</div>
-            <div style={{ fontSize:11, color:"var(--text-secondary)", lineHeight:1.65, marginBottom:14 }}>{p.modules[0]}</div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontSize:12, fontWeight:600 }}>{p.tenants} active schools</span>
-              <button className="primary" style={{ fontSize:11 }}>Manage</button>
-            </div>
-          </div>
-        ))}
+      <div className="surface">
+        <div className="surface-head"><h3>Subscription plans</h3></div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, padding:"0 20px 20px" }}>
+          {Object.entries(PLANS).map(([plan, cfg]) => {
+            const count = tenants.filter((t:any) => parseMeta(t.metadataJson).subscriptionPlan === plan).length;
+            return (
+              <div key={plan} style={{ padding:"16px 18px", borderRadius:12, border:`1.5px solid ${cfg.color}30`, background:cfg.bg }}>
+                <div style={{ fontSize:11, color:cfg.color, fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:6 }}>{plan}</div>
+                <div style={{ fontSize:22, fontWeight:800, color:cfg.color }}>{count}<span style={{ fontSize:12, fontWeight:400, color:"var(--muted)" }}> schools</span></div>
+                <div style={{ fontSize:13, fontWeight:700, color:cfg.color, marginTop:4 }}>${cfg.price}<span style={{ fontSize:11, fontWeight:400 }}>/mo</span></div>
+                <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>MRR contribution: <b>${(cfg.price*count).toLocaleString()}</b></div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="surface">
-        <div className="surface-head"><h3>Revenue trend</h3><p>Monthly MRR over the last 6 months</p></div>
-        <div style={{ padding:"0 20px 20px" }}>
-          {[
-            {month:"Mar",mrr:38400},{month:"Apr",mrr:41200},{month:"May",mrr:44800},
-            {month:"Jun",mrr:47600},{month:"Jul",mrr:50100},{month:"Aug",mrr:52400},
-          ].map(m => (
-            <div key={m.month} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
-              <span style={{ width:32, fontSize:11, color:"var(--muted)", fontWeight:600 }}>{m.month}</span>
-              <div style={{ flex:1, height:12, borderRadius:6, background:"var(--surface-2)", overflow:"hidden" }}>
-                <div style={{ height:"100%", width:`${(m.mrr/52400)*100}%`, background:"#10B981", borderRadius:6, transition:"width .4s" }}/>
-              </div>
-              <span style={{ width:56, fontSize:11, fontWeight:700, textAlign:"right" }}>${(m.mrr/1000).toFixed(1)}K</span>
-            </div>
-          ))}
-        </div>
+        <div className="surface-head"><h3>All subscriptions</h3></div>
+        {isLoading ? <div style={{ padding:30, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>School</th><th>Plan</th><th>Students</th><th>MRR</th><th>Status</th></tr></thead>
+              <tbody>
+                {tenants.map((t:any) => {
+                  const meta = parseMeta(t.metadataJson);
+                  const plan = PLANS[meta.subscriptionPlan ?? "Starter"] ?? PLANS["Starter"];
+                  return (
+                    <tr key={t.id}>
+                      <td><b>{t.name}</b><div style={{fontSize:10,color:"var(--muted)"}}>{meta.city}</div></td>
+                      <td><span style={{ padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:600, background:plan.bg, color:plan.color }}>{meta.subscriptionPlan ?? "Starter"}</span></td>
+                      <td>{meta.studentCount?.toLocaleString() ?? "—"}</td>
+                      <td><b>${plan.price}/mo</b></td>
+                      <td><span className={`status-pill ${meta.status==="ACTIVE"?"success":meta.status==="TRIAL"?"warning":"gray"}`}>{meta.status ?? "ACTIVE"}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );

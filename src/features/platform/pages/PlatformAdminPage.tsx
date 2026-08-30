@@ -1,157 +1,81 @@
 import { useState } from "react";
-import { Plus, RefreshCcw, Upload, X } from "lucide-react";
-import { PageHeader }  from "../../../components/ui/PageHeader";
-import { StatCard }    from "../../../components/ui/StatCard";
-import {
-  useModelConfigs, useKnowledgeCollections, useExecutionLogs,
-} from "../../../core/api/queries";
-import { aiCoreApi } from "../../../core/api/smartschoolApi";
+import { Brain, Database, Plus, X, Zap } from "lucide-react";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { StatCard }   from "../../../components/ui/StatCard";
+import { useModelConfigs, useCreateModelConfig, useKnowledgeCollections, useCreateKnowledgeCollection, useExecutionLogs } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-type Tab = "overview"|"models"|"rag"|"tutor"|"logs";
-
-const TABS: { key: Tab; label: string }[] = [
-  { key:"overview", label:"AI overview"       },
-  { key:"models",   label:"Model config"      },
-  { key:"rag",      label:"Knowledge / RAG"   },
-  { key:"tutor",    label:"AI Tutor analytics"},
-  { key:"logs",     label:"Request logs"      },
-];
+function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
 
 export function PlatformAdminPage() {
   const { user } = useAuth();
-  const tenantId = effectiveTenantId(user);
-  const qc = useQueryClient();
-  const [tab, setTab]       = useState<Tab>("overview");
-  const [collOpen, setCollOpen] = useState(false);
-  const [collName, setCollName] = useState("");
-  const [collDesc, setCollDesc] = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [indexing, setIndexing] = useState(false);
+  const tid = effectiveTenantId(user) ?? "";
+  const [tab, setTab] = useState<"models"|"rag"|"logs">("models");
+  const [modelModal, setModelModal] = useState(false);
+  const [collModal,  setCollModal]  = useState(false);
+  const [modelForm,  setModelForm]  = useState({ name:"", provider:"Ollama", modelIdentifier:"llama3.2", temperature:"0.2", maxTokens:"4096" });
+  const [collForm,   setCollForm]   = useState({ name:"", slug:"", description:"" });
+  const [error, setError] = useState("");
 
-  const { data: modelData,  isLoading: mLoading } = useModelConfigs();
-  const { data: collData,   isLoading: cLoading } = useKnowledgeCollections();
-  const { data: logData,    isLoading: lLoading } = useExecutionLogs();
+  const { data: modelData, isLoading: mLoad } = useModelConfigs();
+  const { data: collData,  isLoading: cLoad } = useKnowledgeCollections();
+  const { data: logData,   isLoading: lLoad } = useExecutionLogs();
+  const createModel = useCreateModelConfig();
+  const createColl  = useCreateKnowledgeCollection();
 
-  const models  = (modelData as any)?.items  ?? (modelData as any)?.value?.items  ?? [];
-  const colls   = (collData  as any)?.items  ?? (collData  as any)?.value?.items  ?? [];
-  const logs    = (logData   as any)?.items  ?? (logData   as any)?.value?.items  ?? [];
+  const models = (modelData as any)?.items ?? (modelData as any) ?? [];
+  const colls  = (collData  as any)?.items ?? (collData  as any) ?? [];
+  const logs   = (logData   as any)?.items ?? (logData   as any) ?? [];
 
-  async function createCollection() {
-    if (!collName.trim()) return;
-    setSaving(true);
+  async function saveModel() {
+    if (!modelForm.name || !modelForm.modelIdentifier) { setError("Name and model ID required"); return; }
     try {
-      await aiCoreApi.createCollection({ tenantId, name: collName.trim(), description: collDesc.trim() });
-      setCollOpen(false); setCollName(""); setCollDesc("");
-      void qc.invalidateQueries({ queryKey: ["rag-collections", tenantId] });
-    } finally { setSaving(false); }
+      await createModel.mutateAsync({ tenantId:tid, name:modelForm.name, metadataJson:JSON.stringify({ provider:modelForm.provider, modelIdentifier:modelForm.modelIdentifier, temperature:Number(modelForm.temperature), maxTokens:Number(modelForm.maxTokens), isActive:true }) });
+      setModelModal(false); setModelForm({ name:"", provider:"Ollama", modelIdentifier:"llama3.2", temperature:"0.2", maxTokens:"4096" }); setError("");
+    } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
-  async function triggerIndex(collectionId: string) {
-    setIndexing(true);
+  async function saveColl() {
+    if (!collForm.name) { setError("Name required"); return; }
     try {
-      await aiCoreApi.indexKnowledge({ tenantId, collectionId });
-      alert("Indexing job queued successfully.");
-    } catch {
-      alert("Indexing failed. Check logs.");
-    } finally { setIndexing(false); }
+      await createColl.mutateAsync({ tenantId:tid, name:collForm.name, metadataJson:JSON.stringify({ slug:collForm.slug||collForm.name.toLowerCase().replace(/\s+/g,"-"), description:collForm.description, documentCount:0, chunkCount:0, isActive:true }) });
+      setCollModal(false); setCollForm({ name:"", slug:"", description:"" }); setError("");
+    } catch(e:any) { setError(e?.message??"Failed"); }
   }
-
-  const LOG_STATUS: Record<string,string> = { Success:"success", Failure:"danger", Error:"danger", Pending:"warning" };
 
   return (
     <>
-      <PageHeader
-        title="AI Platform Management"
-        subtitle="ai_core · ai · ai_tutor — schema monitoring, models and knowledge base"
-      />
-
-      <section className="metric-grid" style={{ marginBottom:16 }}>
-        <StatCard label="AI requests today"    value="14,821" note="↑ 23% vs yesterday" color="#8B5CF6" bg="#F5F3FF"><span style={{fontSize:20}}>🤖</span></StatCard>
-        <StatCard label="Avg latency"          value="1.8 s"  note="Within SLA"         color="#10B981" bg="#ECFDF5"><span style={{fontSize:20}}>⚡</span></StatCard>
-        <StatCard label="Active tutor sessions"value="47"     note="Live now"           color="#2563EB" bg="#EFF6FF"><span style={{fontSize:20}}>📚</span></StatCard>
-        <StatCard label="Prediction accuracy"  value="91.4%"  note="Dropout model"      color="#D97706" bg="#FFFBEB"><span style={{fontSize:20}}>🎯</span></StatCard>
+      <PageHeader title="AI Platform Admin" subtitle="Model configurations, knowledge base and AI execution logs"/>
+      <section className="metric-grid" style={{ marginBottom:20 }}>
+        <StatCard label="Model configs"  value={String(models.length)} note="" color="#8B5CF6" bg="#F5F3FF"><Brain size={20}/></StatCard>
+        <StatCard label="RAG collections"value={String(colls.length)}  note="" color="#2563EB" bg="#EFF6FF"><Database size={20}/></StatCard>
+        <StatCard label="AI log entries" value={String(logs.length)}   note="Recent"          color="#10B981" bg="#ECFDF5"><Zap size={20}/></StatCard>
+        <StatCard label="AI errors"      value={String(logs.filter((l:any)=>parseMeta(l.metadataJson).status==="Failure").length)} note="" color="#EF4444" bg="#FFF0F1"><Zap size={20}/></StatCard>
       </section>
 
-      <div className="section-tabs" style={{ marginBottom:16 }}>
-        {TABS.map(t => (
-          <button key={t.key} className={tab === t.key ? "active" : ""} onClick={() => setTab(t.key)}>{t.label}</button>
-        ))}
+      <div className="section-tabs" style={{ marginBottom:14 }}>
+        <button className={tab==="models"?"active":""} onClick={()=>setTab("models")}>🤖 Model configs</button>
+        <button className={tab==="rag"?"active":""}    onClick={()=>setTab("rag")}>📚 Knowledge base</button>
+        <button className={tab==="logs"?"active":""}   onClick={()=>setTab("logs")}>⚡ Exec logs</button>
       </div>
 
-      {/* ── Overview ── */}
-      {tab === "overview" && (
-        <div className="grid-2">
-          <div className="surface">
-            <div className="surface-head"><h3>Schema status</h3><p>All three AI schemas</p></div>
-            <div style={{ padding:"0 20px 20px" }}>
-              {[
-                { schema:"ai_core",  tables:9, desc:"RAG, chatbots, inquiry AI, parent AI, execution logs" },
-                { schema:"ai",       tables:8, desc:"Predictions, interventions, learning recommendations" },
-                { schema:"ai_tutor", tables:7, desc:"Tutor sessions, mastery tracking, quizzes" },
-              ].map(s => (
-                <div key={s.schema} style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", borderBottom:"0.5px solid var(--border)" }}>
-                  <div>
-                    <div style={{ fontFamily:"var(--font-mono)", fontSize:13, fontWeight:500, color:"var(--text-accent)" }}>{s.schema}</div>
-                    <div style={{ fontSize:11, color:"var(--text-secondary)", marginTop:2 }}>{s.desc}</div>
-                  </div>
-                  <div style={{ textAlign:"right" }}>
-                    <span className="status-pill success">Healthy</span>
-                    <div style={{ fontSize:10, color:"var(--text-muted)", marginTop:3 }}>{s.tables} tables</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="surface">
-            <div className="surface-head"><h3>Latest AI requests</h3></div>
-            <div style={{ padding:"0 18px 16px" }}>
-              {lLoading ? <div style={{ color:"var(--text-muted)", fontSize:12 }}>Loading…</div> :
-                logs.slice(0, 6).map((l: any, i: number) => (
-                  <div key={i} style={{ display:"flex", gap:10, padding:"10px 0", borderBottom:"0.5px solid var(--border)", fontSize:11 }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:500 }}>{l.actor ?? l.actorType ?? "Unknown"} · {l.operation ?? l.requestType ?? "—"}</div>
-                      <div style={{ color:"var(--text-muted)", marginTop:2 }}>{l.tokenCount ?? "—"} tokens · {l.durationMs ?? "—"}ms</div>
-                    </div>
-                    <span className={`status-pill ${LOG_STATUS[l.status ?? "Success"] ?? "gray"}`}>{l.status ?? "OK"}</span>
-                  </div>
-                ))
-              }
-              {!lLoading && logs.length === 0 && <div style={{ color:"var(--text-muted)", fontSize:12 }}>No logs yet.</div>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Model Config ── */}
       {tab === "models" && (
         <div className="surface">
           <div className="surface-head">
-            <div><h3>Model configuration</h3><p>ai_core.model_configuration — provider, model and parameters per tenant</p></div>
-            <button className="primary"><Plus size={14}/> Add config</button>
+            <div><h3>AI model configurations</h3><p>Connected LLM providers and models</p></div>
+            <button className="primary" onClick={()=>{setModelModal(true);setError("");}}><Plus size={14}/> Add model</button>
           </div>
-          {mLoading ? (
-            <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading model configs…</div>
-          ) : (
+          {mLoad ? <div style={{ padding:30, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Name</th><th>Provider</th><th>Model</th><th>Temperature</th><th>Max tokens</th><th>Status</th></tr></thead>
+                <thead><tr><th>Name</th><th>Code</th><th>Provider</th><th>Model ID</th><th>Temp.</th><th>Max tokens</th><th>Status</th></tr></thead>
                 <tbody>
-                  {models.length === 0
-                    ? <tr><td colSpan={6} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No model configurations found.</td></tr>
-                    : models.map((m: any) => (
-                        <tr key={m.modelConfigurationId ?? m.id}>
-                          <td><b>{m.name ?? "—"}</b></td>
-                          <td><code style={{ fontSize:11 }}>{m.provider ?? "—"}</code></td>
-                          <td><code style={{ fontSize:11 }}>{m.modelIdentifier ?? m.model ?? "—"}</code></td>
-                          <td>{m.temperature ?? "—"}</td>
-                          <td>{m.maxTokens ?? "—"}</td>
-                          <td><span className={`status-pill ${m.isActive !== false ? "success" : "gray"}`}>{m.isActive !== false ? "Active" : "Inactive"}</span></td>
-                        </tr>
-                      ))
-                  }
+                  {models.length===0?<tr><td colSpan={7} style={{ textAlign:"center", padding:30, color:"var(--muted)" }}>No model configs yet.</td></tr>
+                  :models.map((m:any)=>{
+                    const meta=parseMeta(m.metadataJson);
+                    return <tr key={m.id}><td><b>{m.name}</b></td><td><code style={{fontSize:11}}>{m.code}</code></td><td>{meta.provider??"-"}</td><td><code style={{fontSize:11}}>{meta.modelIdentifier??"-"}</code></td><td>{meta.temperature??"-"}</td><td>{meta.maxTokens??"-"}</td><td><span className={`status-pill ${meta.isActive?"success":"gray"}`}>{meta.isActive?"Active":"Inactive"}</span></td></tr>;
+                  })}
                 </tbody>
               </table>
             </div>
@@ -159,43 +83,22 @@ export function PlatformAdminPage() {
         </div>
       )}
 
-      {/* ── RAG Collections ── */}
       {tab === "rag" && (
         <div className="surface">
           <div className="surface-head">
-            <div><h3>Knowledge collections</h3><p>ai_core.knowledge_collection + ai_core.knowledge_document — school RAG knowledge base</p></div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button className="secondary" onClick={() => void qc.invalidateQueries({ queryKey: ["rag-collections", tenantId] })}>
-                <RefreshCcw size={13}/> Refresh
-              </button>
-              <button className="primary" onClick={() => setCollOpen(true)}><Plus size={14}/> New collection</button>
-            </div>
+            <div><h3>Knowledge collections</h3><p>RAG knowledge base for AI chatbots and tutoring</p></div>
+            <button className="primary" onClick={()=>{setCollModal(true);setError("");}}><Plus size={14}/> New collection</button>
           </div>
-          {cLoading ? (
-            <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading collections…</div>
-          ) : (
+          {cLoad ? <div style={{ padding:30, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Collection</th><th>Slug</th><th>Documents</th><th>Chunks</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Collection</th><th>Slug</th><th>Docs</th><th>Chunks</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
-                  {colls.length === 0
-                    ? <tr><td colSpan={6} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No knowledge collections yet. Create one to enable AI context.</td></tr>
-                    : colls.map((c: any) => (
-                        <tr key={c.knowledgeCollectionId ?? c.id}>
-                          <td><b>{c.name ?? "—"}</b><small style={{ display:"block", color:"var(--text-muted)", fontSize:10 }}>{c.description?.slice(0,60)}</small></td>
-                          <td><code style={{ fontSize:11 }}>{c.slug ?? c.collectionSlug ?? "—"}</code></td>
-                          <td>{c.documentCount ?? "—"}</td>
-                          <td>{c.chunkCount ?? "—"}</td>
-                          <td><span className={`status-pill ${c.isActive !== false ? "success" : "gray"}`}>{c.isActive !== false ? "Active" : "Inactive"}</span></td>
-                          <td>
-                            <div className="row-actions">
-                              <button className="table-action"><Upload size={12}/> Upload doc</button>
-                              <button className="table-action" disabled={indexing} onClick={() => void triggerIndex(c.knowledgeCollectionId ?? c.id)}>Index</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                  }
+                  {colls.length===0?<tr><td colSpan={6} style={{ textAlign:"center", padding:30, color:"var(--muted)" }}>No collections yet.</td></tr>
+                  :colls.map((c:any)=>{
+                    const meta=parseMeta(c.metadataJson);
+                    return <tr key={c.id}><td><b>{c.name}</b><div style={{fontSize:10,color:"var(--muted)"}}>{meta.description?.slice(0,40)}</div></td><td><code style={{fontSize:11}}>{meta.slug??c.code}</code></td><td>{meta.documentCount??0}</td><td>{meta.chunkCount??0}</td><td><span className={`status-pill ${meta.isActive!==false?"success":"gray"}`}>{meta.isActive!==false?"Active":"Inactive"}</span></td><td><div className="row-actions"><button className="table-action" style={{fontSize:10}}>Upload</button><button className="table-action" style={{fontSize:10}}>Index</button></div></td></tr>;
+                  })}
                 </tbody>
               </table>
             </div>
@@ -203,63 +106,19 @@ export function PlatformAdminPage() {
         </div>
       )}
 
-      {/* ── AI Tutor Analytics ── */}
-      {tab === "tutor" && (
-        <div className="surface">
-          <div className="surface-head"><div><h3>AI Tutor analytics</h3><p>ai_tutor.tutor_session + mastery_tracker across all tenants</p></div></div>
-          <div style={{ padding:20 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
-              {[
-                { label:"Total sessions",  value:"4,821" },
-                { label:"Avg session time",value:"28 min" },
-                { label:"Avg mastery gain",value:"12.4%"  },
-                { label:"Quizzes generated",value:"14,291"},
-              ].map(s => (
-                <div key={s.label} style={{ padding:"14px 16px", border:"0.5px solid var(--border)", borderRadius:12, background:"var(--surface-1)" }}>
-                  <div style={{ fontSize:11, color:"var(--text-muted)", marginBottom:4 }}>{s.label}</div>
-                  <div style={{ fontSize:22, fontWeight:500 }}>{s.value}</div>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize:12, color:"var(--text-secondary)" }}>
-              ai_tutor.session_analytics are persisted per session. Mastery tracker records subject × topic competency per student.
-              Generated quizzes are stored in ai_tutor.generated_quiz with attempt history in ai_tutor.quiz_attempt.
-              Learning recommendations flow from ai_tutor.learning_recommendation → student dashboard.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Request Logs ── */}
       {tab === "logs" && (
         <div className="surface">
-          <div className="surface-head">
-            <div><h3>AI execution logs</h3><p>ai_core.ai_execution_log — all AI API calls across platform</p></div>
-            <button className="secondary" onClick={() => void qc.invalidateQueries({ queryKey: ["exec-logs", tenantId] })}>
-              <RefreshCcw size={13}/> Refresh
-            </button>
-          </div>
-          {lLoading ? (
-            <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading logs…</div>
-          ) : (
+          <div className="surface-head"><h3>AI execution logs</h3><p>Real-time AI activity log (auto-refreshes)</p></div>
+          {lLoad ? <div style={{ padding:30, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Time</th><th>Actor type</th><th>Operation</th><th>Provider</th><th>Tokens</th><th>Duration</th><th>Status</th></tr></thead>
+                <thead><tr><th>Operation</th><th>Actor</th><th>Provider</th><th>Tokens</th><th>Duration</th><th>Time</th><th>Status</th></tr></thead>
                 <tbody>
-                  {logs.length === 0
-                    ? <tr><td colSpan={7} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No execution logs found.</td></tr>
-                    : logs.map((l: any, i: number) => (
-                        <tr key={l.aiExecutionLogId ?? i}>
-                          <td><code style={{ fontSize:11 }}>{l.createdAt ? new Date(l.createdAt).toLocaleTimeString() : "—"}</code></td>
-                          <td>{l.actor ?? l.actorType ?? "—"}</td>
-                          <td><code style={{ fontSize:11 }}>{l.operation ?? l.requestType ?? "—"}</code></td>
-                          <td>{l.provider ?? "—"}</td>
-                          <td>{l.tokenCount ?? "—"}</td>
-                          <td>{l.durationMs ? `${l.durationMs}ms` : "—"}</td>
-                          <td><span className={`status-pill ${LOG_STATUS[l.status ?? "Success"] ?? "gray"}`}>{l.status ?? "OK"}</span></td>
-                        </tr>
-                      ))
-                  }
+                  {logs.length===0?<tr><td colSpan={7} style={{ textAlign:"center", padding:30, color:"var(--muted)" }}>No logs yet.</td></tr>
+                  :logs.map((l:any)=>{
+                    const meta=parseMeta(l.metadataJson);
+                    return <tr key={l.id}><td><b style={{fontSize:11}}>{meta.operation??l.name}</b></td><td>{meta.actor??"-"}</td><td>{meta.provider??"-"}</td><td>{meta.tokenCount??0}</td><td>{meta.durationMs??0}ms</td><td style={{fontSize:10,color:"var(--muted)"}}>{meta.createdAt?new Date(meta.createdAt).toLocaleString():"-"}</td><td><span className={`status-pill ${meta.status==="Success"?"success":"danger"}`} style={{fontSize:9}}>{meta.status??"-"}</span></td></tr>;
+                  })}
                 </tbody>
               </table>
             </div>
@@ -267,23 +126,47 @@ export function PlatformAdminPage() {
         </div>
       )}
 
-      {/* New Collection Modal */}
-      {collOpen && (
-        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setCollOpen(false); }}>
-          <div className="modal-card" style={{ width:"min(500px,96vw)" }}>
-            <div className="modal-head">
-              <h2>New knowledge collection</h2>
-              <button className="icon-button" onClick={() => setCollOpen(false)}><X size={18}/></button>
+      {/* Add model modal */}
+      {modelModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setModelModal(false)}}>
+          <div className="modal-card" style={{ width:"min(520px,96vw)" }}>
+            <div className="modal-head"><h2>Add AI model config</h2><button className="icon-button" onClick={()=>setModelModal(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Config name *</span><input value={modelForm.name} onChange={e=>setModelForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Llama 3.2 (Ollama)"/></label>
+              <label className="human-field"><span>Provider</span>
+                <select value={modelForm.provider} onChange={e=>setModelForm(p=>({...p,provider:e.target.value}))}>
+                  <option value="Ollama">Ollama</option><option value="OpenAI">OpenAI</option><option value="Anthropic">Anthropic</option><option value="Gemini">Gemini</option>
+                </select>
+              </label>
+              <label className="human-field"><span>Model identifier *</span><input value={modelForm.modelIdentifier} onChange={e=>setModelForm(p=>({...p,modelIdentifier:e.target.value}))} placeholder="e.g. llama3.2"/></label>
+              <label className="human-field"><span>Temperature</span><input type="number" step="0.1" min="0" max="2" value={modelForm.temperature} onChange={e=>setModelForm(p=>({...p,temperature:e.target.value}))}/></label>
+              <label className="human-field"><span>Max tokens</span><input type="number" value={modelForm.maxTokens} onChange={e=>setModelForm(p=>({...p,maxTokens:e.target.value}))}/></label>
             </div>
-            <div className="human-form">
-              <div className="human-form-grid">
-                <label className="human-field field-wide"><span>Collection name *</span><input value={collName} onChange={e => setCollName(e.target.value)} placeholder="e.g. School Handbook 2026"/></label>
-                <label className="human-field field-wide"><span>Description</span><textarea value={collDesc} onChange={e => setCollDesc(e.target.value)} style={{ minHeight:72 }} placeholder="What knowledge is in this collection…"/></label>
-              </div>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
             <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setCollOpen(false)}>Cancel</button>
-              <button className="primary" onClick={() => void createCollection()} disabled={saving || !collName.trim()}>{saving ? "Creating…" : "Create collection"}</button>
+              <button className="secondary" onClick={()=>setModelModal(false)}>Cancel</button>
+              <button className="primary" onClick={saveModel} disabled={createModel.isPending}>{createModel.isPending?"Saving…":"Save"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add collection modal */}
+      {collModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setCollModal(false)}}>
+          <div className="modal-card" style={{ width:"min(480px,96vw)" }}>
+            <div className="modal-head"><h2>New knowledge collection</h2><button className="icon-button" onClick={()=>setCollModal(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Name *</span><input value={collForm.name} onChange={e=>setCollForm(p=>({...p,name:e.target.value}))} placeholder="e.g. School Handbook 2026"/></label>
+              <label className="human-field field-wide"><span>Slug</span><input value={collForm.slug} onChange={e=>setCollForm(p=>({...p,slug:e.target.value}))} placeholder="e.g. handbook-2026 (auto-generated if blank)"/></label>
+              <label className="human-field field-wide"><span>Description</span><input value={collForm.description} onChange={e=>setCollForm(p=>({...p,description:e.target.value}))}/></label>
+            </div>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setCollModal(false)}>Cancel</button>
+              <button className="primary" onClick={saveColl} disabled={createColl.isPending}>{createColl.isPending?"Creating…":"Create"}</button>
             </div>
           </div>
         </div>

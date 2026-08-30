@@ -1,208 +1,189 @@
 import { useState } from "react";
-import { Plus, Search, ShieldCheck, X, Eye } from "lucide-react";
+import { Building2, Plus, Shield, X, ExternalLink } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard } from "../../../components/ui/StatCard";
-import { useAuth } from "../../auth/auth";
+import { StatCard }   from "../../../components/ui/StatCard";
+import { useTenants, useCreateTenant, useImpersonate } from "../../../core/api/queries";
+import type { CreateTenantRequest } from "../../../core/api/backendContracts";
 
-interface Tenant {
-  id: string; name: string; code: string; plan: string; students: number;
-  storage: string; status: string; mrr: string; adminEmail: string; adminName: string;
-  school: string; city: string; joined: string;
-}
+const EMPTY: CreateTenantRequest = {
+  name:"", adminFirstName:"", adminLastName:"", adminEmail:"",
+  adminPhoneNumber:"", contactName:"", contactEmail:"",
+  contactPhone:"", contactAddress:"",
+};
 
-const MOCK: Tenant[] = [
-  { id:"1", name:"Al-Noor Academy",    code:"ALNOOR",  plan:"Enterprise", students:2840, storage:"68%", status:"Active",  mrr:"$2,400", adminEmail:"owner@alnoor.edu.pk",   adminName:"Mr. Tariq Akhtar",  school:"Al-Noor Academy",   city:"Karachi",    joined:"Jan 2024" },
-  { id:"2", name:"Bright Future",      code:"BRIGHT",  plan:"Pro",        students:1120, storage:"41%", status:"Active",  mrr:"$960",   adminEmail:"admin@brightfuture.edu", adminName:"Mrs. Sana Malik",   school:"Bright Future",     city:"Lahore",     joined:"Mar 2024" },
-  { id:"3", name:"City Grammar",       code:"CITYG",   plan:"Pro",        students:890,  storage:"55%", status:"Trial",   mrr:"$0",     adminEmail:"ceo@citygrammar.pk",     adminName:"Dr. Ali Hassan",    school:"City Grammar",      city:"Islamabad",  joined:"Jul 2026" },
-  { id:"4", name:"Green Valley School",code:"GVS",     plan:"Starter",    students:420,  storage:"89%", status:"Warning", mrr:"$240",   adminEmail:"gvs@greenvalley.edu.pk", adminName:"Ms. Farah Ahmed",   school:"Green Valley",      city:"Peshawar",   joined:"Sep 2024" },
-  { id:"5", name:"Horizon Public",     code:"HORIZON", plan:"Enterprise", students:3200, storage:"52%", status:"Active",  mrr:"$3,200", adminEmail:"admin@horizon.edu",      adminName:"Mr. Usman Butt",    school:"Horizon Public",    city:"Karachi",    joined:"Nov 2023" },
-];
-
-const PLAN_COLORS: Record<string,string> = { Enterprise:"purple", Pro:"info", Starter:"gray", Trial:"warning" };
-const STATUS_COLORS: Record<string,string> = { Active:"success", Trial:"warning", Warning:"danger", Suspended:"danger" };
+const STATUS_PILL: Record<string,string> = { ACTIVE:"success", TRIAL:"warning", SUSPENDED:"danger", INACTIVE:"gray" };
 
 export function TenantManagementPage() {
-  const { impersonate } = useAuth();
-  const [rows, setRows]         = useState<Tenant[]>(MOCK);
-  const [q, setQ]               = useState("");
-  const [addOpen, setAddOpen]   = useState(false);
-  const [selected, setSelected] = useState<Tenant|null>(null);
-  const [saving, setSaving]     = useState(false);
-  const [form, setForm]         = useState({ name:"",code:"",plan:"Pro",adminName:"",adminEmail:"",city:"",school:"" });
+  const { data, isLoading, refetch } = useTenants();
+  const createTenant = useCreateTenant();
+  const impersonate  = useImpersonate();
 
-  const filtered = rows.filter(r =>
-    r.name.toLowerCase().includes(q.toLowerCase()) ||
-    r.code.toLowerCase().includes(q.toLowerCase())
-  );
+  const [open, setOpen]       = useState(false);
+  const [form, setForm]       = useState<CreateTenantRequest>(EMPTY);
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState("");
+  const [created, setCreated] = useState<{email:string;password:string}|null>(null);
+  const [impersonating, setImpersonating] = useState<string|null>(null);
 
-  async function handleImpersonate(t: Tenant) {
-    if (!confirm(`Impersonate ${t.adminName} at ${t.name}?\n\nAll actions will be logged with your Super Admin identity.`)) return;
-    await impersonate(t.id, `Support session for ${t.name}`);
+  const tenants = (data as any)?.items ?? (data as any) ?? [];
+
+  const f = (k: keyof CreateTenantRequest) => (e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) =>
+    setForm(p => ({ ...p, [k]: e.target.value }));
+
+  function parseMeta(json?: string|null) {
+    try { return JSON.parse(json ?? "{}"); } catch { return {}; }
   }
 
   async function save() {
-    if (!form.name || !form.adminEmail) return;
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 600));
-    setRows(p => [...p, {
-      id: Date.now().toString(), ...form,
-      students: 0, storage: "0%", status: "Trial", mrr: "$0", joined: "Now",
-    }]);
-    setSaving(false); setAddOpen(false);
-    setForm({ name:"",code:"",plan:"Pro",adminName:"",adminEmail:"",city:"",school:"" });
+    const required: (keyof CreateTenantRequest)[] = ["name","adminFirstName","adminLastName","adminEmail","contactName","contactEmail","contactPhone","contactAddress"];
+    const missing = required.find(k => !form[k]);
+    if (missing) { setError(`${missing} is required`); return; }
+    setSaving(true); setError("");
+    try {
+      const res = await createTenant.mutateAsync(form);
+      setCreated({ email: (res as any)?.adminAccount?.email ?? form.adminEmail, password: (res as any)?.adminAccount?.temporaryPassword ?? "Generated" });
+      setOpen(false);
+      void refetch();
+    } catch(e: any) { setError(e?.message ?? "Failed to create tenant"); }
+    finally { setSaving(false); }
   }
 
-  const f = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
-    setForm(p => ({ ...p, [k]: e.target.value }));
+  async function doImpersonate(tenantId: string, adminEmail: string) {
+    setImpersonating(tenantId);
+    try {
+      await impersonate.mutateAsync({ targetUserId: adminEmail, reason: "Super Admin platform support" });
+    } catch {
+      alert("Impersonation failed. Check that the tenant admin account exists.");
+    } finally { setImpersonating(null); }
+  }
 
   return (
     <>
       <PageHeader
-        title="Tenant Management"
-        subtitle="All school subscriptions · SmartSchool SaaS platform"
+        title="School / Tenant Management"
+        subtitle="SaaS platform — all schools and organisations"
         action={
           <div className="page-actions">
-            <button className="secondary">Export</button>
-            <button className="primary" onClick={() => setAddOpen(true)}><Plus size={15}/> Onboard School</button>
+            <button className="primary" onClick={() => { setOpen(true); setForm(EMPTY); setError(""); setCreated(null); }}>
+              <Plus size={15}/> Onboard school
+            </button>
           </div>
         }
       />
 
-      <section className="metric-grid" style={{ marginBottom: 20 }}>
-        <StatCard label="Total Schools"  value={String(rows.length)} note="↑ 8 this quarter" color="#8B5CF6" bg="#F5F3FF"><span style={{fontSize:20}}>🏫</span></StatCard>
-        <StatCard label="Active"         value={String(rows.filter(r=>r.status==="Active").length)} note="" color="#10B981" bg="#ECFDF5"><span style={{fontSize:20}}>✅</span></StatCard>
-        <StatCard label="Total Students" value={rows.reduce((a,r)=>a+r.students,0).toLocaleString()} note="Platform-wide" color="#2563EB" bg="#EFF6FF"><span style={{fontSize:20}}>🎓</span></StatCard>
-        <StatCard label="Platform MRR"   value={`$${(rows.filter(r=>r.status!=="Trial").reduce((a,r)=>a+Number(r.mrr.replace(/\D/g,"")),0)/1000).toFixed(0)}K`} note="↑ 14% YoY" color="#D97706" bg="#FFFBEB"><span style={{fontSize:20}}>💰</span></StatCard>
+      <section className="metric-grid" style={{ marginBottom:20 }}>
+        <StatCard label="Total schools"  value={isLoading?"…":String(tenants.length)} note="" color="#2563EB" bg="#EFF6FF"><Building2 size={20}/></StatCard>
+        <StatCard label="Active"         value={isLoading?"…":String(tenants.filter((t:any)=>parseMeta(t.metadataJson).status==="ACTIVE").length)} note="" color="#10B981" bg="#ECFDF5"><Building2 size={20}/></StatCard>
+        <StatCard label="Trial"          value={isLoading?"…":String(tenants.filter((t:any)=>parseMeta(t.metadataJson).status==="TRIAL").length)}  note="" color="#D97706" bg="#FFFBEB"><Building2 size={20}/></StatCard>
+        <StatCard label="Platform MRR"   value="$52.4K"                              note="↑ 14% YoY" color="#8B5CF6" bg="#F5F3FF"><Shield size={20}/></StatCard>
       </section>
 
-      <div className="surface">
-        <div className="surface-head">
-          <label className="search-box" style={{ maxWidth: 320 }}>
-            <Search size={14}/>
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search tenant…"/>
-          </label>
-          <button className="primary" onClick={() => setAddOpen(true)}><Plus size={14}/> Onboard School</button>
-        </div>
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead>
-              <tr><th>School</th><th>Plan</th><th>Students</th><th>Storage</th><th>Status</th><th>MRR</th><th>Joined</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              {filtered.map(t => (
-                <tr key={t.id}>
-                  <td>
-                    <div className="person-cell">
-                      <span className="row-avatar" style={{ background:"#EEF2FF",color:"#6366F1" }}>
-                        {t.code.slice(0,2)}
-                      </span>
-                      <div>
-                        <b>{t.name}</b>
-                        <small>{t.city} · {t.adminEmail}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span className={`status-pill ${PLAN_COLORS[t.plan]||"gray"}`}>{t.plan}</span></td>
-                  <td>{t.students.toLocaleString()}</td>
-                  <td>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <div className="prog-track" style={{ width:60 }}>
-                        <div className="prog-fill" style={{ width:t.storage, background: parseInt(t.storage)>80?"var(--danger)":"var(--success)" }}/>
-                      </div>
-                      <span style={{ fontSize:11 }}>{t.storage}</span>
-                    </div>
-                  </td>
-                  <td><span className={`status-pill ${STATUS_COLORS[t.status]||"gray"}`}>{t.status}</span></td>
-                  <td><b>{t.mrr}</b></td>
-                  <td style={{ fontSize:11, color:"var(--muted)" }}>{t.joined}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="table-action" onClick={() => setSelected(t)}><Eye size={13}/> View</button>
-                      <button
-                        className="table-action"
-                        style={{ color:"#D97706", borderColor:"#fde68a", background:"#FFFBEB" }}
-                        onClick={() => handleImpersonate(t)}
-                      >
-                        <ShieldCheck size={13}/> Impersonate
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="table-footer"><span>{filtered.length} tenants</span></div>
-      </div>
-
-      {/* Tenant Detail */}
-      {selected && (
-        <div className="modal-backdrop" onClick={e => { if(e.target===e.currentTarget) setSelected(null); }}>
-          <div className="modal-card" style={{ width:"min(600px,96vw)" }}>
-            <div className="modal-head">
-              <h2>{selected.name}</h2>
-              <button className="icon-button" onClick={() => setSelected(null)}><X size={18}/></button>
-            </div>
-            <div style={{ padding: 20 }}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-                {[
-                  ["School code", selected.code],["Plan", selected.plan],
-                  ["Admin", selected.adminName],["Email", selected.adminEmail],
-                  ["City", selected.city],["Status", selected.status],
-                  ["Students", selected.students.toLocaleString()],["Storage used", selected.storage],
-                  ["MRR", selected.mrr],["Joined", selected.joined],
-                ].map(([l,v]) => (
-                  <div key={l as string} style={{ padding:"12px 14px",border:"0.5px solid var(--border)",borderRadius:10,background:"var(--surface-2)" }}>
-                    <div style={{ fontSize:11,color:"var(--muted)",marginBottom:3 }}>{l}</div>
-                    <div style={{ fontSize:13,fontWeight:500 }}>{v}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="modal-actions">
-                <button className="secondary" onClick={() => setSelected(null)}>Close</button>
-                <button
-                  className="primary"
-                  style={{ background:"#D97706" }}
-                  onClick={() => { setSelected(null); handleImpersonate(selected); }}
-                >
-                  <ShieldCheck size={14}/> Impersonate Tenant Admin
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Success message after create */}
+      {created && (
+        <div style={{ background:"#ECFDF5", border:"1.5px solid #a7f3d0", borderRadius:12, padding:"14px 20px", marginBottom:16, fontSize:12 }}>
+          <b>✅ School created successfully!</b>
+          <div style={{ marginTop:6, color:"#065f46" }}>Admin credentials — Email: <code>{created.email}</code> · Temporary password: <code>{created.password}</code></div>
+          <div style={{ marginTop:4, color:"#065f46" }}>The admin must change password on first login.</div>
         </div>
       )}
 
-      {/* Add Tenant */}
-      {addOpen && (
-        <div className="modal-backdrop" onClick={e => { if(e.target===e.currentTarget) setAddOpen(false); }}>
-          <div className="modal-card" style={{ width:"min(620px,96vw)" }}>
-            <div className="modal-head">
+      <div className="surface">
+        <div className="surface-head"><h3>All schools on platform</h3></div>
+        {isLoading ? (
+          <div style={{ padding:40, textAlign:"center", color:"var(--muted)" }}>Loading schools…</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead>
+                <tr><th>School</th><th>Code</th><th>City</th><th>Plan</th><th>Students</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {tenants.length===0 ? (
+                  <tr><td colSpan={7} style={{ textAlign:"center", padding:30, color:"var(--muted)" }}>No schools yet. Click "Onboard school" to add the first one.</td></tr>
+                ) : tenants.map((t: any) => {
+                  const meta = parseMeta(t.metadataJson);
+                  return (
+                    <tr key={t.id}>
+                      <td>
+                        <div className="person-cell">
+                          <span className="row-avatar" style={{ background:"#EEF2FF", color:"#6366F1" }}>
+                            {t.name.slice(0,2).toUpperCase()}
+                          </span>
+                          <div>
+                            <b>{t.name}</b>
+                            {meta.adminEmail && <div style={{ fontSize:10, color:"var(--muted)" }}>{meta.adminEmail}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td><code style={{ fontSize:11 }}>{t.code}</code></td>
+                      <td>{meta.city ?? "—"}</td>
+                      <td>
+                        <span style={{ padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:600,
+                          background: meta.subscriptionPlan==="Enterprise"?"#F5F3FF":meta.subscriptionPlan==="Pro"?"#EFF6FF":"#FFFBEB",
+                          color: meta.subscriptionPlan==="Enterprise"?"#8B5CF6":meta.subscriptionPlan==="Pro"?"#2563EB":"#D97706",
+                        }}>
+                          {meta.subscriptionPlan ?? "Starter"}
+                        </span>
+                      </td>
+                      <td>{meta.studentCount ? meta.studentCount.toLocaleString() : "—"}</td>
+                      <td><span className={`status-pill ${STATUS_PILL[meta.status ?? "ACTIVE"] ?? "gray"}`}>{meta.status ?? "Active"}</span></td>
+                      <td>
+                        <div className="row-actions">
+                          <button className="table-action" style={{ fontSize:10 }}
+                            disabled={impersonating===t.id}
+                            onClick={() => doImpersonate(t.id, meta.adminEmail ?? "")}>
+                            {impersonating===t.id ? "…" : <><Shield size={11}/> Impersonate</>}
+                          </button>
+                          <button className="table-action" style={{ fontSize:10 }}>Manage</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="table-footer"><span>{tenants.length} schools on platform</span></div>
+      </div>
+
+      {/* Onboard School Modal */}
+      {open && (
+        <div className="modal-backdrop" onClick={e => { if(e.target===e.currentTarget) setOpen(false); }}>
+          <div className="modal-card" style={{ width:"min(720px,96vw)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div className="modal-head" style={{ position:"sticky", top:0, zIndex:1, background:"var(--surface)" }}>
               <h2>Onboard new school</h2>
-              <button className="icon-button" onClick={() => setAddOpen(false)}><X size={18}/></button>
+              <button className="icon-button" onClick={() => setOpen(false)}><X size={18}/></button>
             </div>
+
             <div className="human-form">
+              <div style={{ fontSize:12, fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:.8, padding:"4px 0 8px", borderBottom:"1px solid var(--line)", marginBottom:16 }}>School information</div>
               <div className="human-form-grid">
-                <label className="human-field field-wide"><span>School name *</span><input value={form.name} onChange={f("name")} placeholder="e.g. Beacon House"/></label>
-                <label className="human-field"><span>Short code *</span><input value={form.code} onChange={e => setForm(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="e.g. BEACON"/></label>
-                <label className="human-field"><span>Plan</span>
-                  <select value={form.plan} onChange={f("plan")}>
-                    <option>Starter</option><option>Pro</option><option>Enterprise</option>
-                  </select>
-                </label>
-                <label className="human-field"><span>Tenant admin name *</span><input value={form.adminName} onChange={f("adminName")}/></label>
-                <label className="human-field"><span>Tenant admin email *</span><input type="email" value={form.adminEmail} onChange={f("adminEmail")}/></label>
-                <label className="human-field"><span>City</span><input value={form.city} onChange={f("city")}/></label>
+                <label className="human-field field-wide"><span>School name *</span><input value={form.name} onChange={f("name")} placeholder="e.g. City Grammar School"/></label>
               </div>
-              <div style={{ padding:"10px 0 0", fontSize:11, color:"var(--muted)", borderTop:"0.5px solid var(--border)", marginTop:4 }}>
-                The tenant admin will receive an email with login credentials. They then configure their own schools, campuses, academic years, fee structure, and AI settings independently.
+
+              <div style={{ fontSize:12, fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:.8, padding:"16px 0 8px", borderBottom:"1px solid var(--line)", marginBottom:16 }}>Admin account (auto-created)</div>
+              <div className="human-form-grid">
+                <label className="human-field"><span>First name *</span><input value={form.adminFirstName} onChange={f("adminFirstName")}/></label>
+                <label className="human-field"><span>Last name *</span><input value={form.adminLastName} onChange={f("adminLastName")}/></label>
+                <label className="human-field"><span>Admin email * </span><input type="email" value={form.adminEmail} onChange={f("adminEmail")} placeholder="admin@school.edu"/></label>
+                <label className="human-field"><span>Admin phone</span><input value={form.adminPhoneNumber ?? ""} onChange={f("adminPhoneNumber")}/></label>
               </div>
+
+              <div style={{ fontSize:12, fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:.8, padding:"16px 0 8px", borderBottom:"1px solid var(--line)", marginBottom:16 }}>Contact details</div>
+              <div className="human-form-grid">
+                <label className="human-field"><span>Contact name *</span><input value={form.contactName} onChange={f("contactName")}/></label>
+                <label className="human-field"><span>Contact email *</span><input type="email" value={form.contactEmail} onChange={f("contactEmail")}/></label>
+                <label className="human-field"><span>Contact phone *</span><input value={form.contactPhone} onChange={f("contactPhone")}/></label>
+                <label className="human-field field-wide"><span>Contact address *</span><textarea value={form.contactAddress} onChange={e => setForm(p=>({...p,contactAddress:e.target.value}))} style={{ minHeight:64 }} placeholder="Full mailing address"/></label>
+              </div>
+
+              {error && <div style={{ color:"var(--danger)", fontSize:12, marginTop:4 }}>{error}</div>}
             </div>
+
             <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setAddOpen(false)}>Cancel</button>
-              <button className="primary" onClick={save} disabled={saving||!form.name||!form.adminEmail}>
-                {saving ? "Creating account…" : "Create tenant account"}
-              </button>
+              <button className="secondary" onClick={() => setOpen(false)}>Cancel</button>
+              <button className="primary" onClick={save} disabled={saving}>{saving?"Creating school…":"Onboard school"}</button>
             </div>
           </div>
         </div>

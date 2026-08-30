@@ -1,94 +1,86 @@
 import { useState } from "react";
-import { Modal, Field, Input, Select, DataTable, ActionCell, ModalActions, StatusPill } from "./_helpers";
-
-interface LV { id: string; type: string; code: string; name: string; sortOrder: number; isActive: boolean; }
-
-const MOCK: LV[] = [
-  { id:"1", type:"GENDER",      code:"MALE",   name:"Male",     sortOrder:1, isActive:true },
-  { id:"2", type:"GENDER",      code:"FEMALE", name:"Female",   sortOrder:2, isActive:true },
-  { id:"3", type:"BLOOD_GROUP", code:"A+",     name:"A Positive", sortOrder:1, isActive:true },
-  { id:"4", type:"BLOOD_GROUP", code:"B+",     name:"B Positive", sortOrder:2, isActive:true },
-  { id:"5", type:"LEAVE_TYPE",  code:"ANNUAL", name:"Annual Leave",sortOrder:1,isActive:true },
-  { id:"6", type:"LEAVE_TYPE",  code:"SICK",   name:"Sick Leave",  sortOrder:2,isActive:true },
-  { id:"7", type:"LEAVE_TYPE",  code:"CASUAL", name:"Casual Leave", sortOrder:3,isActive:true },
-];
-
-const TYPES = ["GENDER","BLOOD_GROUP","LEAVE_TYPE","RELIGION","NATIONALITY","RELATIONSHIP"];
-const empty = { type:"GENDER", code:"", name:"", sortOrder:"1", isActive:true };
+import { Plus, Trash2, X } from "lucide-react";
+import { useLookupTypes, useLookupValues, useCreateLookup, useDeleteLookup } from "../../../../core/api/queries";
+import { useAuth } from "../../../auth/auth";
+import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
 export function LookupTab() {
-  const [rows, setRows] = useState<LV[]>(MOCK);
-  const [filterType, setFilterType] = useState("ALL");
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<LV|null>(null);
-  const [form, setForm] = useState<typeof empty>(empty);
-  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+  const tid = effectiveTenantId(user);
+  const { data: types } = useLookupTypes();
+  const [selected, setSelected] = useState("GENDER");
+  const { data: values, isLoading } = useLookupValues(selected);
+  const create = useCreateLookup();
+  const remove = useDeleteLookup();
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({ code:"", name:"", sortOrder:"10" });
+  const [error, setError] = useState("");
 
-  const filtered = rows.filter(r => filterType === "ALL" || r.type === filterType);
-  const f = (k: keyof typeof form) => (v: string|boolean) => setForm(p=>({...p,[k]:v}));
-
-  function openAdd() { setEditing(null); setForm(empty); setOpen(true); }
-  function openEdit(r: LV) { setEditing(r); setForm({type:r.type,code:r.code,name:r.name,sortOrder:String(r.sortOrder),isActive:r.isActive}); setOpen(true); }
-  function remove(r: LV) { if(confirm(`Delete "${r.name}"?`)) setRows(p=>p.filter(x=>x.id!==r.id)); }
+  const typeList = Array.isArray(types) ? types : ["GENDER","BLOOD_GROUP","EMPLOYMENT_TYPE","LEAVE_TYPE","NATIONALITY"];
+  const valueList = Array.isArray(values) ? values : [];
 
   async function save() {
-    if(!form.code||!form.name) return;
-    setSaving(true);
-    await new Promise(r=>setTimeout(r,400));
-    if(editing) setRows(p=>p.map(x=>x.id===editing.id?{...x,...form,sortOrder:Number(form.sortOrder)}:x));
-    else setRows(p=>[...p,{id:Date.now().toString(),...form,sortOrder:Number(form.sortOrder)}]);
-    setSaving(false); setOpen(false);
+    if (!form.code||!form.name) { setError("Code and name required"); return; }
+    try {
+      await create.mutateAsync({ tenantId:tid, typeCode:selected, code:form.code.toUpperCase(), name:form.name, sortOrder:Number(form.sortOrder), isActive:true });
+      setModal(false); setForm({ code:"", name:"", sortOrder:"10" }); setError("");
+    } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
   return (
-    <>
+    <div style={{ display:"grid", gridTemplateColumns:"160px 1fr", gap:12 }}>
+      <div className="surface" style={{ padding:8 }}>
+        <div style={{ fontSize:10, color:"var(--muted)", padding:"6px 8px", fontWeight:700, textTransform:"uppercase", letterSpacing:.8 }}>Types</div>
+        {typeList.map((t:string) => (
+          <button key={t} onClick={()=>setSelected(t)}
+            style={{ width:"100%", padding:"8px 10px", border:"none", borderRadius:8, cursor:"pointer", textAlign:"left", fontSize:11, fontWeight:selected===t?600:400, background:selected===t?"var(--navy)":"transparent", color:selected===t?"#fff":"var(--text)", marginBottom:2 }}>
+            {t.replace(/_/g," ")}
+          </button>
+        ))}
+      </div>
       <div className="surface">
         <div className="surface-head">
-          <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-            {["ALL",...TYPES].map(t => (
-              <button key={t} className={`table-action ${filterType===t?"active":""}`}
-                style={{ background: filterType===t?"var(--navy)":"var(--surface)", color: filterType===t?"#fff":"var(--text)" }}
-                onClick={()=>setFilterType(t)}>
-                {t}
-              </button>
-            ))}
+          <div><h3>{selected.replace(/_/g," ")}</h3></div>
+          <button className="primary" onClick={()=>{setModal(true);setError("");setForm({code:"",name:"",sortOrder:"10"})}}><Plus size={14}/> Add value</button>
+        </div>
+        {isLoading ? <div style={{padding:20,color:"var(--muted)"}}>Loading…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Name</th><th>Code</th><th>Sort</th><th>Status</th><th/></tr></thead>
+              <tbody>
+                {valueList.length===0 ? <tr><td colSpan={5} style={{textAlign:"center",padding:24,color:"var(--muted)"}}>No values for this type.</td></tr>
+                : valueList.map((v:any) => (
+                    <tr key={v.id}>
+                      <td><b>{v.name}</b></td><td><code style={{fontSize:11}}>{v.code}</code></td>
+                      <td>{v.sortOrder??"-"}</td>
+                      <td><span className={`status-pill ${v.isActive?"success":"gray"}`}>{v.isActive?"Active":"Inactive"}</span></td>
+                      <td><button className="table-action danger-button" style={{fontSize:10}} onClick={()=>remove.mutate(v.id)}><Trash2 size={11}/></button></td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
           </div>
-          <button className="primary" onClick={openAdd}>Add Lookup Value</button>
-        </div>
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead><tr><th>Type</th><th>Code</th><th>Name</th><th>Sort Order</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-              {filtered.map(r=>(
-                <tr key={r.id}>
-                  <td><span className="status-pill purple">{r.type}</span></td>
-                  <td><code style={{fontSize:11}}>{r.code}</code></td>
-                  <td><b>{r.name}</b></td>
-                  <td>{r.sortOrder}</td>
-                  <td><StatusPill active={r.isActive}/></td>
-                  <td><ActionCell onEdit={()=>openEdit(r)} onDelete={()=>remove(r)}/></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        )}
       </div>
-
-      <Modal open={open} title={editing?"Edit Lookup Value":"Add Lookup Value"} onClose={()=>setOpen(false)}>
-        <div className="human-form">
-          <div className="human-form-grid">
-            <Field label="Type" required>
-              <Select value={form.type} onChange={f("type")}>
-                {TYPES.map(t=><option key={t}>{t}</option>)}
-              </Select>
-            </Field>
-            <Field label="Code" required><Input value={form.code} onChange={v=>f("code")(v.toUpperCase())} placeholder="e.g. MALE"/></Field>
-            <Field label="Display Name" required><Input value={form.name} onChange={f("name")} placeholder="e.g. Male"/></Field>
-            <Field label="Sort Order"><Input value={form.sortOrder} onChange={f("sortOrder")} type="number"/></Field>
+      {modal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setModal(false)}}>
+          <div className="modal-card" style={{ width:"min(420px,96vw)" }}>
+            <div className="modal-head"><h2>Add value to {selected}</h2><button className="icon-button" onClick={()=>setModal(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field"><span>Code *</span><input value={form.code} onChange={e=>setForm(p=>({...p,code:e.target.value}))} placeholder="e.g. A_POS"/></label>
+              <label className="human-field"><span>Name *</span><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. A+"/></label>
+              <label className="human-field"><span>Sort</span><input type="number" value={form.sortOrder} onChange={e=>setForm(p=>({...p,sortOrder:e.target.value}))}/></label>
+            </div>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setModal(false)}>Cancel</button>
+              <button className="primary" onClick={save} disabled={create.isPending}>{create.isPending?"Saving…":"Save"}</button>
+            </div>
           </div>
         </div>
-        <ModalActions onCancel={()=>setOpen(false)} onSave={save} saving={saving} disabled={!form.code||!form.name}/>
-      </Modal>
-    </>
+      )}
+    </div>
   );
 }

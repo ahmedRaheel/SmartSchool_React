@@ -1,104 +1,108 @@
-import { useState } from "react";
-import { Library, Plus, Search, X } from "lucide-react";
+import { useState, useMemo } from "react";
+import { BookOpen, Plus, Search, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useBooks } from "../../../core/api/queries";
-import { libraryApi } from "../../../core/api/smartschoolApi";
+import { useBooks, useCreateBook } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-import { useQuery } from "@tanstack/react-query";
+
+const CATEGORIES = ["Textbook","Literature","History","Science","Technology","Reference","Fiction","Non-fiction"];
+
+function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
 
 export function LibraryPage() {
-  const { user } = useAuth();
-  const tenantId = effectiveTenantId(user);
-  const [tab, setTab] = useState<"catalog"|"loans">("catalog");
-  const [q, setQ]     = useState("");
+  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ name:"", author:"", isbn:"", category:"Textbook", totalCopies:"1" });
+  const { data, isLoading } = useBooks();
+  const createBook = useCreateBook();
 
-  const { data: books, isLoading: bLoading } = useBooks();
-  const { data: loans, isLoading: lLoading } = useQuery({
-    queryKey: ["loans", tenantId],
-    queryFn: () => libraryApi.issue({ tenantId } as any).then(r => r.data).catch(() => ({ items: [] })),
-    enabled: tab === "loans",
-  });
+  const items  = (data as any)?.items ?? (data as any) ?? [];
+  const total  = (data as any)?.totalCount ?? items.length;
 
-  const bItems = (books as any)?.items ?? (books as any)?.value?.items ?? [];
-  const lItems = (loans as any)?.items ?? [];
+  const filtered = useMemo(() =>
+    items.filter((b:any) => {
+      const meta = parseMeta(b.metadataJson);
+      return `${b.name} ${meta.author} ${meta.isbn} ${meta.category}`.toLowerCase().includes(q.toLowerCase());
+    }),
+    [items, q]);
+
+  const totalCopies   = items.reduce((a:number,b:any) => a + (parseMeta(b.metadataJson).totalCopies ?? 0), 0);
+  const available     = items.reduce((a:number,b:any) => a + (parseMeta(b.metadataJson).availableCopies ?? 0), 0);
+
+  function sf(k:string) { return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setForm(p=>({...p,[k]:e.target.value})); }
+
+  async function save() {
+    if (!form.name) { setError("Book title required"); return; }
+    try {
+      await createBook.mutateAsync({ tenantId:tid, name:form.name, metadataJson: JSON.stringify({ author:form.author, isbn:form.isbn, category:form.category, totalCopies:Number(form.totalCopies), availableCopies:Number(form.totalCopies) }) });
+      setOpen(false); setForm({ name:"", author:"", isbn:"", category:"Textbook", totalCopies:"1" }); setError("");
+    } catch(e:any) { setError(e?.message ?? "Failed"); }
+  }
 
   return (
     <>
-      <PageHeader title="Library" subtitle="Book catalog, issues and returns" />
-
+      <PageHeader title="Library" subtitle={`${total} books in catalogue`}
+        action={<div className="page-actions"><button className="primary" onClick={() => { setOpen(true); setError(""); }}><Plus size={14}/> Add book</button></div>}/>
       <section className="metric-grid" style={{ marginBottom:20 }}>
-        <StatCard label="Total books"  value={bLoading ? "…" : String(bItems.length)} note="In catalog" color="#2563EB" bg="#EFF6FF"><Library size={20}/></StatCard>
-        <StatCard label="Available"    value={bLoading ? "…" : String(bItems.filter((b: any) => b.availableCopies > 0 || b.status === "AVAILABLE").length)} note="" color="#10B981" bg="#ECFDF5"><Library size={20}/></StatCard>
-        <StatCard label="Active loans" value={lLoading ? "…" : String(lItems.length)} note="" color="#D97706" bg="#FFFBEB"><Library size={20}/></StatCard>
-        <StatCard label="Overdue"      value="0" note="AI prediction active" color="#8B5CF6" bg="#F5F3FF"><Library size={20}/></StatCard>
+        <StatCard label="Total books"    value={String(total)}       note=""             color="#2563EB" bg="#EFF6FF"><BookOpen size={20}/></StatCard>
+        <StatCard label="Total copies"   value={String(totalCopies)} note=""             color="#0F2241" bg="#EEF2FF"><BookOpen size={20}/></StatCard>
+        <StatCard label="Available"      value={String(available)}   note="Ready to issue" color="#10B981" bg="#ECFDF5"><BookOpen size={20}/></StatCard>
+        <StatCard label="Issued"         value={String(totalCopies - available)} note="" color="#D97706" bg="#FFFBEB"><BookOpen size={20}/></StatCard>
       </section>
-
-      <div className="section-tabs" style={{ marginBottom:16 }}>
-        <button className={tab === "catalog" ? "active" : ""} onClick={() => setTab("catalog")}>📚 Book catalog</button>
-        <button className={tab === "loans"   ? "active" : ""} onClick={() => setTab("loans")}>📖 Active loans</button>
-      </div>
-
       <div className="surface">
         <div className="surface-head">
-          <label className="search-box" style={{ maxWidth:280 }}>
-            <Search size={14}/>
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search books…"/>
-          </label>
-          {tab === "catalog" && <button className="primary"><Plus size={14}/> Add book</button>}
+          <label className="search-box" style={{ maxWidth:280 }}><Search size={14}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search books…"/></label>
         </div>
-
-        {tab === "catalog" && (
-          bLoading ? <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading catalog…</div> : (
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead><tr><th>Title</th><th>Author</th><th>ISBN</th><th>Category</th><th>Copies</th><th>Status</th></tr></thead>
-                <tbody>
-                  {bItems.length === 0
-                    ? <tr><td colSpan={6} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No books in catalog yet.</td></tr>
-                    : bItems.filter((b: any) => JSON.stringify(b).toLowerCase().includes(q.toLowerCase())).map((b: any) => (
-                        <tr key={b.libraryItemId ?? b.id}>
-                          <td><b>{b.title ?? "—"}</b></td>
-                          <td>{b.author ?? "—"}</td>
-                          <td><code style={{ fontSize:11 }}>{b.isbn ?? "—"}</code></td>
-                          <td>{b.category ?? b.genre ?? "—"}</td>
-                          <td>{b.availableCopies ?? b.copies ?? "—"}</td>
-                          <td><span className={`status-pill ${b.availableCopies > 0 || b.status === "AVAILABLE" ? "success" : "warning"}`}>{b.availableCopies > 0 || b.status === "AVAILABLE" ? "Available" : "Checked out"}</span></td>
-                        </tr>
-                      ))
-                  }
-                </tbody>
-              </table>
-            </div>
-          )
+        {isLoading ? <div style={{ padding:48, textAlign:"center", color:"var(--muted)" }}>Loading catalogue…</div> : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Title</th><th>Code</th><th>Author</th><th>Category</th><th>Total</th><th>Available</th><th>Actions</th></tr></thead>
+              <tbody>
+                {filtered.length === 0 ? <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>No books found.</td></tr>
+                : filtered.map((b:any) => {
+                  const meta = parseMeta(b.metadataJson);
+                  const avail = meta.availableCopies ?? 0;
+                  return (
+                    <tr key={b.id}>
+                      <td><b>{b.name}</b>{meta.isbn && <div style={{ fontSize:10, color:"var(--muted)" }}>ISBN: {meta.isbn}</div>}</td>
+                      <td><code style={{ fontSize:11 }}>{b.code}</code></td>
+                      <td>{meta.author ?? "—"}</td>
+                      <td>{meta.category ?? "—"}</td>
+                      <td>{meta.totalCopies ?? 0}</td>
+                      <td><span className={`status-pill ${avail>0?"success":"danger"}`}>{avail > 0 ? `${avail} available` : "All issued"}</span></td>
+                      <td><div className="row-actions">{avail > 0 && <button className="table-action" style={{ fontSize:10 }}>Issue</button>}<button className="table-action" style={{ fontSize:10 }}>View</button></div></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
-
-        {tab === "loans" && (
-          lLoading ? <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading loans…</div> : (
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead><tr><th>Book</th><th>Student</th><th>Issued</th><th>Due date</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {lItems.length === 0
-                    ? <tr><td colSpan={6} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No active loans.</td></tr>
-                    : lItems.map((l: any) => (
-                        <tr key={l.itemLoanId ?? l.id}>
-                          <td><b>{l.bookTitle ?? l.itemTitle ?? "—"}</b></td>
-                          <td>{l.studentName ?? l.studentId ?? "—"}</td>
-                          <td>{l.issuedDate ? new Date(l.issuedDate).toLocaleDateString() : "—"}</td>
-                          <td>{l.dueDate ? new Date(l.dueDate).toLocaleDateString() : "—"}</td>
-                          <td><span className={`status-pill ${l.returnedDate ? "success" : l.isOverdue ? "danger" : "info"}`}>{l.returnedDate ? "Returned" : l.isOverdue ? "Overdue" : "Active"}</span></td>
-                          <td><button className="table-action">Return</button></td>
-                        </tr>
-                      ))
-                  }
-                </tbody>
-              </table>
-            </div>
-          )
-        )}
+        <div className="table-footer"><span>{filtered.length} books shown</span></div>
       </div>
+      {open && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setOpen(false)}}>
+          <div className="modal-card" style={{ width:"min(480px,96vw)" }}>
+            <div className="modal-head"><h2>Add book</h2><button className="icon-button" onClick={()=>setOpen(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Title *</span><input value={form.name} onChange={sf("name")}/></label>
+              <label className="human-field"><span>Author</span><input value={form.author} onChange={sf("author")}/></label>
+              <label className="human-field"><span>ISBN</span><input value={form.isbn} onChange={sf("isbn")}/></label>
+              <label className="human-field"><span>Category</span><select value={form.category} onChange={sf("category")}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></label>
+              <label className="human-field"><span>Copies</span><input type="number" min="1" value={form.totalCopies} onChange={sf("totalCopies")}/></label>
+            </div>
+            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={()=>setOpen(false)}>Cancel</button>
+              <button className="primary" onClick={save} disabled={createBook.isPending}>{createBook.isPending?"Adding…":"Add book"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
