@@ -1,164 +1,158 @@
-import { useMemo, useRef, useEffect, useState } from "react";
-import { Bot, ExternalLink, Send, Sparkles, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Bot, Send, Sparkles, X } from "lucide-react";
 import { useAuth } from "../../auth/auth";
+import { aiApi } from "../../../core/api/smartschoolApi";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-type Msg = { id: string; role: "ai" | "user"; text: string; loading?: boolean };
+type BotType = "student"|"teacher"|"parent"|"admissions"|"admin";
 
-const ROLE_CONFIG: Record<string, { title: string; welcome: string; qs: string[] }> = {
-  student:    { title: "AI Tutor", welcome: "Hi! I'm your AI Tutor. Ask me anything about your subjects, assignments or study plans.", qs: ["Help me study for my Physics quiz", "Create a revision plan for History", "Explain quadratic equations", "What assignments are due this week"] },
-  teacher:    { title: "Teacher AI Assistant", welcome: "Hello! I'm your Teacher AI Assistant. I can help with lesson plans, grading analysis and student insights.", qs: ["Which students need extra help?", "Generate quiz questions for Chapter 5", "Create a lesson plan for next week", "Show me class performance trends"] },
-  parent:     { title: "Parent AI", welcome: "Welcome! I'm your Parent AI. I can share insights about your children's progress and answer school queries.", qs: ["How is my child performing?", "What subjects need attention?", "Tips for learning at home", "When is the next PT meeting?"] },
-  principal:  { title: "Principal AI", welcome: "Hello Principal. I can provide academic analysis, staff insights, and school performance summaries.", qs: ["Which departments need attention?", "Show dropout risk overview", "Staff performance summary", "Compare this term vs last term"] },
-  admin:      { title: "Admin AI Assistant", welcome: "Hi! I'm your Admin Assistant. Ask about fees, attendance, admissions, or daily operations.", qs: ["How many fee defaulters this month?", "Today's absent students summary", "Pending admission applications", "Transport issues today"] },
-  driver:     { title: "Transport AI", welcome: "Hello! I can help with route optimisation, student schedules and traffic updates.", qs: ["Optimise my route for today", "Which students are absent today?", "School dismissal time today", "Traffic alert on my route"] },
-  superadmin: { title: "Platform AI", welcome: "Welcome to Platform AI. I can help with tenant analytics, system health, and platform operations.", qs: ["Which tenants are at risk?", "Platform usage this month", "API error patterns", "Revenue trends this quarter"] },
-  tenant:     { title: "School AI", welcome: "Hello! I can provide school-level analytics, fee insights and academic summaries.", qs: ["School performance overview", "Fee collection status", "Top performing students", "Departments needing attention"] },
-  system:     { title: "System AI", welcome: "System AI ready. Monitor predictions, integrations, and AI model performance.", qs: ["AI model accuracy this week", "Prediction batch status", "Integration health check", "Error log summary"] },
-};
-
-function getRoleKey(role: string): string {
+function getBotForRole(role: string): BotType {
   const r = role.toLowerCase();
   if (r.includes("student"))   return "student";
   if (r.includes("teacher"))   return "teacher";
-  if (r.includes("parent") || r.includes("guardian")) return "parent";
-  if (r.includes("principal")) return "principal";
-  if (r.includes("driver"))    return "driver";
-  if (r.includes("superadmin")) return "superadmin";
-  if (r.includes("system"))   return "system";
-  if (r.includes("admin") || r.includes("office")) return "admin";
-  return "tenant";
+  if (r.includes("parent"))    return "parent";
+  if (r.includes("admission")) return "admissions";
+  return "admin";
 }
 
-function collectionsFor(role: string): string[] {
-  const r = role.toLowerCase();
-  if (r.includes("student"))  return ["learning", "academic", "policy"];
-  if (r.includes("teacher"))  return ["learning", "academic", "policy", "operations"];
-  if (r.includes("parent"))   return ["academic", "policy"];
-  return ["operations", "academic", "policy", "admissions"];
-}
+const QUICK_QUESTIONS: Record<BotType, string[]> = {
+  student:    ["Help me understand this topic","What's on my timetable?","Check my fee status"],
+  teacher:    ["Show class performance","Which students need help?","Generate a quiz"],
+  parent:     ["How is my child doing?","Check fee balance","Transport status"],
+  admissions: ["How do I apply?","What documents are needed?","Fee structure"],
+  admin:      ["Today's attendance","Fee collection status","Pending approvals"],
+};
+
+interface Msg { role: "user"|"ai"; text: string; }
 
 export function FloatingAiChatbot() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const bot = getBotForRole(user?.role ?? "");
+  const tenantId = effectiveTenantId(user);
 
-  const roleKey = useMemo(() => getRoleKey(user?.role ?? ""), [user?.role]);
-  const cfg     = ROLE_CONFIG[roleKey] ?? ROLE_CONFIG.tenant;
-
+  const [open, setOpen]         = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
-    { id: "welcome", role: "ai", text: cfg.welcome },
+    { role:"ai", text:`Hi ${user?.name?.split(" ")[0] ?? "there"} 👋 I'm your SmartSchool AI assistant. How can I help?` },
   ]);
+  const [input, setInput]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, open]);
 
-  if (!user) return null;
-
-  async function sendMessage(prompt?: string) {
-    const text = (prompt ?? input).trim();
-    if (!text || busy) return;
-
-    const userMsg: Msg = { id: crypto.randomUUID(), role: "user", text };
-    const loadingMsg: Msg = { id: crypto.randomUUID(), role: "ai", text: "", loading: true };
-    setMessages(m => [...m, userMsg, loadingMsg]);
+  async function send(question?: string) {
+    const text = (question ?? input).trim();
+    if (!text || loading) return;
     setInput("");
-    setBusy(true);
-
+    setMessages(m => [...m, { role:"user", text }]);
+    setLoading(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 600,
-          system: `You are SmartSchool AI embedded in a school management platform. The user is a ${cfg.title}. Be concise (under 100 words), warm and practical. Use bullet points for lists. School context: multi-tenant SaaS, Pakistani school system, academic year 2025-26.`,
-          messages: [{ role: "user", content: text }],
-        }),
-      });
-      const data = await res.json();
-      const reply = data.content?.map((b: any) => b.text ?? "").join("") || "I couldn't complete that request. Please try again.";
-      setMessages(m => [...m.filter(x => !x.loading), { id: crypto.randomUUID(), role: "ai", text: reply }]);
+      const res = await aiApi.chatbot(bot, { question: text, tenantId });
+      setMessages(m => [...m, { role:"ai", text: res.data.answer }]);
     } catch {
-      setMessages(m => [...m.filter(x => !x.loading), { id: crypto.randomUUID(), role: "ai", text: "Connection issue. Please check your network and try again." }]);
-    } finally {
-      setBusy(false);
-    }
+      setMessages(m => [...m, { role:"ai", text:"I'm having trouble connecting. Please try again." }]);
+    } finally { setLoading(false); }
   }
+
+  const quickQs = QUICK_QUESTIONS[bot];
 
   return (
     <>
-      {open && (
-        <section className="floating-ai-panel" aria-label={cfg.title}>
-          <header className="floating-ai-header">
-            <span className="floating-ai-avatar"><Sparkles size={18} /></span>
-            <div>
-              <b>{cfg.title}</b>
-              <small><span className="ai-online-dot" /> Online · Claude Sonnet</small>
-            </div>
-            <button className="floating-ai-close" onClick={() => setOpen(false)}><X size={16} /></button>
-          </header>
+      {/* Floating trigger */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          position:"fixed", bottom:24, right:24, width:52, height:52,
+          borderRadius:"50%", background:"var(--fill-primary)", color:"#fff",
+          border:"none", cursor:"pointer", display:"grid", placeItems:"center",
+          boxShadow:"0 4px 16px rgba(0,0,0,.18)", zIndex:1000,
+          transition:"transform .15s",
+        }}
+        onMouseEnter={e => (e.currentTarget.style.transform="scale(1.07)")}
+        onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}
+        aria-label="Open AI assistant"
+      >
+        {open ? <X size={20}/> : <Bot size={20}/>}
+      </button>
 
-          <div className="floating-ai-messages">
-            {messages.map(msg => (
-              <div key={msg.id} className={`floating-ai-message ${msg.role === "user" ? "user" : ""}`}>
-                {msg.role === "ai" && (
-                  <span className="mini-ai-avatar"><Sparkles size={12} /></span>
+      {/* Chat panel */}
+      {open && (
+        <div
+          className="floating-ai-panel"
+          style={{
+            position:"fixed", bottom:90, right:24, width:"min(380px,calc(100vw - 32px))",
+            background:"var(--surface-2)", border:"0.5px solid var(--border)",
+            borderRadius:16, boxShadow:"0 8px 32px rgba(0,0,0,.16)",
+            display:"flex", flexDirection:"column", height:480, zIndex:1000,
+            overflow:"hidden",
+          }}
+        >
+          {/* Header */}
+          <div style={{ padding:"12px 16px", borderBottom:"0.5px solid var(--border)", display:"flex", alignItems:"center", gap:10, background:"var(--surface-1)" }}>
+            <div style={{ width:32, height:32, borderRadius:9, background:"var(--bg-accent)", color:"var(--text-accent)", display:"grid", placeItems:"center" }}>
+              <Sparkles size={16}/>
+            </div>
+            <div style={{ flex:1 }}>
+              <b style={{ fontSize:13 }}>SmartSchool AI</b>
+              <div style={{ fontSize:10, color:"var(--text-success)", display:"flex", alignItems:"center", gap:4 }}>
+                <span style={{ width:6, height:6, borderRadius:"50%", background:"currentColor", display:"inline-block" }}/>
+                Online · School knowledge base
+              </div>
+            </div>
+            <button className="icon-button" onClick={() => setOpen(false)} style={{ width:28, height:28 }}><X size={15}/></button>
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex:1, overflowY:"auto", padding:12, display:"flex", flexDirection:"column", gap:8 }}>
+            {messages.map((m, i) => (
+              <div key={i} className={`floating-ai-message ${m.role === "user" ? "user" : ""}`}>
+                {m.role === "ai" && (
+                  <span className="mini-ai-avatar" style={{ background:"var(--bg-accent)", color:"var(--text-accent)" }}>
+                    <Sparkles size={11}/>
+                  </span>
                 )}
-                <div className="floating-ai-bubble">
-                  {msg.loading ? <span style={{ color: "var(--muted)" }}>Thinking…</span> : msg.text}
-                </div>
+                <div className="floating-ai-bubble">{m.text}</div>
               </div>
             ))}
-            <div ref={messagesEndRef} />
+            {loading && (
+              <div className="floating-ai-message">
+                <span className="mini-ai-avatar" style={{ background:"var(--bg-accent)", color:"var(--text-accent)" }}><Sparkles size={11}/></span>
+                <div className="floating-ai-bubble" style={{ color:"var(--text-muted)" }}>Thinking…</div>
+              </div>
+            )}
+            {messages.length === 1 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:5, marginTop:4 }}>
+                {quickQs.map(q => (
+                  <button key={q} onClick={() => void send(q)} style={{ padding:"6px 10px", border:"0.5px solid var(--border)", borderRadius:"var(--radius)", background:"var(--surface-1)", fontSize:11, textAlign:"left", cursor:"pointer", color:"var(--text-primary)" }}>
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div ref={endRef}/>
           </div>
 
-          {/* Quick questions (shown only when just 1 message) */}
-          {messages.length <= 1 && (
-            <div style={{ padding: "6px 12px", borderTop: "1px solid var(--line)" }}>
-              {cfg.qs.map(q => (
-                <button
-                  key={q}
-                  onClick={() => sendMessage(q)}
-                  style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, background: "var(--surface-2)", fontSize: 11, cursor: "pointer", marginBottom: 5, color: "var(--text)" }}
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="floating-ai-footer">
-            <button className="floating-ai-workspace" onClick={() => { setOpen(false); navigate("/ai"); }}>
-              <ExternalLink size={12} /> Open full AI workspace
+          {/* Compose */}
+          <div className="floating-ai-compose" style={{ padding:10, borderTop:"0.5px solid var(--border)", background:"var(--surface-1)" }}>
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Ask anything…"
+              rows={1}
+              style={{ flex:1, resize:"none", border:"0.5px solid var(--border)", borderRadius:"var(--radius)", padding:"8px 10px", fontSize:12, background:"var(--surface-2)", color:"var(--text-primary)", fontFamily:"var(--font-sans)" }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+            />
+            <button
+              onClick={() => void send()}
+              disabled={loading || !input.trim()}
+              className="primary"
+              style={{ width:36, height:36, padding:0, display:"grid", placeItems:"center", flexShrink:0 }}
+            >
+              <Send size={14}/>
             </button>
-            <div className="floating-ai-compose">
-              <textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder={`Ask ${cfg.title}…`}
-                rows={1}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-              />
-              <button onClick={() => void sendMessage()} disabled={busy || !input.trim()}>
-                <Send size={15} />
-              </button>
-            </div>
-            <small className="floating-ai-disclaimer">AI responses are scoped to your role and tenant.</small>
           </div>
-        </section>
+        </div>
       )}
-
-      <button
-        className={`floating-ai-launcher ${open ? "active" : ""}`}
-        onClick={() => setOpen(v => !v)}
-        aria-label="Open SmartSchool AI chatbot"
-      >
-        {open ? <X size={20} /> : <><Bot size={20} /> <span>{cfg.title}</span></>}
-      </button>
     </>
   );
 }

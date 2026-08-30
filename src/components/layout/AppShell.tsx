@@ -1,212 +1,216 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { Bell, ChevronDown, LogOut, Menu, MessageSquare, Moon, Search, Send, Settings, ShieldCheck, Sun, UserRound, X } from "lucide-react";
+import { Suspense, useEffect, useState, useRef } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import {
+  Bell, Bot, LogOut, Menu, Moon, Search, Settings,
+  ShieldAlert, Sun, X, ChevronRight,
+} from "lucide-react";
 import { useAuth } from "../../features/auth/auth";
-import { Modal, useUi } from "../ui/InteractiveUi";
 import { Sidebar } from "./Sidebar";
-import { getNotifications, getUnreadCount, markAllRead, markRead, type NotificationItem } from "../../features/communication/api/notifications";
+import { FloatingAiChatbot } from "../../features/ai/components/FloatingAiChatbot";
 import { createNotificationConnection } from "../../features/communication/realtime/communicationRealtime";
 import { effectiveTenantId } from "../../core/tenant/tenantContext";
-import { FloatingAiChatbot } from "../../features/ai/components/FloatingAiChatbot";
-import { PageErrorBoundary } from "../ui/PageErrorBoundary";
-
-// ─── Inter-actor chat contacts (populated dynamically by role) ─
-const ALL_ACTORS = [
-  { id: "superadmin", title: "Super Admin",    subtitle: "Platform Master",        initials: "SA", path: "/communication" },
-  { id: "principal",  title: "Principal",       subtitle: "Academic Head",          initials: "PR", path: "/communication" },
-  { id: "admin",      title: "Admin Officer",   subtitle: "School Operations",      initials: "AO", path: "/communication" },
-  { id: "teacher",    title: "Ms. Aisha",       subtitle: "Mathematics Teacher",    initials: "TS", path: "/communication" },
-  { id: "parent",     title: "Mr. Hassan",      subtitle: "Parent — Ahmed, Hina",  initials: "PA", path: "/communication" },
-  { id: "finance",    title: "Finance Office",  subtitle: "Accounts & Fees",        initials: "FO", path: "/finance" },
-  { id: "driver",     title: "Bus Driver",      subtitle: "Route A — North",        initials: "DR", path: "/transport" },
-];
+import { useUnreadCount } from "../../core/api/queries";
+import type { NotificationItem } from "../../features/communication/api/notifications";
 
 export function AppShell() {
   const { user, logout, stopImpersonation } = useAuth();
-  const { notify } = useUi();
-  const nav = useNavigate();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const tenantId   = effectiveTenantId(user);
 
-  const [sidebarOpen,  setSidebarOpen]  = useState(false);
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [drawer,       setDrawer]       = useState<"chat" | "notifications" | null>(null);
-  const [notes,        setNotes]        = useState<NotificationItem[]>([]);
-  const [unreadCount,  setUnreadCount]  = useState(0);
-  const [activeChat,   setActiveChat]   = useState(ALL_ACTORS[3]); // Ms. Aisha default
-  const [messages,     setMessages]     = useState<Record<string, string[]>>({
-    teacher:  ["Ms. Aisha: Grade 10 timetable review is ready.", "You: Thanks, sharing now."],
-    parent:   ["Mr. Hassan: Query about Ahmed's Physics grade — can we schedule a call?"],
-    admin:    ["Admin Office: August fee collection summary has been prepared."],
-    principal:["Principal: Staff meeting tomorrow at 9 AM in the conference room."],
-    finance:  ["Finance Office: August payroll is processed. Slip shared."],
-    driver:   ["Bus Driver: Route C delay — 15 min behind schedule today."],
-  });
-  const [chatText,     setChatText]     = useState("");
-  const [searchOpen,   setSearchOpen]   = useState(false);
-  const [q,            setQ]            = useState("");
-  const [dark,         setDark]         = useState(() => localStorage.getItem("smartschool.theme") === "dark");
+  const [dark, setDark]           = useState(() => localStorage.getItem("ss_dark") === "1");
+  const [sidebarOpen, setSidebar] = useState(false);
+  const [searchOpen, setSearch]   = useState(false);
+  const [profileOpen, setProfile] = useState(false);
+  const [notifOpen, setNotif]     = useState(false);
+  const [toasts, setToasts]       = useState<NotificationItem[]>([]);
+  const [searchQ, setSearchQ]     = useState("");
 
-  const profileRef  = useRef<HTMLDivElement>(null);
-  const tenantId    = effectiveTenantId(user);
+  const hubRef = useRef<import("@microsoft/signalr").HubConnection | null>(null);
+  const { data: unreadCount = 0 } = useUnreadCount();
 
-  // ── Theme toggle ────────────────────────────────────────────
+  // Dark mode
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    localStorage.setItem("smartschool.theme", dark ? "dark" : "light");
+    localStorage.setItem("ss_dark", dark ? "1" : "0");
   }, [dark]);
 
-  // ── Global keyboard shortcut Ctrl/Cmd+K ─────────────────────
+  // Close sidebar on route change (mobile)
+  useEffect(() => { setSidebar(false); }, [location.pathname]);
+
+  // Keyboard shortcuts
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") { e.preventDefault(); setSearch(s => !s); }
+      if (e.key === "Escape") { setSearch(false); setProfile(false); setNotif(false); }
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, []);
 
-  // ── Close profile popover on outside click ──────────────────
+  // SignalR
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (!profileRef.current?.contains(e.target as Node)) setProfileOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // ── Load notifications + SignalR ────────────────────────────
-  async function loadNotifications() {
-    if (!user?.id || !tenantId) return;
-    try {
-      const [page, count] = await Promise.all([
-        getNotifications(tenantId, user.id),
-        getUnreadCount(tenantId, user.id),
-      ]);
-      setNotes(page.items ?? []);
-      setUnreadCount(count ?? 0);
-    } catch {}
-  }
-
-  useEffect(() => {
-    if (!user?.id || !tenantId) return;
-    let disposed = false;
-    const hub = createNotificationConnection(notification => {
-      if (disposed) return;
-      setNotes(cur => [notification, ...cur.filter(n => n.id !== notification.id)].slice(0, 30));
-      if (!notification.isRead) setUnreadCount(cur => cur + 1);
+    if (!user || !tenantId) return;
+    const hub = createNotificationConnection((n) => {
+      setToasts(t => [n, ...t].slice(0, 4));
     });
-    void loadNotifications();
-    const t = window.setTimeout(() => {
-      if (!disposed) void hub.start().catch(() => {});
-    }, 100);
-    return () => { disposed = true; window.clearTimeout(t); if (hub.state !== "Disconnected") void hub.stop(); };
+    hubRef.current = hub;
+    hub.start().catch(() => {});
+    return () => { if (hub.state !== "Disconnected") void hub.stop(); };
   }, [user?.id, tenantId]);
 
-  // ── Searchable modules ──────────────────────────────────────
-  const modules = useMemo(() => [
-    ["Dashboard","/"], ["Students","/students"], ["Teachers","/teachers"],
-    ["Academics","/academics"], ["Examinations","/examinations"],
-    ["Attendance","/attendance"], ["Finance","/finance"], ["HR & Payroll","/hr"],
-    ["Transport","/transport"], ["Library","/library"],
-    ["Communication","/communication"], ["AI Assistant","/ai"],
-    ["Admissions","/admissions"], ["Reports","/reports"],
-    ["Settings","/settings"], ["Tenants","/tenancy"], ["Platform","/platform"],
-  ] as const, []);
+  // Auto-dismiss toasts
+  useEffect(() => {
+    if (!toasts.length) return;
+    const t = setTimeout(() => setToasts(p => p.slice(0, -1)), 5000);
+    return () => clearTimeout(t);
+  }, [toasts]);
 
-  const results = useMemo(() =>
-    q.trim()
-      ? modules.filter(([t]) => t.toLowerCase().includes(q.toLowerCase()))
-          .map(([title, path]) => ({ title, path }))
-      : [],
-  [q, modules]);
+  if (!user) return null;
 
-  // ── Chat send ───────────────────────────────────────────────
-  function send() {
-    const val = chatText.trim();
-    if (!val) return;
-    setMessages(s => ({ ...s, [activeChat.id]: [...(s[activeChat.id] ?? []), `You: ${val}`] }));
-    setChatText("");
-    notify({ kind: "success", title: "Message sent", message: `Your message to ${activeChat.title} was delivered.` });
-    // Simulate reply after 1.2s
-    setTimeout(() => {
-      const replies = ["Understood, thank you!", "I'll look into that right away.", "Got it. Will follow up shortly.", "Thanks for the update!"];
-      const reply = replies[Math.floor(Math.random() * replies.length)];
-      setMessages(s => ({ ...s, [activeChat.id]: [...(s[activeChat.id] ?? []), `${activeChat.title}: ${reply}`] }));
-    }, 1200);
-  }
+  const isImpersonating = user.impersonated === true;
+  const initials = user.initials || user.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 
-  const go = (path: string) => { setDrawer(null); setSearchOpen(false); nav(path); };
+  const NAV_SHORTCUTS = [
+    { label: "Students",    path: "/students"     },
+    { label: "Finance",     path: "/finance"      },
+    { label: "Admissions",  path: "/admissions"   },
+    { label: "HR",          path: "/hr"           },
+    { label: "Attendance",  path: "/attendance"   },
+    { label: "AI Tutor",    path: "/ai"           },
+    { label: "Transport",   path: "/transport"    },
+    { label: "Library",     path: "/library"      },
+    { label: "Reports",     path: "/reports"      },
+    { label: "Communication",path:"/communication"},
+    { label: "Examinations",path: "/examinations" },
+    { label: "Tenants",     path: "/tenancy"      },
+    { label: "Payroll",     path: "/payroll"      },
+    { label: "Audit Logs",  path: "/audit"        },
+    { label: "AI Platform", path: "/ai-platform"  },
+    { label: "Settings",    path: "/settings"     },
+  ].filter(s => !searchQ || s.label.toLowerCase().includes(searchQ.toLowerCase()));
 
   return (
     <div className="app">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* ── Impersonation banner ── */}
+      {isImpersonating && (
+        <div style={{
+          position:"fixed", top:0, left:0, right:0, zIndex:2000,
+          background:"#D97706", color:"#fff", padding:"8px 20px",
+          display:"flex", alignItems:"center", gap:12, fontSize:12, fontWeight:500,
+        }}>
+          <ShieldAlert size={16}/>
+          <span>Impersonation active — viewing as <b>{user.name}</b> ({user.role}). All actions logged.</span>
+          <div style={{ flex:1 }}/>
+          <button
+            onClick={stopImpersonation}
+            style={{ background:"rgba(255,255,255,.25)", color:"#fff", border:"none", borderRadius:6, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}
+          >
+            Exit impersonation
+          </button>
+        </div>
+      )}
 
-      <main className="main">
-        {/* Impersonation banner */}
-        {user?.impersonated && (
-          <div className="impersonation-banner" role="status">
-            <div><ShieldCheck size={16} /><span><b>Support session:</b> viewing SmartSchool as {user.name} ({user.role}). Actions are audited.</span></div>
-            <button onClick={() => { stopImpersonation(); window.location.assign("/"); }}>Return to administrator</button>
-          </div>
-        )}
+      {/* ── Sidebar ── */}
+      <Sidebar open={sidebarOpen} onClose={() => setSidebar(false)} />
 
-        {/* Topbar */}
+      {/* ── Main ── */}
+      <div className="main" style={{ paddingTop: isImpersonating ? 36 : 0 }}>
+
+        {/* ── Topbar ── */}
         <header className="topbar">
           <div className="tb-left">
-            <button className="mobile-menu" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}>
-              <Menu size={19} />
+            <button className="mobile-menu icon-button" onClick={() => setSidebar(o => !o)} aria-label="Toggle navigation">
+              <Menu size={18}/>
             </button>
-            <div className="breadcrumb">SmartSchool / <strong>Workspace</strong></div>
+
+            {/* Search trigger */}
+            <button
+              className="global-search"
+              onClick={() => setSearch(true)}
+              aria-label="Open search"
+            >
+              <Search size={13}/>
+              <span style={{ color:"var(--muted)", fontSize:12 }}>Search modules…</span>
+              <kbd>⌘K</kbd>
+            </button>
           </div>
 
-          <button
-            className="global-search"
-            style={{ textAlign: "left", border: "1.5px solid var(--line)", cursor: "text" }}
-            onClick={() => setSearchOpen(true)}
-          >
-            <Search size={15} />
-            <span style={{ flex: 1, color: "var(--muted)", fontSize: 12 }}>Search modules…</span>
-            <kbd>⌘K</kbd>
-          </button>
-
+          {/* Right actions */}
           <div className="top-actions">
-            <button className="top-icon" title="Inter-actor chat" onClick={() => setDrawer("chat")}>
-              <MessageSquare size={18} />
-              <span className="notification-dot" />
-            </button>
-            <button className="top-icon" title="Notifications" onClick={() => setDrawer("notifications")}>
-              <Bell size={18} />
-              {unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
-            </button>
-            <button className="top-icon" title="Toggle theme" onClick={() => setDark(v => !v)}>
-              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            <button className="top-icon" onClick={() => setDark(d => !d)} aria-label="Toggle dark mode">
+              {dark ? <Sun size={17}/> : <Moon size={17}/>}
             </button>
 
-            <div className="profile-menu" ref={profileRef}>
-              <button className="profile-trigger" onClick={() => setProfileOpen(v => !v)}>
-                <span className="avatar">{user?.initials}</span>
-                <span className="profile-copy">
-                  <b>{user?.name}</b>
-                  <small>{user?.role}</small>
-                </span>
-                <ChevronDown size={14} />
+            {/* Notifications */}
+            <div style={{ position:"relative" }}>
+              <button className="top-icon" onClick={() => { setNotif(o => !o); setProfile(false); }} aria-label="Notifications">
+                <Bell size={17}/>
+                {unreadCount > 0 && <span className="notification-count">{unreadCount > 9 ? "9+" : unreadCount}</span>}
               </button>
+              {notifOpen && (
+                <div style={{
+                  position:"absolute", top:"calc(100% + 8px)", right:0, width:300,
+                  background:"var(--surface)", border:"1.5px solid var(--line)", borderRadius:12,
+                  boxShadow:"var(--shadow-lg)", zIndex:300, overflow:"hidden",
+                }}>
+                  <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--line)", fontWeight:600, fontSize:13, display:"flex", justifyContent:"space-between" }}>
+                    <span>Notifications</span>
+                    {unreadCount > 0 && <span style={{ fontSize:11, color:"var(--muted)" }}>{unreadCount} unread</span>}
+                  </div>
+                  <div style={{ maxHeight:260, overflowY:"auto" }}>
+                    {unreadCount === 0 ? (
+                      <div style={{ padding:"24px 16px", textAlign:"center", color:"var(--muted)", fontSize:12 }}>No new notifications</div>
+                    ) : (
+                      <div style={{ padding:"8px 16px", fontSize:12, color:"var(--muted)" }}>{unreadCount} notification{unreadCount !== 1 ? "s" : ""} — go to communication page to view</div>
+                    )}
+                  </div>
+                  <div style={{ padding:"8px 16px", borderTop:"1px solid var(--line)" }}>
+                    <button className="text-button" style={{ fontSize:11 }} onClick={() => { setNotif(false); navigate("/communication"); }}>
+                      View all <ChevronRight size={12}/>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
+            {/* AI shortcut */}
+            <button className="top-icon" onClick={() => navigate("/ai")} aria-label="AI assistant">
+              <Bot size={17}/>
+            </button>
+
+            {/* Profile menu */}
+            <div className="profile-menu">
+              <button
+                className="profile-trigger"
+                onClick={() => { setProfile(o => !o); setNotif(false); }}
+                aria-label="Profile menu"
+              >
+                <div className="avatar" style={{ fontSize:11 }}>{initials}</div>
+                <div className="profile-copy">
+                  <b>{user.name}</b>
+                  <small>{user.role}</small>
+                </div>
+              </button>
               {profileOpen && (
                 <div className="profile-popover">
                   <div className="profile-summary">
-                    <span className="avatar large">{user?.initials}</span>
+                    <div className="avatar large">{initials}</div>
                     <div>
-                      <b>{user?.name}</b>
-                      <small>{user?.email}</small>
+                      <b>{user.name}</b>
+                      <small>{user.email}</small>
                     </div>
                   </div>
-                  <button onClick={() => nav("/profiles")}><UserRound size={16} /> My profile</button>
-                  <button onClick={() => nav("/settings")}><Settings size={16} /> Account settings</button>
-                  <hr />
-                  <button className="logout-item" onClick={() => { logout(); nav("/login", { replace: true }); }}>
-                    <LogOut size={16} /> Log out
+                  <hr/>
+                  <button onClick={() => { setProfile(false); navigate("/profiles"); }}>
+                    <Settings size={14}/> My Profile
+                  </button>
+                  <button onClick={() => { setProfile(false); navigate("/settings"); }}>
+                    <Settings size={14}/> Settings
+                  </button>
+                  <hr/>
+                  <button className="logout-item" onClick={logout}>
+                    <LogOut size={14}/> Sign out
                   </button>
                 </div>
               )}
@@ -214,144 +218,73 @@ export function AppShell() {
           </div>
         </header>
 
-        {/* Page content */}
+        {/* ── Page content ── */}
         <div className="content">
-          <PageErrorBoundary>
-            <Outlet />
-          </PageErrorBoundary>
+          <Suspense fallback={<div style={{ padding:40, color:"var(--muted)", textAlign:"center" }}>Loading…</div>}>
+            <Outlet/>
+          </Suspense>
         </div>
-      </main>
+      </div>
 
-      {/* ── Right drawer (chat + notifications) ────────────── */}
-      {drawer && (
-        <>
-          <button className="drawer-backdrop" onClick={() => setDrawer(null)} />
-          <aside className="right-drawer">
-            <header className="drawer-head">
-              <div>
-                <span className="eyebrow">SmartSchool</span>
-                <h2>{drawer === "chat" ? "Inter-Actor Chat" : "Notifications"}</h2>
-              </div>
-              <button className="icon-button" onClick={() => setDrawer(null)}><X size={18} /></button>
-            </header>
+      {/* ── Floating AI chatbot ── */}
+      <FloatingAiChatbot/>
 
-            {/* ── NOTIFICATIONS ── */}
-            {drawer === "notifications" && (
-              <div className="drawer-content">
-                <div className="drawer-toolbar">
-                  <span>{unreadCount} unread</span>
-                  <button
-                    className="text-button"
-                    onClick={async () => {
-                      if (!user?.id) return;
-                      await markAllRead(tenantId, user.id);
-                      setNotes(n => n.map(i => ({ ...i, isRead: true })));
-                      setUnreadCount(0);
-                      notify({ kind: "success", title: "Notifications updated", message: "All marked as read." });
-                    }}
-                  >
-                    Mark all read
-                  </button>
-                </div>
-                <div className="notification-list">
-                  {notes.length === 0 && (
-                    <p style={{ padding: "20px 18px", color: "var(--muted)", fontSize: 12 }}>No notifications yet.</p>
-                  )}
-                  {notes.map(n => (
-                    <button
-                      key={n.id}
-                      className={n.isRead ? "read" : ""}
-                      onClick={async () => {
-                        if (!user?.id) return;
-                        if (!n.isRead) {
-                          await markRead(tenantId, user.id, n.id);
-                          setNotes(cur => cur.map(i => i.id === n.id ? { ...i, isRead: true } : i));
-                          setUnreadCount(c => Math.max(0, c - 1));
-                        }
-                        if (n.actionUrl) go(n.actionUrl);
-                      }}
-                    >
-                      <span className="notification-bullet" />
-                      <div>
-                        <b>{n.title}</b>
-                        <p>{n.message}</p>
-                        <time>{new Date(n.createdAt).toLocaleString()}</time>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* ── Toast stack ── */}
+      <div style={{ position:"fixed", bottom:90, left:20, display:"flex", flexDirection:"column-reverse", gap:8, zIndex:900, maxWidth:320 }}>
+        {toasts.map((t, i) => (
+          <div key={i} style={{ background:"var(--surface)", border:"1.5px solid var(--line)", borderRadius:12, padding:"12px 16px", boxShadow:"var(--shadow-lg)", fontSize:12 }}>
+            <div style={{ fontWeight:600, marginBottom:2 }}>{t.title}</div>
+            <div style={{ color:"var(--muted)" }}>{t.message}</div>
+          </div>
+        ))}
+      </div>
 
-            {/* ── INTER-ACTOR CHAT ── */}
-            {drawer === "chat" && (
-              <div className="chat-shell">
-                {/* Contact list */}
-                <div className="conversation-list">
-                  {ALL_ACTORS.map(c => (
-                    <button key={c.id} className={activeChat.id === c.id ? "active" : ""} onClick={() => setActiveChat(c)}>
-                      <span className="avatar small">{c.initials}</span>
-                      <div>
-                        <b>{c.title}</b>
-                        <small>{c.subtitle}</small>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Active thread */}
-                <div className="chat-thread">
-                  <div className="chat-title">
-                    <div>
-                      <b>{activeChat.title}</b>
-                      <small>{activeChat.subtitle}</small>
-                    </div>
-                    <button className="text-button" onClick={() => go(activeChat.path)}>Open module</button>
-                  </div>
-                  <div className="chat-messages">
-                    {(messages[activeChat.id] ?? []).map((m, i) => (
-                      <div key={i} className={`chat-bubble ${m.startsWith("You:") ? "mine" : ""}`}>
-                        {m.replace(/^You: |^[^:]+: /, "")}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="chat-compose">
-                    <textarea
-                      value={chatText}
-                      onChange={e => setChatText(e.target.value)}
-                      placeholder={`Message ${activeChat.title}…`}
-                      onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    />
-                    <button className="primary" onClick={send}><Send size={15} /></button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </aside>
-        </>
-      )}
-
-      {/* ── Global search modal ─────────────────────────────── */}
-      <Modal open={searchOpen} title="Search SmartSchool" onClose={() => setSearchOpen(false)}>
-        <div className="command-search">
-          <label className="search-box" style={{ maxWidth: "100%", marginBottom: 12 }}>
-            <Search size={16} />
-            <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search modules, students, exams…" />
-          </label>
-          <div className="search-results">
-            {q && !results.length && <div className="empty-state">No matching results.</div>}
-            {results.map(r => (
-              <button key={r.path} onClick={() => go(r.path)}>
-                <span className="search-result-icon"><Search size={14} /></span>
-                <div><b>{r.title}</b><small>SmartSchool module</small></div>
-                <span>Open</span>
-              </button>
-            ))}
+      {/* ── Search overlay ── */}
+      {searchOpen && (
+        <div
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:1500, display:"flex", alignItems:"flex-start", justifyContent:"center", paddingTop:"14vh" }}
+          onClick={e => { if (e.target === e.currentTarget) setSearch(false); }}
+        >
+          <div style={{ background:"var(--surface)", borderRadius:16, width:"min(560px,94vw)", overflow:"hidden", boxShadow:"var(--shadow-lg)" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", borderBottom:"1px solid var(--line)" }}>
+              <Search size={16} style={{ color:"var(--muted)", flexShrink:0 }}/>
+              <input
+                autoFocus
+                value={searchQ}
+                onChange={e => setSearchQ(e.target.value)}
+                placeholder="Search modules, pages, students…"
+                style={{ flex:1, border:"none", background:"transparent", outline:"none", fontSize:14, color:"var(--text)" }}
+              />
+              <button className="icon-button" style={{ width:28, height:28, flexShrink:0 }} onClick={() => setSearch(false)}><X size={15}/></button>
+            </div>
+            <div style={{ maxHeight:320, overflowY:"auto", padding:8 }}>
+              {NAV_SHORTCUTS.map(s => (
+                <button key={s.path}
+                  onClick={() => { navigate(s.path); setSearch(false); setSearchQ(""); }}
+                  style={{
+                    width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+                    padding:"10px 12px", borderRadius:"var(--radius)", border:"none",
+                    background:"transparent", cursor:"pointer", fontSize:13, color:"var(--text)", textAlign:"left",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background="var(--surface-2)")}
+                  onMouseLeave={e => (e.currentTarget.style.background="transparent")}
+                >
+                  <span>{s.label}</span>
+                  <ChevronRight size={14} style={{ color:"var(--muted)" }}/>
+                </button>
+              ))}
+              {NAV_SHORTCUTS.length === 0 && (
+                <div style={{ padding:"16px 12px", color:"var(--muted)", fontSize:13 }}>No results for "{searchQ}"</div>
+              )}
+            </div>
           </div>
         </div>
-      </Modal>
+      )}
 
-      <FloatingAiChatbot />
+      {/* Click-away to close dropdowns */}
+      {(profileOpen || notifOpen) && (
+        <div style={{ position:"fixed", inset:0, zIndex:100 }} onClick={() => { setProfile(false); setNotif(false); }}/>
+      )}
     </div>
   );
 }

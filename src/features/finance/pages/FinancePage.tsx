@@ -1,129 +1,173 @@
 import { useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard } from "../../../components/ui/StatCard";
-import { invoices as MOCK } from "../../../mocks/data";
+import { StatCard }   from "../../../components/ui/StatCard";
+import { useInvoices, useCreateInvoice, useRecordPayment } from "../../../core/api/queries";
+import { useAuth } from "../../auth/auth";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import type { Invoice } from "../../../core/api/smartschoolApi";
 
-type Invoice = typeof MOCK[0] & { id: string; invoiceNo?: string; };
-interface Payment { invoiceId: string; amount: string; method: string; ref: string; date: string; }
-
-const METHODS = ["Cash","Bank Transfer","Online","Cheque","Wallet"];
+const PAYMENT_METHODS = ["Cash","Bank Transfer","Online Portal","Cheque","Wallet"];
 
 export function FinancePage() {
-  const [rows, setRows]       = useState<Invoice[]>(MOCK.map((r,i)=>({...r,id:String(i+1),invoiceNo:`INV-2026-0${890+i}`})));
+  const { user } = useAuth();
+  const tenantId = effectiveTenantId(user);
+  const { data, isLoading, refetch } = useInvoices();
+  const createInvoice  = useCreateInvoice();
+  const recordPayment  = useRecordPayment();
+
   const [q, setQ]             = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
-  const [payTarget, setPayTarget] = useState<Invoice|null>(null);
+  const [payTarget, setPayTarget] = useState<Invoice | null>(null);
   const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState("");
 
-  const [newInv, setNewInv] = useState({ student:"",grade:"Grade 9",amount:"",due:"",type:"Tuition Fee" });
-  const [pay, setPay]       = useState<Payment>({ invoiceId:"",amount:"",method:"Cash",ref:"",date:"" });
+  const [invForm, setInvForm] = useState({ studentId:"", amount:"", dueDate:"", feeTypeCode:"TUITION" });
+  const [payForm, setPayForm] = useState({ amount:"", paymentMethod:"Cash", referenceNumber:"", paymentDate: new Date().toISOString().slice(0, 10) });
 
-  const filtered = rows.filter(r =>
-    r.student.toLowerCase().includes(q.toLowerCase()) ||
-    (r.invoiceNo||"").includes(q)
+  const invoices = data?.items ?? [];
+  const filtered = invoices.filter(inv =>
+    (inv.invoiceNumber ?? "").toLowerCase().includes(q.toLowerCase()) ||
+    inv.studentId.toLowerCase().includes(q.toLowerCase())
   );
 
-  function openPay(r: Invoice) { setPayTarget(r); setPay({invoiceId:r.id,amount:String(r.amount),method:"Cash",ref:"",date:new Date().toISOString().slice(0,10)}); setPayOpen(true); }
+  const totals = invoices.reduce((a, inv) => ({
+    collected: a.collected + (inv.status === "PAID" ? inv.totalAmount : 0),
+    pending:   a.pending   + (inv.status === "PENDING" ? inv.totalAmount : 0),
+    overdue:   a.overdue   + (inv.status === "OVERDUE" ? inv.totalAmount : 0),
+  }), { collected: 0, pending: 0, overdue: 0 });
 
   async function saveInvoice() {
-    if(!newInv.student||!newInv.amount) return;
-    setSaving(true);
-    await new Promise(r=>setTimeout(r,400));
-    const no = `INV-2026-0${rows.length+890}`;
-    setRows(p=>[...p,{id:Date.now().toString(),invoiceNo:no,student:newInv.student,grade:newInv.grade,amount:Number(newInv.amount),due:newInv.due,status:"Pending"}]);
-    setSaving(false); setAddOpen(false); setNewInv({student:"",grade:"Grade 9",amount:"",due:"",type:"Tuition Fee"});
+    if (!invForm.studentId || !invForm.amount) { setError("Student ID and amount are required."); return; }
+    setSaving(true); setError("");
+    try {
+      await createInvoice.mutateAsync({
+        tenantId, studentId: invForm.studentId,
+        amount: Number(invForm.amount), dueDate: invForm.dueDate || null,
+        feeTypeCode: invForm.feeTypeCode,
+      });
+      setAddOpen(false);
+      void refetch();
+    } catch (err: any) {
+      setError(err?.message ?? "Could not create invoice.");
+    } finally { setSaving(false); }
   }
 
   async function savePayment() {
-    if(!pay.amount) return;
-    setSaving(true);
-    await new Promise(r=>setTimeout(r,400));
-    setRows(p=>p.map(r=>r.id===payTarget?.id?{...r,status:"Paid"}:r));
-    setSaving(false); setPayOpen(false);
+    if (!payForm.amount || !payTarget) return;
+    setSaving(true); setError("");
+    try {
+      await recordPayment.mutateAsync({
+        tenantId, invoiceId: payTarget.studentInvoiceId,
+        amount: Number(payForm.amount), paymentMethod: payForm.paymentMethod,
+        referenceNumber: payForm.referenceNumber || null,
+        paymentDate: payForm.paymentDate,
+      });
+      setPayOpen(false);
+      void refetch();
+    } catch (err: any) {
+      setError(err?.message ?? "Could not record payment.");
+    } finally { setSaving(false); }
   }
+
+  const STATUS_PILL: Record<string, string> = {
+    PAID:"success", PENDING:"warning", OVERDUE:"danger", CANCELLED:"gray", PARTIAL:"info",
+  };
 
   return (
     <>
       <PageHeader
         title="Fees & Finance"
-        subtitle="Collection, invoices, payments and scholarships"
-        action={<div className="page-actions"><button className="secondary">Export</button><button className="primary" onClick={()=>setAddOpen(true)}><Plus size={15}/> New Invoice</button></div>}
+        subtitle="Invoices, payments and fee collection management"
+        action={
+          <div className="page-actions">
+            <button className="secondary">Export</button>
+            <button className="primary" onClick={() => { setInvForm({ studentId:"", amount:"", dueDate:"", feeTypeCode:"TUITION" }); setAddOpen(true); setError(""); }}>
+              <Plus size={15}/> New invoice
+            </button>
+          </div>
+        }
       />
 
-      <section className="metric-grid" style={{marginBottom:20}}>
-        <StatCard label="Collected"       value="$847K" note="↑ 4% vs last month" color="#10B981" bg="#ECFDF5"><span style={{fontSize:20}}>💰</span></StatCard>
-        <StatCard label="Pending"         value="$153K" note={`${rows.filter(r=>r.status==="Pending").length} invoices`} color="#D97706" bg="#FFFBEB"><span style={{fontSize:20}}>⏳</span></StatCard>
-        <StatCard label="Overdue"         value="$42K"  note={`${rows.filter(r=>r.status==="Overdue").length} critical`} color="#EF4444" bg="#FFF0F1"><span style={{fontSize:20}}>🚨</span></StatCard>
-        <StatCard label="Collection Rate" value="91%"   note="↑ 4%"  color="#2563EB" bg="#EFF6FF"><span style={{fontSize:20}}>📊</span></StatCard>
+      <section className="metric-grid" style={{ marginBottom: 20 }}>
+        <StatCard label="Collected"       value={`PKR ${totals.collected.toLocaleString()}`} note="" color="#10B981" bg="#ECFDF5"><span style={{ fontSize: 20 }}>💰</span></StatCard>
+        <StatCard label="Pending"         value={`PKR ${totals.pending.toLocaleString()}`}   note={`${invoices.filter(i => i.status === "PENDING").length} invoices`} color="#D97706" bg="#FFFBEB"><span style={{ fontSize: 20 }}>⏳</span></StatCard>
+        <StatCard label="Overdue"         value={`PKR ${totals.overdue.toLocaleString()}`}   note="Action needed" color="#EF4444" bg="#FFF0F1"><span style={{ fontSize: 20 }}>🚨</span></StatCard>
+        <StatCard label="Collection rate" value={invoices.length ? `${Math.round(invoices.filter(i => i.status === "PAID").length / invoices.length * 100)}%` : "—"} note="" color="#2563EB" bg="#EFF6FF"><span style={{ fontSize: 20 }}>📊</span></StatCard>
       </section>
 
       <div className="surface">
         <div className="surface-head">
-          <label className="search-box" style={{maxWidth:300}}>
+          <label className="search-box" style={{ maxWidth: 300 }}>
             <Search size={14}/>
-            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search invoice or student…"/>
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search invoice or student…"/>
           </label>
-          <button className="primary" onClick={()=>setAddOpen(true)}><Plus size={14}/> New Invoice</button>
+          <button className="primary" onClick={() => { setInvForm({ studentId:"", amount:"", dueDate:"", feeTypeCode:"TUITION" }); setAddOpen(true); setError(""); }}>
+            <Plus size={14}/> New invoice
+          </button>
         </div>
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead><tr><th>Invoice No.</th><th>Student</th><th>Grade</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-              {filtered.map(r=>(
-                <tr key={r.id}>
-                  <td><code style={{fontSize:11}}>{r.invoiceNo}</code></td>
-                  <td>
-                    <div className="person-cell">
-                      <span className="row-avatar" style={{background:"#EFF6FF",color:"#2563EB"}}>{r.student.split(" ").map((w:string)=>w[0]).join("")}</span>
-                      <b>{r.student}</b>
-                    </div>
-                  </td>
-                  <td>{r.grade}</td>
-                  <td><b>${r.amount}</b></td>
-                  <td>{r.due}</td>
-                  <td><span className={`status-pill ${r.status==="Paid"?"success":r.status==="Overdue"?"danger":"warning"}`}>{r.status}</span></td>
-                  <td>
-                    <div className="row-actions">
-                      {r.status!=="Paid" && <button className="table-action" style={{color:"var(--success)"}} onClick={()=>openPay(r)}>Collect</button>}
-                      {r.status==="Paid" && <button className="table-action">Receipt</button>}
-                      <button className="table-action">View</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="table-footer"><span>{filtered.length} invoices</span></div>
+        {isLoading ? (
+          <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading invoices…</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead>
+                <tr><th>Invoice no.</th><th>Student</th><th>Amount</th><th>Paid</th><th>Due date</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>No invoices found.</td></tr>
+                ) : filtered.map(inv => (
+                  <tr key={inv.studentInvoiceId}>
+                    <td><code style={{ fontSize: 11 }}>{inv.invoiceNumber ?? inv.studentInvoiceId.slice(0, 8)}</code></td>
+                    <td><code style={{ fontSize: 11 }}>{inv.studentId.slice(0, 12)}…</code></td>
+                    <td><b>PKR {inv.totalAmount.toLocaleString()}</b></td>
+                    <td>PKR {inv.paidAmount.toLocaleString()}</td>
+                    <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—"}</td>
+                    <td><span className={`status-pill ${STATUS_PILL[inv.status] ?? "gray"}`}>{inv.status}</span></td>
+                    <td>
+                      <div className="row-actions">
+                        {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
+                          <button className="table-action" style={{ color: "var(--text-success)" }}
+                            onClick={() => { setPayTarget(inv); setPayForm({ amount: String(inv.totalAmount - inv.paidAmount), paymentMethod:"Cash", referenceNumber:"", paymentDate: new Date().toISOString().slice(0,10) }); setPayOpen(true); setError(""); }}>
+                            Collect
+                          </button>
+                        )}
+                        {inv.status === "PAID" && <button className="table-action">Receipt</button>}
+                        <button className="table-action">View</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="table-footer"><span>{filtered.length} invoices shown</span></div>
       </div>
 
       {/* New Invoice Modal */}
       {addOpen && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setAddOpen(false)}}>
-          <div className="modal-card" style={{width:"min(560px,96vw)"}}>
-            <div className="modal-head"><h2>Create Invoice</h2><button className="icon-button" onClick={()=>setAddOpen(false)}><X size={18}/></button></div>
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setAddOpen(false); }}>
+          <div className="modal-card" style={{ width: "min(560px, 96vw)" }}>
+            <div className="modal-head"><h2>Create invoice</h2><button className="icon-button" onClick={() => setAddOpen(false)}><X size={18}/></button></div>
             <div className="human-form">
               <div className="human-form-grid">
-                <label className="human-field field-wide"><span>Student Name *</span><input value={newInv.student} onChange={e=>setNewInv(p=>({...p,student:e.target.value}))}/></label>
-                <label className="human-field"><span>Grade</span>
-                  <select value={newInv.grade} onChange={e=>setNewInv(p=>({...p,grade:e.target.value}))}>
-                    {["Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"].map(g=><option key={g}>{g}</option>)}
+                <label className="human-field field-wide"><span>Student ID *</span><input value={invForm.studentId} onChange={e => setInvForm(p => ({ ...p, studentId: e.target.value }))} placeholder="Paste student UUID"/></label>
+                <label className="human-field"><span>Fee type</span>
+                  <select value={invForm.feeTypeCode} onChange={e => setInvForm(p => ({ ...p, feeTypeCode: e.target.value }))}>
+                    {["TUITION","TRANSPORT","LIBRARY","LAB","SPORTS","ADMISSION"].map(t => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()} Fee</option>)}
                   </select>
                 </label>
-                <label className="human-field"><span>Fee Type</span>
-                  <select value={newInv.type} onChange={e=>setNewInv(p=>({...p,type:e.target.value}))}>
-                    {["Tuition Fee","Transport Fee","Library Fee","Lab Fee","Admission Fee"].map(t=><option key={t}>{t}</option>)}
-                  </select>
-                </label>
-                <label className="human-field"><span>Amount ($) *</span><input type="number" value={newInv.amount} onChange={e=>setNewInv(p=>({...p,amount:e.target.value}))}/></label>
-                <label className="human-field"><span>Due Date</span><input type="date" value={newInv.due} onChange={e=>setNewInv(p=>({...p,due:e.target.value}))}/></label>
+                <label className="human-field"><span>Amount (PKR) *</span><input type="number" value={invForm.amount} onChange={e => setInvForm(p => ({ ...p, amount: e.target.value }))}/></label>
+                <label className="human-field"><span>Due date</span><input type="date" value={invForm.dueDate} onChange={e => setInvForm(p => ({ ...p, dueDate: e.target.value }))}/></label>
               </div>
+              {error && <div style={{ color: "var(--text-danger)", fontSize: 12 }}>{error}</div>}
             </div>
-            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              <button className="secondary" onClick={()=>setAddOpen(false)}>Cancel</button>
-              <button className="primary" onClick={saveInvoice} disabled={saving||!newInv.student||!newInv.amount}>{saving?"Saving…":"Create Invoice"}</button>
+            <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
+              <button className="secondary" onClick={() => setAddOpen(false)}>Cancel</button>
+              <button className="primary" onClick={() => void saveInvoice()} disabled={saving || !invForm.studentId || !invForm.amount}>{saving ? "Saving…" : "Create invoice"}</button>
             </div>
           </div>
         </div>
@@ -131,29 +175,30 @@ export function FinancePage() {
 
       {/* Record Payment Modal */}
       {payOpen && payTarget && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setPayOpen(false)}}>
-          <div className="modal-card" style={{width:"min(500px,96vw)"}}>
-            <div className="modal-head"><h2>Record Payment</h2><button className="icon-button" onClick={()=>setPayOpen(false)}><X size={18}/></button></div>
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setPayOpen(false); }}>
+          <div className="modal-card" style={{ width: "min(500px, 96vw)" }}>
+            <div className="modal-head"><h2>Record payment</h2><button className="icon-button" onClick={() => setPayOpen(false)}><X size={18}/></button></div>
             <div className="human-form">
-              <div style={{padding:"0 0 14px",borderBottom:"1px solid var(--line)",marginBottom:14}}>
-                <div style={{fontSize:12,color:"var(--muted)"}}>Invoice</div>
-                <div style={{fontSize:14,fontWeight:700}}>{payTarget.invoiceNo} — {payTarget.student}</div>
-                <div style={{fontSize:12,color:"var(--muted)"}}>Outstanding: <b style={{color:"var(--danger)"}}>$ {payTarget.amount}</b></div>
+              <div style={{ padding: "0 0 14px", borderBottom: "0.5px solid var(--border)", marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Invoice</div>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{payTarget.invoiceNumber ?? payTarget.studentInvoiceId.slice(0,12)}</div>
+                <div style={{ fontSize: 12, color: "var(--text-danger)" }}>Outstanding: PKR {(payTarget.totalAmount - payTarget.paidAmount).toLocaleString()}</div>
               </div>
               <div className="human-form-grid">
-                <label className="human-field"><span>Amount Received *</span><input type="number" value={pay.amount} onChange={e=>setPay(p=>({...p,amount:e.target.value}))}/></label>
-                <label className="human-field"><span>Payment Method</span>
-                  <select value={pay.method} onChange={e=>setPay(p=>({...p,method:e.target.value}))}>
-                    {METHODS.map(m=><option key={m}>{m}</option>)}
+                <label className="human-field"><span>Amount (PKR) *</span><input type="number" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))}/></label>
+                <label className="human-field"><span>Payment method</span>
+                  <select value={payForm.paymentMethod} onChange={e => setPayForm(p => ({ ...p, paymentMethod: e.target.value }))}>
+                    {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
                   </select>
                 </label>
-                <label className="human-field"><span>Payment Date</span><input type="date" value={pay.date} onChange={e=>setPay(p=>({...p,date:e.target.value}))}/></label>
-                <label className="human-field"><span>Reference / Transaction No.</span><input value={pay.ref} onChange={e=>setPay(p=>({...p,ref:e.target.value}))} placeholder="Bank reference if any"/></label>
+                <label className="human-field"><span>Payment date</span><input type="date" value={payForm.paymentDate} onChange={e => setPayForm(p => ({ ...p, paymentDate: e.target.value }))}/></label>
+                <label className="human-field"><span>Reference / transaction no.</span><input value={payForm.referenceNumber} onChange={e => setPayForm(p => ({ ...p, referenceNumber: e.target.value }))} placeholder="Bank reference if any"/></label>
               </div>
+              {error && <div style={{ color: "var(--text-danger)", fontSize: 12 }}>{error}</div>}
             </div>
-            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              <button className="secondary" onClick={()=>setPayOpen(false)}>Cancel</button>
-              <button className="primary" onClick={savePayment} disabled={saving||!pay.amount}>{saving?"Saving…":"Record Payment"}</button>
+            <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
+              <button className="secondary" onClick={() => setPayOpen(false)}>Cancel</button>
+              <button className="primary" onClick={() => void savePayment()} disabled={saving || !payForm.amount}>{saving ? "Saving…" : "Record payment"}</button>
             </div>
           </div>
         </div>

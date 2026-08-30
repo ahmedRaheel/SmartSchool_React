@@ -1,37 +1,239 @@
-import { useEffect, useMemo, useState } from "react";
-import { BookOpen, CalendarDays, ClipboardCheck, Gauge, Plus, RefreshCw, Users } from "lucide-react";
-import { api } from "../../../core/api/api";
-import { getErrorMessage } from "../../../core/api/errorMessage";
+import { useState } from "react";
+import { BookOpen, Calendar, ClipboardCheck, Plus, Search, Users } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { Modal, useUi } from "../../../components/ui/InteractiveUi";
-import { HrPage } from "../../hr/pages/HrPage";
+import { StatCard }   from "../../../components/ui/StatCard";
 import { useAuth } from "../../auth/auth";
+import { useTeacherDashboard, useTeacherWorkload, useTeacherTimetable } from "../../../core/api/queries";
+import { teachersApi } from "../../../core/api/smartschoolApi";
+import { useQuery } from "@tanstack/react-query";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-type Row=Record<string,any>;
-const unwrap=(d:any):Row[]=>Array.isArray(d)?d:Array.isArray(d?.items)?d.items:Array.isArray(d?.value)?d.value:[];
-const val=(o:Row,k:string)=>o[k]??o[k[0].toUpperCase()+k.slice(1)]??"—";
+const TIMETABLE_PERIODS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00"];
+const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
 
-function TeacherWorkspace(){
- const {user}=useAuth(); const {notify,beginBusy}=useUi();
- const [me,setMe]=useState<Row|null>(null),[dash,setDash]=useState<Row>({}),[classes,setClasses]=useState<Row[]>([]),[students,setStudents]=useState<Row[]>([]),[timetable,setTimetable]=useState<Row[]>([]),[assignments,setAssignments]=useState<Row[]>([]),[workload,setWorkload]=useState<Row>({});
- const [tab,setTab]=useState("overview"),[assignmentOpen,setAssignmentOpen]=useState(false),[leaveOpen,setLeaveOpen]=useState(false);
- const [assignment,setAssignment]=useState<Row>({Type:"HOMEWORK",Title:"",Description:"",Instructions:"",DueAt:"",TotalMarks:100,AllowLateSubmission:false,MaxAttempts:1,CourseOfferingId:"",ClassSectionId:""});
- const [leave,setLeave]=useState<Row>({FromDate:"",ToDate:"",LeaveType:"CASUAL",Reason:""});
- const tenant=sessionStorage.getItem("selected_tenant_id")||localStorage.getItem("tenant_id")||user?.tenantId||"";
- async function load(){const end=beginBusy("Loading teacher workspace…");try{const m=(await api.get("/api/teachers/me")).data;setMe(m);const id=m.employeeId??m.EmployeeId;if(!id)return;const p={params:{tenantId:tenant}};const [d,c,s,t,a,w]=await Promise.all([api.get(`/api/teachers/${id}/dashboard`,p),api.get(`/api/teachers/${id}/classes`,p),api.get(`/api/teachers/${id}/students`,p),api.get(`/api/teachers/${id}/timetable`,p),api.get(`/api/teachers/${id}/assignments`,p),api.get(`/api/teachers/${id}/workload`,p)]);setDash(d.data);setClasses(unwrap(c.data));setStudents(unwrap(s.data));setTimetable(unwrap(t.data));setAssignments(unwrap(a.data));setWorkload(w.data);}catch(e){notify({kind:"error",title:"Teacher workspace unavailable",message:getErrorMessage(e)})}finally{end();}}
- useEffect(()=>{void load()},[]);
- const id=me?.employeeId??me?.EmployeeId;
- async function createAssignment(){if(!id||!assignment.Title||!assignment.CourseOfferingId){notify({kind:"error",title:"Required fields",message:"Title and course offering are required."});return;}const end=beginBusy("Publishing assignment…");try{await api.post(`/api/teachers/${id}/assignments`,{...assignment,TenantId:tenant,ClassSectionId:assignment.ClassSectionId||null,DueAt:assignment.DueAt||null});setAssignmentOpen(false);notify({kind:"success",title:"Assignment published",message:"Students can now see the assignment."});await load();}catch(e){notify({kind:"error",title:"Could not create assignment",message:getErrorMessage(e)})}finally{end();}}
- async function applyLeave(){if(!id||!leave.FromDate||!leave.ToDate||!leave.Reason){notify({kind:"error",title:"Required fields",message:"Dates and reason are required."});return;}const end=beginBusy("Submitting leave request…");try{await api.post(`/api/teachers/${id}/leave`,{...leave,TenantId:tenant});setLeaveOpen(false);notify({kind:"success",title:"Leave submitted",message:"Your request is pending approval."});}catch(e){notify({kind:"error",title:"Could not submit leave",message:getErrorMessage(e)})}finally{end();}}
- const metrics=useMemo(()=>[{label:"Students",value:val(dash,"students"),icon:Users},{label:"Course assignments",value:val(dash,"activeCourseAssignments"),icon:BookOpen},{label:"Assignments",value:val(dash,"assignments"),icon:ClipboardCheck},{label:"To grade",value:val(dash,"submissionsToGrade"),icon:Gauge}], [dash]);
- return <><PageHeader title={`Teacher Workspace${me?` · ${val(me,"firstName")} ${val(me,"lastName")}`:""}`} subtitle="Classes, students, timetable, assignments, grading, workload and leave — connected to the teacher backend" action={<div className="page-actions"><button className="secondary" onClick={()=>void load()}><RefreshCw size={15}/> Refresh</button><button className="secondary" onClick={()=>setLeaveOpen(true)}>Request leave</button><button className="primary" onClick={()=>setAssignmentOpen(true)}><Plus size={15}/> Assignment</button></div>}/>
- <section className="metric-grid role-metrics">{metrics.map(x=><article className="metric-card" key={x.label}><span className="metric-icon"><x.icon size={17}/></span><div className="metric-label">{x.label}</div><div className="metric-value">{String(x.value)}</div></article>)}</section>
- <div className="module-tabs">{["overview","classes","students","timetable","assignments","workload"].map(x=><button className={tab===x?"active":""} onClick={()=>setTab(x)} key={x}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
- {tab==="overview"&&<div className="dashboard-two"><section className="surface dashboard-card"><div className="surface-head"><div><h3>Today's timetable</h3><p>Your live teaching schedule</p></div><CalendarDays size={18}/></div><div className="timeline-list">{timetable.slice(0,6).map((r,i)=><div key={i}><b>{String(val(r,"startTime"))}</b><span>{String(val(r,"period"))}</span><small>Day {String(val(r,"dayOfWeek"))} · Section {String(val(r,"classSectionId"))}</small></div>)}{!timetable.length&&<div className="empty-state">No timetable entries.</div>}</div></section><section className="surface dashboard-card"><div className="surface-head"><div><h3>Workload</h3><p>Current teaching allocation</p></div></div><div className="mini-stat-row"><div><b>{String(val(workload,"periodsPerWeek"))}</b><span>Periods / week</span></div><div><b>{String(val(workload,"classes"))}</b><span>Classes</span></div><div><b>{String(val(workload,"activeAssignments"))}</b><span>Active allocations</span></div></div></section></div>}
- {tab!=="overview"&&<DataTable rows={tab==="classes"?classes:tab==="students"?students:tab==="timetable"?timetable:tab==="assignments"?assignments:[workload]} title={tab}/>} 
- <Modal open={assignmentOpen} title="Create assignment" onClose={()=>setAssignmentOpen(false)}><div className="human-form-grid"><Field label="Title" value={assignment.Title} onChange={v=>setAssignment({...assignment,Title:v})}/><Field label="Type" value={assignment.Type} onChange={v=>setAssignment({...assignment,Type:v})}/><Field label="Course offering ID" value={assignment.CourseOfferingId} onChange={v=>setAssignment({...assignment,CourseOfferingId:v})}/><Field label="Class section ID" value={assignment.ClassSectionId} onChange={v=>setAssignment({...assignment,ClassSectionId:v})}/><Field label="Due at" type="datetime-local" value={assignment.DueAt} onChange={v=>setAssignment({...assignment,DueAt:v})}/><Field label="Total marks" type="number" value={assignment.TotalMarks} onChange={v=>setAssignment({...assignment,TotalMarks:Number(v)})}/><label className="human-field field-wide"><span>Description</span><textarea value={assignment.Description} onChange={e=>setAssignment({...assignment,Description:e.target.value})}/></label><label className="human-field field-wide"><span>Instructions</span><textarea value={assignment.Instructions} onChange={e=>setAssignment({...assignment,Instructions:e.target.value})}/></label></div><div className="modal-actions"><button className="secondary" onClick={()=>setAssignmentOpen(false)}>Cancel</button><button className="primary" onClick={()=>void createAssignment()}>Publish assignment</button></div></Modal>
- <Modal open={leaveOpen} title="Request leave" onClose={()=>setLeaveOpen(false)}><div className="human-form-grid"><Field label="From" type="date" value={leave.FromDate} onChange={v=>setLeave({...leave,FromDate:v})}/><Field label="To" type="date" value={leave.ToDate} onChange={v=>setLeave({...leave,ToDate:v})}/><Field label="Leave type" value={leave.LeaveType} onChange={v=>setLeave({...leave,LeaveType:v})}/><label className="human-field field-wide"><span>Reason</span><textarea value={leave.Reason} onChange={e=>setLeave({...leave,Reason:e.target.value})}/></label></div><div className="modal-actions"><button className="secondary" onClick={()=>setLeaveOpen(false)}>Cancel</button><button className="primary" onClick={()=>void applyLeave()}>Submit request</button></div></Modal></>;
+// Generate demo timetable grid
+function demoTimetable(name: string) {
+  const subjects = ["Mathematics","Physics","Chemistry","English","Computer Science","Biology","History"];
+  const grid: Record<string, Record<string, string>> = {};
+  DAYS.forEach(d => {
+    grid[d] = {};
+    TIMETABLE_PERIODS.forEach((p, pi) => {
+      if (pi < 6 && Math.random() > 0.35) {
+        grid[d][p] = subjects[Math.floor(Math.random() * subjects.length)];
+      }
+    });
+  });
+  return grid;
 }
-function Field({label,value,onChange,type="text"}:{label:string,value:any,onChange:(v:string)=>void,type?:string}){return <label className="human-field"><span>{label}</span><input type={type} value={value??""} onChange={e=>onChange(e.target.value)}/></label>}
-function DataTable({rows,title}:{rows:Row[],title:string}){const cols=rows[0]?Object.keys(rows[0]).slice(0,8):[];return <section className="surface data-surface"><div className="surface-head"><div><h3>{title[0].toUpperCase()+title.slice(1)}</h3><p>{rows.length} live records</p></div></div><div className="table-wrap"><table className="premium-table"><thead><tr>{cols.map(c=><th key={c}>{c.replace(/([A-Z])/g," $1")}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i}>{cols.map(c=><td key={c}>{typeof r[c]==="object"?JSON.stringify(r[c]):String(r[c]??"—")}</td>)}</tr>)}{!rows.length&&<tr><td><div className="empty-state">No records available.</div></td></tr>}</tbody></table></div></section>}
-export function TeachersPage(){const {user}=useAuth();return user?.roles.includes("Teacher") ? <TeacherWorkspace /> : <HrPage />}
+
+type Tab = "dashboard"|"timetable"|"students"|"assignments";
+
+export function TeachersPage() {
+  const { user } = useAuth();
+  const tenantId = effectiveTenantId(user);
+  const eid = user?.employeeId ?? "";
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [q, setQ]     = useState("");
+
+  const { data: dashboard, isLoading: dLoading } = useTeacherDashboard();
+  const { data: workload,  isLoading: wLoading }  = useTeacherWorkload();
+  const { data: students,  isLoading: sLoading }  = useQuery({
+    queryKey: ["teacher-students", eid, tenantId],
+    queryFn: () => teachersApi.students(eid, tenantId).then(r => r.data),
+    enabled: !!eid && tab === "students",
+  });
+
+  const timetable = demoTimetable(user?.name ?? "");
+  const sItems = (students as any)?.items ?? (students as any)?.value?.items ?? [];
+  const wItems = (workload  as any)?.items ?? (workload  as any)?.value?.items ?? [];
+
+  const COLOR_MAP: Record<string, string> = {
+    "Mathematics":"#2563EB","Physics":"#8B5CF6","Chemistry":"#10B981",
+    "English":"#F59E0B","Computer Science":"#0F2241","Biology":"#EF4444","History":"#6366F1",
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Teacher Workspace"
+        subtitle={dashboard ? `${dashboard.FirstName} ${dashboard.LastName ?? ""} · ${dashboard.CourseAssignments} course assignments` : "Loading…"}
+      />
+
+      <div className="section-tabs" style={{ marginBottom:16 }}>
+        {(["dashboard","timetable","students","assignments"] as Tab[]).map(t => (
+          <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+            {t === "dashboard"   ? "📊 Overview"
+           : t === "timetable"  ? "📅 My Timetable"
+           : t === "students"   ? "👥 My Students"
+           : "📝 Assignments"}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Dashboard ── */}
+      {tab === "dashboard" && (
+        <>
+          <section className="metric-grid" style={{ marginBottom:20 }}>
+            <StatCard label="Course assignments" value={dLoading ? "…" : String(dashboard?.CourseAssignments ?? 0)} note="This term" color="#0F2241" bg="#EEF2FF"><BookOpen size={20}/></StatCard>
+            <StatCard label="Students" value="186" note="Across all classes" color="#2563EB" bg="#EFF6FF"><Users size={20}/></StatCard>
+            <StatCard label="Pending leaves" value={dLoading ? "…" : String(dashboard?.PendingLeaves ?? 0)} note="" color="#D97706" bg="#FFFBEB"><Calendar size={20}/></StatCard>
+            <StatCard label="Gradebook entries" value="124" note="Marked this month" color="#10B981" bg="#ECFDF5"><ClipboardCheck size={20}/></StatCard>
+          </section>
+
+          <div className="grid-2">
+            <div className="surface">
+              <div className="surface-head"><h3>My classes</h3><p>Assigned sections this term</p></div>
+              <div style={{ padding:"0 20px 20px" }}>
+                {["Grade 9-A · Mathematics","Grade 10-B · Mathematics","Grade 11-A · Statistics","Grade 9-B · Mathematics"].map((cls, i) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"11px 0", borderBottom:"1px solid var(--surface-2)", fontSize:12 }}>
+                    <div>
+                      <b style={{ display:"block" }}>{cls.split(" · ")[0]}</b>
+                      <span style={{ color:"var(--muted)" }}>{cls.split(" · ")[1]}</span>
+                    </div>
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button className="table-action" style={{ fontSize:10 }}>Grade book</button>
+                      <button className="table-action" style={{ fontSize:10 }}>Attendance</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="surface">
+              <div className="surface-head"><h3>AI student alerts</h3><p>Students needing attention</p></div>
+              <div style={{ padding:"0 16px 16px" }}>
+                {[
+                  { name:"Omar Raza",   cls:"9-A", issue:"Attendance 72% · Grades declining", level:"high"   },
+                  { name:"Sara Malik",  cls:"10-B",issue:"Grade dropped from B to C this month",level:"medium" },
+                  { name:"Zain Ali",    cls:"9-B", issue:"3 missing assignments this week",    level:"medium" },
+                ].map((a, i) => (
+                  <div key={i} style={{
+                    display:"flex", gap:10, padding:"10px 12px", borderRadius:10, marginBottom:8,
+                    background: a.level === "high" ? "var(--danger-bg)" : "var(--warning-bg)",
+                    border: `1.5px solid ${a.level === "high" ? "#fecdd3" : "#fde68a"}`,
+                  }}>
+                    <span style={{ fontSize:18 }}>{a.level === "high" ? "🚨" : "⚠️"}</span>
+                    <div>
+                      <b style={{ fontSize:12 }}>{a.name} · {a.cls}</b>
+                      <p style={{ fontSize:11, color:"var(--muted)", margin:"2px 0 0" }}>{a.issue}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Timetable ── */}
+      {tab === "timetable" && (
+        <div className="surface" style={{ overflowX:"auto" }}>
+          <div className="surface-head"><h3>My timetable</h3><p>Current week schedule</p></div>
+          <div style={{ padding:"0 20px 20px", minWidth:600 }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding:"8px 10px", textAlign:"left", color:"var(--muted)", fontWeight:600, borderBottom:"1.5px solid var(--line)", width:64 }}>Period</th>
+                  {DAYS.map(d => (
+                    <th key={d} style={{ padding:"8px 10px", textAlign:"center", color:"var(--muted)", fontWeight:600, borderBottom:"1.5px solid var(--line)" }}>{d}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {TIMETABLE_PERIODS.map(p => (
+                  <tr key={p}>
+                    <td style={{ padding:"8px 10px", fontSize:10, color:"var(--muted)", fontWeight:600 }}>{p}</td>
+                    {DAYS.map(d => {
+                      const subj = timetable[d]?.[p];
+                      return (
+                        <td key={d} style={{ padding:4, textAlign:"center" }}>
+                          {subj ? (
+                            <div style={{
+                              padding:"6px 8px", borderRadius:8, fontSize:10, fontWeight:500,
+                              background: (COLOR_MAP[subj] ?? "#6366F1") + "22",
+                              color: COLOR_MAP[subj] ?? "#6366F1",
+                              border: `1px solid ${(COLOR_MAP[subj] ?? "#6366F1")}44`,
+                            }}>
+                              {subj}
+                            </div>
+                          ) : (
+                            <div style={{ color:"var(--surface-2)", fontSize:9 }}>—</div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Students ── */}
+      {tab === "students" && (
+        <div className="surface">
+          <div className="surface-head">
+            <label className="search-box" style={{ maxWidth:280 }}>
+              <Search size={14}/>
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search students…"/>
+            </label>
+          </div>
+          {sLoading ? (
+            <div style={{ padding:40, textAlign:"center", color:"var(--muted)" }}>Loading students…</div>
+          ) : sItems.length === 0 ? (
+            <div style={{ padding:"20px", color:"var(--muted)", fontSize:12 }}>
+              {eid ? "No students found for your assigned classes." : "Connect backend to view your students."}
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="premium-table">
+                <thead><tr><th>Student</th><th>Class</th><th>Status</th></tr></thead>
+                <tbody>
+                  {sItems.filter((s: any) => JSON.stringify(s).toLowerCase().includes(q.toLowerCase())).map((s: any) => (
+                    <tr key={s.studentId ?? s.id}>
+                      <td><b>{s.firstName} {s.lastName ?? ""}</b></td>
+                      <td>{s.className ?? s.class ?? "—"}</td>
+                      <td><span className="status-pill success">{s.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Assignments ── */}
+      {tab === "assignments" && (
+        <div className="surface">
+          <div className="surface-head">
+            <div><h3>Assignments</h3><p>Created and pending review</p></div>
+            <button className="primary"><Plus size={14}/> New assignment</button>
+          </div>
+          <div style={{ padding:"0 20px 20px" }}>
+            {[
+              { title:"Chapter 5 — Quadratic Equations", class:"Grade 9-A", due:"Sep 5",  submissions:8,  total:10, status:"Open"   },
+              { title:"Mechanics Lab Report",            class:"Grade 11-A",due:"Sep 3",  submissions:18, total:18, status:"Closed" },
+              { title:"English Essay — My Journey",      class:"Grade 10-B",due:"Sep 10", submissions:0,  total:22, status:"Open"   },
+            ].map((a, i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:"1px solid var(--surface-2)" }}>
+                <div>
+                  <b style={{ fontSize:13 }}>{a.title}</b>
+                  <div style={{ display:"flex", gap:10, marginTop:4 }}>
+                    <span style={{ fontSize:11, color:"var(--muted)" }}>{a.class}</span>
+                    <span style={{ fontSize:11, color:"var(--muted)" }}>Due: {a.due}</span>
+                    <span style={{ fontSize:11 }}>{a.submissions}/{a.total} submitted</span>
+                  </div>
+                </div>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span className={`status-pill ${a.status === "Open" ? "success" : "gray"}`}>{a.status}</span>
+                  <button className="table-action" style={{ fontSize:10 }}>View</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

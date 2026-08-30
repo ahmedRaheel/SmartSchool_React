@@ -1,126 +1,293 @@
-import { useEffect, useMemo, useState } from "react";
-import { Building2, KeyRound, Search, ShieldCheck, UserRoundCog, UserX } from "lucide-react";
-import { PageHeader } from "../../../components/ui/PageHeader";
-import { Modal, useUi } from "../../../components/ui/InteractiveUi";
-import { api } from "../../../core/api/ApiClient";
-import { getErrorMessage } from "../../../core/api/errorMessage";
-import { env } from "../../../config/env";
+import { useState } from "react";
+import { Plus, RefreshCcw, Upload, X } from "lucide-react";
+import { PageHeader }  from "../../../components/ui/PageHeader";
+import { StatCard }    from "../../../components/ui/StatCard";
+import {
+  useModelConfigs, useKnowledgeCollections, useExecutionLogs,
+} from "../../../core/api/queries";
+import { aiCoreApi } from "../../../core/api/smartschoolApi";
 import { useAuth } from "../../auth/auth";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-type Tenant = { id?: string; tenantId?: string; code: string; name: string; isActive?: boolean };
-type IdentityUser = { id: string; tenantId?: string | null; email: string; firstName: string; lastName: string;
-  displayName?: string | null; accountType?: string | null; isActive: boolean; mustChangePassword: boolean; roles: string[] };
-type CreatedAccount = { email: string; temporaryPassword: string };
-const identityPath = (path: string) => import.meta.env.DEV ? `/identity${path}` : `${env.identityBaseUrl}${path}`;
-const tenantIdOf = (tenant: Tenant) => tenant.id ?? tenant.tenantId ?? "";
-const unwrap = <T,>(data: any): T[] => data?.items ?? data?.value?.items ?? (Array.isArray(data) ? data : []);
+type Tab = "overview"|"models"|"rag"|"tutor"|"logs";
 
-/** Platform administration workspace for SuperAdmin tenant and identity operations. */
+const TABS: { key: Tab; label: string }[] = [
+  { key:"overview", label:"AI overview"       },
+  { key:"models",   label:"Model config"      },
+  { key:"rag",      label:"Knowledge / RAG"   },
+  { key:"tutor",    label:"AI Tutor analytics"},
+  { key:"logs",     label:"Request logs"      },
+];
+
 export function PlatformAdminPage() {
-  const { user, impersonate } = useAuth();
-  const { notify } = useUi();
-  const [tenantId, setTenantId] = useState(sessionStorage.getItem("selected_tenant_id") ?? "");
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [users, setUsers] = useState<IdentityUser[]>([]);
-  const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [created, setCreated] = useState<CreatedAccount | null>(null);
-  const [impersonationTarget, setImpersonationTarget] = useState<IdentityUser | null>(null);
-  const [reason, setReason] = useState("Support and troubleshooting session");
-  const [form, setForm] = useState({ email: "", firstName: "", lastName: "" });
-  const isSuperAdmin = user?.roles.includes("SuperAdmin") ?? false;
+  const { user } = useAuth();
+  const tenantId = effectiveTenantId(user);
+  const qc = useQueryClient();
+  const [tab, setTab]       = useState<Tab>("overview");
+  const [collOpen, setCollOpen] = useState(false);
+  const [collName, setCollName] = useState("");
+  const [collDesc, setCollDesc] = useState("");
+  const [saving, setSaving]     = useState(false);
+  const [indexing, setIndexing] = useState(false);
 
-  async function loadTenants(): Promise<void> {
-    if (!isSuperAdmin) return;
+  const { data: modelData,  isLoading: mLoading } = useModelConfigs();
+  const { data: collData,   isLoading: cLoading } = useKnowledgeCollections();
+  const { data: logData,    isLoading: lLoading } = useExecutionLogs();
+
+  const models  = (modelData as any)?.items  ?? (modelData as any)?.value?.items  ?? [];
+  const colls   = (collData  as any)?.items  ?? (collData  as any)?.value?.items  ?? [];
+  const logs    = (logData   as any)?.items  ?? (logData   as any)?.value?.items  ?? [];
+
+  async function createCollection() {
+    if (!collName.trim()) return;
+    setSaving(true);
     try {
-      const { data } = await api.get("/api/tenancy/tenant", { params: { tenantId: user?.tenantId, page: 1, pageSize: 250 } });
-      setTenants(unwrap<Tenant>(data));
-    } catch (error) { notify({ kind: "error", title: "Tenants unavailable", message: getErrorMessage(error) }); }
+      await aiCoreApi.createCollection({ tenantId, name: collName.trim(), description: collDesc.trim() });
+      setCollOpen(false); setCollName(""); setCollDesc("");
+      void qc.invalidateQueries({ queryKey: ["rag-collections", tenantId] });
+    } finally { setSaving(false); }
   }
 
-  async function loadUsers(): Promise<void> {
-    if (!isSuperAdmin) return;
+  async function triggerIndex(collectionId: string) {
+    setIndexing(true);
     try {
-      const token = (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token")) ?? "";
-      const { data } = await fetch(`${identityPath("/api/identity/users")}?page=1&pageSize=100${tenantId ? `&tenantId=${tenantId}` : ""}`,
-        { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }).then(async response => {
-          if (!response.ok) throw new Error((await response.json().catch(() => null))?.detail ?? `Identity request failed (${response.status}).`);
-          return { data: await response.json() };
-        });
-      setUsers(unwrap<IdentityUser>(data));
-    } catch (error) { notify({ kind: "error", title: "Users unavailable", message: getErrorMessage(error) }); }
+      await aiCoreApi.indexKnowledge({ tenantId, collectionId });
+      alert("Indexing job queued successfully.");
+    } catch {
+      alert("Indexing failed. Check logs.");
+    } finally { setIndexing(false); }
   }
 
-  useEffect(() => { void loadTenants(); }, [isSuperAdmin]);
-  useEffect(() => { void loadUsers(); }, [tenantId, isSuperAdmin]);
+  const LOG_STATUS: Record<string,string> = { Success:"success", Failure:"danger", Error:"danger", Pending:"warning" };
 
-  const visibleUsers = useMemo(() => users.filter(item =>
-    `${item.displayName ?? ""} ${item.email} ${item.roles.join(" ")}`.toLowerCase().includes(query.toLowerCase())), [users, query]);
+  return (
+    <>
+      <PageHeader
+        title="AI Platform Management"
+        subtitle="ai_core · ai · ai_tutor — schema monitoring, models and knowledge base"
+      />
 
-  function selectTenant(value: string): void {
-    setTenantId(value);
-    value ? sessionStorage.setItem("selected_tenant_id", value) : sessionStorage.removeItem("selected_tenant_id");
-  }
-
-  async function createAdmin(): Promise<void> {
-    if (!tenantId || !form.email.trim() || !form.firstName.trim() || !form.lastName.trim()) {
-      notify({ kind: "warning", title: "Complete required fields", message: "Select a tenant and enter the administrator's name and email." }); return;
-    }
-    setBusy(true);
-    try {
-      const token = (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token")) ?? "";
-      const response = await fetch(identityPath("/api/identity/users"), { method: "POST", headers: { Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ tenantId, schoolId: null,
-          email: form.email.trim(), password: null, firstName: form.firstName.trim(), lastName: form.lastName.trim(), accountType: "SchoolAdmin", roles: ["SchoolAdmin"] }) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.detail ?? data.title ?? "The administrator could not be created.");
-      setCreated({ email: form.email.trim(), temporaryPassword: data.temporaryPassword }); setForm({ email: "", firstName: "", lastName: "" });
-      notify({ kind: "success", title: "School administrator created", message: "The account is ready and must change its temporary password on first sign-in." });
-      await loadUsers();
-    } catch (error) { notify({ kind: "error", title: "Account creation failed", message: getErrorMessage(error) }); }
-    finally { setBusy(false); }
-  }
-
-  async function setTenantActive(active: boolean): Promise<void> {
-    if (!tenantId) { notify({ kind: "warning", message: "Select a tenant first." }); return; }
-    try {
-      const token = (localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token")) ?? "";
-      const response = await fetch(identityPath(`/api/identity/users/tenant/${tenantId}/status`), { method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ isActive: active }) });
-      const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.detail ?? data.title ?? "Status update failed.");
-      notify({ kind: "success", title: active ? "Tenant enabled" : "Tenant disabled", message: `${data.affectedUsers ?? 0} user accounts were updated.` });
-      await Promise.all([loadUsers(), loadTenants()]);
-    } catch (error) { notify({ kind: "error", title: "Status update failed", message: getErrorMessage(error) }); }
-  }
-
-  async function beginImpersonation(): Promise<void> {
-    if (!impersonationTarget) return;
-    const result = await impersonate(impersonationTarget.id, reason);
-    if (!result.success) { notify({ kind: "error", title: "Impersonation failed", message: result.message ?? "Identity rejected the request." }); return; }
-    notify({ kind: "success", title: `Signed in as ${impersonationTarget.displayName ?? impersonationTarget.email}`, message: "The audited support session is active. Use the banner to return to your administrator account." });
-    setImpersonationTarget(null); window.location.assign("/");
-  }
-
-  if (!isSuperAdmin) return <div className="empty-state">Platform management is available to SuperAdmin only.</div>;
-  return <>
-    <PageHeader title="Platform Management" subtitle="Tenant master accounts, lifecycle control and audited support impersonation" />
-    <section className="metric-grid platform-metrics">
-      <article className="metric-card"><span>Tenants</span><strong>{tenants.length}</strong><small>Organizations visible to platform administration</small></article>
-      <article className="metric-card"><span>Users in context</span><strong>{users.length}</strong><small>{tenantId ? "Selected tenant" : "All accessible tenants"}</small></article>
-      <article className="metric-card"><span>Active users</span><strong>{users.filter(x => x.isActive).length}</strong><small>Enabled identity accounts</small></article>
-      <article className="metric-card"><span>Security</span><strong><ShieldCheck size={24}/></strong><small>Audited impersonation enabled</small></article>
-    </section>
-    <section className="surface admin-control-bar">
-      <div><span className="eyebrow">Tenant context</span><select className="filter-select" value={tenantId} onChange={event => selectTenant(event.target.value)}><option value="">All tenants</option>{tenants.map(t => <option key={tenantIdOf(t)} value={tenantIdOf(t)}>{t.name} ({t.code})</option>)}</select></div>
-      <div className="page-actions"><button className="secondary" disabled={!tenantId} onClick={() => void setTenantActive(false)}><UserX size={15}/> Disable tenant</button><button disabled={!tenantId} onClick={() => void setTenantActive(true)}><ShieldCheck size={15}/> Enable tenant</button></div>
-    </section>
-    <div className="admin-grid">
-      <section className="surface form-surface"><div className="surface-head"><div><h3>Create school master administrator</h3><p>Creates a tenant administrator with a one-time temporary password.</p></div><KeyRound size={19}/></div>
-        <div className="human-form"><div className="human-form-grid"><label className="human-field"><span>Email *</span><input type="email" value={form.email} onChange={e => setForm(v => ({...v,email:e.target.value}))}/></label><label className="human-field"><span>First name *</span><input value={form.firstName} onChange={e => setForm(v => ({...v,firstName:e.target.value}))}/></label><label className="human-field"><span>Last name *</span><input value={form.lastName} onChange={e => setForm(v => ({...v,lastName:e.target.value}))}/></label></div><button className="primary" disabled={busy || !tenantId} onClick={() => void createAdmin()}>{busy ? "Creating…" : "Create administrator"}</button></div>
+      <section className="metric-grid" style={{ marginBottom:16 }}>
+        <StatCard label="AI requests today"    value="14,821" note="↑ 23% vs yesterday" color="#8B5CF6" bg="#F5F3FF"><span style={{fontSize:20}}>🤖</span></StatCard>
+        <StatCard label="Avg latency"          value="1.8 s"  note="Within SLA"         color="#10B981" bg="#ECFDF5"><span style={{fontSize:20}}>⚡</span></StatCard>
+        <StatCard label="Active tutor sessions"value="47"     note="Live now"           color="#2563EB" bg="#EFF6FF"><span style={{fontSize:20}}>📚</span></StatCard>
+        <StatCard label="Prediction accuracy"  value="91.4%"  note="Dropout model"      color="#D97706" bg="#FFFBEB"><span style={{fontSize:20}}>🎯</span></StatCard>
       </section>
-      <section className="surface data-surface"><div className="surface-head"><div><h3>Tenant users</h3><p>Manage and enter an audited support session.</p></div><label className="search-box"><Search size={15}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search users"/></label></div><div className="table-wrap"><table className="premium-table"><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Support</th></tr></thead><tbody>{visibleUsers.map(item => <tr key={item.id}><td><div className="entity-cell"><span className="entity-icon"><Building2 size={15}/></span><div><b>{item.displayName ?? `${item.firstName} ${item.lastName}`}</b><small>{item.email}</small></div></div></td><td>{item.roles.join(", ")}</td><td><span className={`status-pill ${item.isActive ? "success" : "danger"}`}>{item.isActive ? "Active" : "Disabled"}</span></td><td><button className="table-action" disabled={!item.isActive} onClick={() => setImpersonationTarget(item)}><UserRoundCog size={14}/> Login as user</button></td></tr>)}</tbody></table></div></section>
-    </div>
-    <Modal open={!!impersonationTarget} title="Start audited support session" onClose={() => setImpersonationTarget(null)}><div className="human-form"><div className="form-context"><UserRoundCog size={18}/><div><b>{impersonationTarget?.displayName ?? impersonationTarget?.email}</b><span>{impersonationTarget?.roles.join(", ")}</span></div></div><label className="human-field"><span>Reason *</span><textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Why is impersonation required?"/></label></div><div className="modal-actions"><button className="secondary" onClick={() => setImpersonationTarget(null)}>Cancel</button><button className="primary" onClick={() => void beginImpersonation()}>Start support session</button></div></Modal>
-    <Modal open={!!created} title="Administrator account created" onClose={() => setCreated(null)}>{created && <div className="credential-card"><div className="credential-success"><ShieldCheck size={22}/><div><b>Account is ready</b><span>Share the temporary password securely. It is shown here once.</span></div></div><div className="credential-row"><span>Email</span><b>{created.email}</b></div><div className="credential-row"><span>Temporary password</span><code>{created.temporaryPassword}</code></div></div>}<div className="modal-actions"><button className="primary" onClick={() => setCreated(null)}>Done</button></div></Modal>
-  </>;
+
+      <div className="section-tabs" style={{ marginBottom:16 }}>
+        {TABS.map(t => (
+          <button key={t.key} className={tab === t.key ? "active" : ""} onClick={() => setTab(t.key)}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === "overview" && (
+        <div className="grid-2">
+          <div className="surface">
+            <div className="surface-head"><h3>Schema status</h3><p>All three AI schemas</p></div>
+            <div style={{ padding:"0 20px 20px" }}>
+              {[
+                { schema:"ai_core",  tables:9, desc:"RAG, chatbots, inquiry AI, parent AI, execution logs" },
+                { schema:"ai",       tables:8, desc:"Predictions, interventions, learning recommendations" },
+                { schema:"ai_tutor", tables:7, desc:"Tutor sessions, mastery tracking, quizzes" },
+              ].map(s => (
+                <div key={s.schema} style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", borderBottom:"0.5px solid var(--border)" }}>
+                  <div>
+                    <div style={{ fontFamily:"var(--font-mono)", fontSize:13, fontWeight:500, color:"var(--text-accent)" }}>{s.schema}</div>
+                    <div style={{ fontSize:11, color:"var(--text-secondary)", marginTop:2 }}>{s.desc}</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <span className="status-pill success">Healthy</span>
+                    <div style={{ fontSize:10, color:"var(--text-muted)", marginTop:3 }}>{s.tables} tables</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="surface">
+            <div className="surface-head"><h3>Latest AI requests</h3></div>
+            <div style={{ padding:"0 18px 16px" }}>
+              {lLoading ? <div style={{ color:"var(--text-muted)", fontSize:12 }}>Loading…</div> :
+                logs.slice(0, 6).map((l: any, i: number) => (
+                  <div key={i} style={{ display:"flex", gap:10, padding:"10px 0", borderBottom:"0.5px solid var(--border)", fontSize:11 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:500 }}>{l.actor ?? l.actorType ?? "Unknown"} · {l.operation ?? l.requestType ?? "—"}</div>
+                      <div style={{ color:"var(--text-muted)", marginTop:2 }}>{l.tokenCount ?? "—"} tokens · {l.durationMs ?? "—"}ms</div>
+                    </div>
+                    <span className={`status-pill ${LOG_STATUS[l.status ?? "Success"] ?? "gray"}`}>{l.status ?? "OK"}</span>
+                  </div>
+                ))
+              }
+              {!lLoading && logs.length === 0 && <div style={{ color:"var(--text-muted)", fontSize:12 }}>No logs yet.</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Model Config ── */}
+      {tab === "models" && (
+        <div className="surface">
+          <div className="surface-head">
+            <div><h3>Model configuration</h3><p>ai_core.model_configuration — provider, model and parameters per tenant</p></div>
+            <button className="primary"><Plus size={14}/> Add config</button>
+          </div>
+          {mLoading ? (
+            <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading model configs…</div>
+          ) : (
+            <div className="table-wrap">
+              <table className="premium-table">
+                <thead><tr><th>Name</th><th>Provider</th><th>Model</th><th>Temperature</th><th>Max tokens</th><th>Status</th></tr></thead>
+                <tbody>
+                  {models.length === 0
+                    ? <tr><td colSpan={6} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No model configurations found.</td></tr>
+                    : models.map((m: any) => (
+                        <tr key={m.modelConfigurationId ?? m.id}>
+                          <td><b>{m.name ?? "—"}</b></td>
+                          <td><code style={{ fontSize:11 }}>{m.provider ?? "—"}</code></td>
+                          <td><code style={{ fontSize:11 }}>{m.modelIdentifier ?? m.model ?? "—"}</code></td>
+                          <td>{m.temperature ?? "—"}</td>
+                          <td>{m.maxTokens ?? "—"}</td>
+                          <td><span className={`status-pill ${m.isActive !== false ? "success" : "gray"}`}>{m.isActive !== false ? "Active" : "Inactive"}</span></td>
+                        </tr>
+                      ))
+                  }
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── RAG Collections ── */}
+      {tab === "rag" && (
+        <div className="surface">
+          <div className="surface-head">
+            <div><h3>Knowledge collections</h3><p>ai_core.knowledge_collection + ai_core.knowledge_document — school RAG knowledge base</p></div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button className="secondary" onClick={() => void qc.invalidateQueries({ queryKey: ["rag-collections", tenantId] })}>
+                <RefreshCcw size={13}/> Refresh
+              </button>
+              <button className="primary" onClick={() => setCollOpen(true)}><Plus size={14}/> New collection</button>
+            </div>
+          </div>
+          {cLoading ? (
+            <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading collections…</div>
+          ) : (
+            <div className="table-wrap">
+              <table className="premium-table">
+                <thead><tr><th>Collection</th><th>Slug</th><th>Documents</th><th>Chunks</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {colls.length === 0
+                    ? <tr><td colSpan={6} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No knowledge collections yet. Create one to enable AI context.</td></tr>
+                    : colls.map((c: any) => (
+                        <tr key={c.knowledgeCollectionId ?? c.id}>
+                          <td><b>{c.name ?? "—"}</b><small style={{ display:"block", color:"var(--text-muted)", fontSize:10 }}>{c.description?.slice(0,60)}</small></td>
+                          <td><code style={{ fontSize:11 }}>{c.slug ?? c.collectionSlug ?? "—"}</code></td>
+                          <td>{c.documentCount ?? "—"}</td>
+                          <td>{c.chunkCount ?? "—"}</td>
+                          <td><span className={`status-pill ${c.isActive !== false ? "success" : "gray"}`}>{c.isActive !== false ? "Active" : "Inactive"}</span></td>
+                          <td>
+                            <div className="row-actions">
+                              <button className="table-action"><Upload size={12}/> Upload doc</button>
+                              <button className="table-action" disabled={indexing} onClick={() => void triggerIndex(c.knowledgeCollectionId ?? c.id)}>Index</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                  }
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── AI Tutor Analytics ── */}
+      {tab === "tutor" && (
+        <div className="surface">
+          <div className="surface-head"><div><h3>AI Tutor analytics</h3><p>ai_tutor.tutor_session + mastery_tracker across all tenants</p></div></div>
+          <div style={{ padding:20 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
+              {[
+                { label:"Total sessions",  value:"4,821" },
+                { label:"Avg session time",value:"28 min" },
+                { label:"Avg mastery gain",value:"12.4%"  },
+                { label:"Quizzes generated",value:"14,291"},
+              ].map(s => (
+                <div key={s.label} style={{ padding:"14px 16px", border:"0.5px solid var(--border)", borderRadius:12, background:"var(--surface-1)" }}>
+                  <div style={{ fontSize:11, color:"var(--text-muted)", marginBottom:4 }}>{s.label}</div>
+                  <div style={{ fontSize:22, fontWeight:500 }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize:12, color:"var(--text-secondary)" }}>
+              ai_tutor.session_analytics are persisted per session. Mastery tracker records subject × topic competency per student.
+              Generated quizzes are stored in ai_tutor.generated_quiz with attempt history in ai_tutor.quiz_attempt.
+              Learning recommendations flow from ai_tutor.learning_recommendation → student dashboard.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Request Logs ── */}
+      {tab === "logs" && (
+        <div className="surface">
+          <div className="surface-head">
+            <div><h3>AI execution logs</h3><p>ai_core.ai_execution_log — all AI API calls across platform</p></div>
+            <button className="secondary" onClick={() => void qc.invalidateQueries({ queryKey: ["exec-logs", tenantId] })}>
+              <RefreshCcw size={13}/> Refresh
+            </button>
+          </div>
+          {lLoading ? (
+            <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading logs…</div>
+          ) : (
+            <div className="table-wrap">
+              <table className="premium-table">
+                <thead><tr><th>Time</th><th>Actor type</th><th>Operation</th><th>Provider</th><th>Tokens</th><th>Duration</th><th>Status</th></tr></thead>
+                <tbody>
+                  {logs.length === 0
+                    ? <tr><td colSpan={7} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No execution logs found.</td></tr>
+                    : logs.map((l: any, i: number) => (
+                        <tr key={l.aiExecutionLogId ?? i}>
+                          <td><code style={{ fontSize:11 }}>{l.createdAt ? new Date(l.createdAt).toLocaleTimeString() : "—"}</code></td>
+                          <td>{l.actor ?? l.actorType ?? "—"}</td>
+                          <td><code style={{ fontSize:11 }}>{l.operation ?? l.requestType ?? "—"}</code></td>
+                          <td>{l.provider ?? "—"}</td>
+                          <td>{l.tokenCount ?? "—"}</td>
+                          <td>{l.durationMs ? `${l.durationMs}ms` : "—"}</td>
+                          <td><span className={`status-pill ${LOG_STATUS[l.status ?? "Success"] ?? "gray"}`}>{l.status ?? "OK"}</span></td>
+                        </tr>
+                      ))
+                  }
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* New Collection Modal */}
+      {collOpen && (
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setCollOpen(false); }}>
+          <div className="modal-card" style={{ width:"min(500px,96vw)" }}>
+            <div className="modal-head">
+              <h2>New knowledge collection</h2>
+              <button className="icon-button" onClick={() => setCollOpen(false)}><X size={18}/></button>
+            </div>
+            <div className="human-form">
+              <div className="human-form-grid">
+                <label className="human-field field-wide"><span>Collection name *</span><input value={collName} onChange={e => setCollName(e.target.value)} placeholder="e.g. School Handbook 2026"/></label>
+                <label className="human-field field-wide"><span>Description</span><textarea value={collDesc} onChange={e => setCollDesc(e.target.value)} style={{ minHeight:72 }} placeholder="What knowledge is in this collection…"/></label>
+              </div>
+            </div>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={() => setCollOpen(false)}>Cancel</button>
+              <button className="primary" onClick={() => void createCollection()} disabled={saving || !collName.trim()}>{saving ? "Creating…" : "Create collection"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }

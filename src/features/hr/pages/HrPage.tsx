@@ -1,182 +1,214 @@
 import { useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard } from "../../../components/ui/StatCard";
-import { employees as MOCK } from "../../../mocks/data";
+import { StatCard }   from "../../../components/ui/StatCard";
+import { useEmployees, useCreateEmployee } from "../../../core/api/queries";
+import { useAuth } from "../../auth/auth";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-type Employee = typeof MOCK[0] & { cnic?:string; phone?:string; address?:string; dob?:string; gender?:string; qualification?:string; };
+const DEPTS = ["Mathematics","Sciences","Languages","Social Studies","CS","Admin","Finance","HR"];
+const ROLES = ["Teacher","Head of Department","Admin Officer","Accountant","Librarian","Driver","Support Staff"];
 
-const EMPTY: Partial<Employee> = {
-  name:"", employeeNumber:"", role:"Teacher", department:"Mathematics",
-  joinDate:"", leaveBalance:"15 days", status:"Active",
-  cnic:"", phone:"", address:"", dob:"", gender:"Male", qualification:"",
+const EMPTY = {
+  firstName:"", lastName:"", cnicNumber:"", dateOfBirth:"", gender:"Male",
+  email:"", phone:"", role:"Teacher", department:"Mathematics",
+  hireDate:"", employmentTypeCode:"PERMANENT", status:"ACTIVE",
+  qualification:"", address:"",
 };
 
-const DEPTS   = ["Mathematics","Sciences","Languages","Social Studies","CS","Admin","Finance","HR"];
-const ROLES   = ["Teacher","Head of Department","Admin Officer","Accountant","Librarian","Driver","Support Staff"];
-
 export function HrPage() {
-  const [rows, setRows]       = useState<Employee[]>(MOCK);
-  const [q, setQ]             = useState("");
-  const [open, setOpen]       = useState(false);
-  const [editing, setEditing] = useState<Employee|null>(null);
-  const [form, setForm]       = useState<Partial<Employee>>(EMPTY);
-  const [saving, setSaving]   = useState(false);
-  const [tab, setTab]         = useState<"personal"|"employment">("personal");
+  const { user } = useAuth();
+  const tenantId = effectiveTenantId(user);
+  const { data, isLoading, refetch } = useEmployees();
+  const createEmployee = useCreateEmployee();
 
-  const filtered = rows.filter(e =>
-    e.name.toLowerCase().includes(q.toLowerCase()) ||
+  const [q, setQ]           = useState("");
+  const [open, setOpen]     = useState(false);
+  const [tab, setTab]       = useState<"personal"|"employment">("personal");
+  const [form, setForm]     = useState(EMPTY);
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState("");
+
+  const employees = data?.items ?? [];
+  const filtered  = employees.filter(e =>
+    `${e.firstName} ${e.lastName ?? ""}`.toLowerCase().includes(q.toLowerCase()) ||
     e.employeeNumber.toLowerCase().includes(q.toLowerCase())
   );
 
-  function openAdd()            { setEditing(null); setForm(EMPTY); setTab("personal"); setOpen(true); }
-  function openEdit(e: Employee){ setEditing(e); setForm(e); setTab("personal"); setOpen(true); }
-  function remove(e: Employee)  { if(confirm(`Remove "${e.name}"?`)) setRows(p=>p.filter(x=>x.id!==e.id)); }
-  const f = (k: keyof Employee) => (ev: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) =>
-    setForm(p=>({...p,[k]:ev.target.value}));
+  const f = (k: keyof typeof EMPTY) => (ev: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) =>
+    setForm(p => ({ ...p, [k]: ev.target.value }));
 
   async function save() {
-    if(!form.name) return;
-    setSaving(true);
-    await new Promise(r=>setTimeout(r,500));
-    if(editing) {
-      setRows(p=>p.map(x=>x.id===editing.id?{...x,...form} as Employee:x));
-    } else {
-      const num = `EMP-${String(rows.length+1).padStart(3,"0")}`;
-      setRows(p=>[...p,{...EMPTY,...form,id:Date.now().toString(),employeeNumber:num} as Employee]);
+    if (!form.firstName) { setError("First name is required."); return; }
+    setSaving(true); setError("");
+    try {
+      await createEmployee.mutateAsync({
+        tenantId,
+        firstName:          form.firstName.trim(),
+        lastName:           form.lastName.trim() || null,
+        cnicNumber:         form.cnicNumber || null,
+        email:              form.email || null,
+        phone:              form.phone || null,
+        hireDate:           form.hireDate || null,
+        employmentTypeCode: form.employmentTypeCode,
+        status:             form.status,
+        dateOfBirth:        form.dateOfBirth || null,
+        gender:             form.gender,
+      });
+      setOpen(false);
+      void refetch();
+    } catch (err: any) {
+      setError(err?.message ?? "Could not create staff member. Please try again.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false); setOpen(false);
   }
+
+  const STATUS_PILL: Record<string, string> = {
+    ACTIVE:"success", INACTIVE:"gray", TERMINATED:"danger", ON_LEAVE:"warning",
+  };
 
   return (
     <>
       <PageHeader
         title="HR Management"
-        subtitle="Staff records, positions, leave and payroll"
+        subtitle={data ? `${data.totalCount.toLocaleString()} staff records · AY 2025–26` : "Loading…"}
         action={
           <div className="page-actions">
             <button className="secondary">Export</button>
-            <button className="primary" onClick={openAdd}><Plus size={15}/> Add Staff</button>
+            <button className="primary" onClick={() => { setForm(EMPTY); setTab("personal"); setOpen(true); setError(""); }}>
+              <Plus size={15}/> Add staff
+            </button>
           </div>
         }
       />
 
-      <section className="metric-grid" style={{marginBottom:20}}>
-        <StatCard label="Total Staff"    value={String(rows.length)} note="" color="#0F2241" bg="#EEF2FF"><span style={{fontSize:20}}>👥</span></StatCard>
-        <StatCard label="Active"         value={String(rows.filter(e=>e.status==="Active").length)} note="" color="#10B981" bg="#ECFDF5"><span style={{fontSize:20}}>✅</span></StatCard>
-        <StatCard label="On Leave"       value={String(rows.filter(e=>e.status==="On Leave").length)} note="" color="#D97706" bg="#FFFBEB"><span style={{fontSize:20}}>🏖️</span></StatCard>
-        <StatCard label="Payroll Due"    value="Sep 1" note="" color="#2563EB" bg="#EFF6FF"><span style={{fontSize:20}}>💳</span></StatCard>
+      <section className="metric-grid" style={{ marginBottom: 20 }}>
+        <StatCard label="Total staff"  value={isLoading ? "…" : (data?.totalCount ?? 0).toLocaleString()} note="" color="#0F2241" bg="#EEF2FF"><span style={{ fontSize: 20 }}>👥</span></StatCard>
+        <StatCard label="Active"       value={isLoading ? "…" : employees.filter(e => e.status === "ACTIVE").length.toLocaleString()} note="" color="#10B981" bg="#ECFDF5"><span style={{ fontSize: 20 }}>✅</span></StatCard>
+        <StatCard label="On leave"     value={isLoading ? "…" : employees.filter(e => e.status === "ON_LEAVE").length.toLocaleString()} note="" color="#D97706" bg="#FFFBEB"><span style={{ fontSize: 20 }}>🏖️</span></StatCard>
+        <StatCard label="Payroll due"  value="Sep 1" note="" color="#2563EB" bg="#EFF6FF"><span style={{ fontSize: 20 }}>💳</span></StatCard>
       </section>
 
       <div className="surface">
         <div className="surface-head">
-          <label className="search-box" style={{maxWidth:320}}>
+          <label className="search-box" style={{ maxWidth: 320 }}>
             <Search size={14}/>
-            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search staff…"/>
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search staff by name or number…"/>
           </label>
-          <button className="primary" onClick={openAdd}><Plus size={14}/> Add Staff</button>
+          <button className="primary" onClick={() => { setForm(EMPTY); setTab("personal"); setOpen(true); setError(""); }}>
+            <Plus size={14}/> Add staff
+          </button>
         </div>
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead><tr><th>Name</th><th>Employee No.</th><th>Role</th><th>Department</th><th>Join Date</th><th>Leave Balance</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-              {filtered.map(e=>(
-                <tr key={e.id}>
-                  <td>
-                    <div className="person-cell">
-                      <span className="row-avatar" style={{background:"#EEF2FF",color:"#6366F1"}}>
-                        {e.name.split(" ").map((w:string)=>w[0]).join("").slice(0,2)}
-                      </span>
-                      <b>{e.name}</b>
-                    </div>
-                  </td>
-                  <td><code style={{fontSize:11}}>{e.employeeNumber}</code></td>
-                  <td>{e.role}</td>
-                  <td>{e.department}</td>
-                  <td>{e.joinDate}</td>
-                  <td>{e.leaveBalance}</td>
-                  <td><span className={`status-pill ${e.status==="Active"?"success":"warning"}`}>{e.status}</span></td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="table-action" onClick={()=>openEdit(e)}>Edit</button>
-                      <button className="table-action" style={{color:"var(--danger)"}} onClick={()=>remove(e)}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        {isLoading ? (
+          <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading staff…</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead>
+                <tr><th>Name</th><th>Employee No.</th><th>Email</th><th>Hire date</th><th>Type</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>No staff found.</td></tr>
+                ) : filtered.map(e => (
+                  <tr key={e.employeeId}>
+                    <td>
+                      <div className="person-cell">
+                        <span className="row-avatar" style={{ background: "#EEF2FF", color: "#6366F1" }}>
+                          {(e.firstName[0] + (e.lastName?.[0] ?? "")).toUpperCase()}
+                        </span>
+                        <b>{e.firstName} {e.lastName ?? ""}</b>
+                      </div>
+                    </td>
+                    <td><code style={{ fontSize: 11 }}>{e.employeeNumber}</code></td>
+                    <td>{e.email ?? "—"}</td>
+                    <td>{e.hireDate ? new Date(e.hireDate).toLocaleDateString() : "—"}</td>
+                    <td>{e.employmentTypeCode ?? "—"}</td>
+                    <td><span className={`status-pill ${STATUS_PILL[e.status] ?? "gray"}`}>{e.status}</span></td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="table-action">View</button>
+                        <button className="table-action">Edit</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="table-footer">
+          <span>Showing {filtered.length} of {data?.totalCount ?? 0}</span>
         </div>
       </div>
 
-      {/* ── Add / Edit Employee Modal ── */}
+      {/* ── Add Staff Modal ── */}
       {open && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setOpen(false)}}>
-          <div className="modal-card" style={{width:"min(700px,96vw)",maxHeight:"90vh",overflowY:"auto"}}>
-            <div className="modal-head" style={{position:"sticky",top:0,zIndex:1,background:"var(--surface)"}}>
-              <h2>{editing?"Edit Staff Member":"Add Staff Member"}</h2>
-              <button className="icon-button" onClick={()=>setOpen(false)}><X size={18}/></button>
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
+          <div className="modal-card" style={{ width: "min(700px, 96vw)", maxHeight: "90vh", overflowY: "auto" }}>
+            <div className="modal-head" style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--surface)" }}>
+              <h2>Add staff member</h2>
+              <button className="icon-button" onClick={() => setOpen(false)}><X size={18}/></button>
             </div>
-
-            <div className="section-tabs" style={{padding:"12px 20px 0",marginBottom:0,borderBottom:"1px solid var(--line)"}}>
-              {(["personal","employment"] as const).map(t=>(
-                <button key={t} className={tab===t?"active":""} onClick={()=>setTab(t)}>
-                  {t==="personal"?"👤 Personal Info":"💼 Employment"}
+            <div className="section-tabs" style={{ padding: "10px 20px 0", marginBottom: 0, borderBottom: "1px solid var(--line)" }}>
+              {(["personal","employment"] as const).map(t => (
+                <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+                  {t === "personal" ? "👤 Personal info" : "💼 Employment"}
                 </button>
               ))}
             </div>
-
             <div className="human-form">
-              {tab==="personal" && (
+              {tab === "personal" && (
                 <div className="human-form-grid">
-                  <label className="human-field"><span>Full Name *</span><input value={form.name||""} onChange={f("name" as any)}/></label>
-                  <label className="human-field"><span>CNIC</span><input value={form.cnic||""} onChange={f("cnic" as any)} placeholder="XXXXX-XXXXXXX-X"/></label>
-                  <label className="human-field"><span>Date of Birth</span><input type="date" value={form.dob||""} onChange={f("dob" as any)}/></label>
+                  <label className="human-field"><span>First name *</span><input value={form.firstName} onChange={f("firstName")}/></label>
+                  <label className="human-field"><span>Last name</span><input value={form.lastName} onChange={f("lastName")}/></label>
+                  <label className="human-field"><span>CNIC</span><input value={form.cnicNumber} onChange={f("cnicNumber")} placeholder="XXXXX-XXXXXXX-X"/></label>
+                  <label className="human-field"><span>Date of birth</span><input type="date" value={form.dateOfBirth} onChange={f("dateOfBirth")}/></label>
                   <label className="human-field"><span>Gender</span>
-                    <select value={form.gender||"Male"} onChange={f("gender" as any)}>
-                      <option>Male</option><option>Female</option>
-                    </select>
+                    <select value={form.gender} onChange={f("gender")}><option>Male</option><option>Female</option></select>
                   </label>
-                  <label className="human-field"><span>Phone</span><input value={form.phone||""} onChange={f("phone" as any)} placeholder="+92 300 0000000"/></label>
-                  <label className="human-field"><span>Qualification</span><input value={form.qualification||""} onChange={f("qualification" as any)} placeholder="e.g. MSc Mathematics"/></label>
-                  <label className="human-field field-wide"><span>Address</span><textarea value={form.address||""} onChange={f("address" as any)} style={{minHeight:72}}/></label>
+                  <label className="human-field"><span>Phone</span><input value={form.phone} onChange={f("phone")} placeholder="+92 300 0000000"/></label>
+                  <label className="human-field"><span>Email</span><input type="email" value={form.email} onChange={f("email")}/></label>
+                  <label className="human-field"><span>Qualification</span><input value={form.qualification} onChange={f("qualification")} placeholder="e.g. MSc Mathematics"/></label>
                 </div>
               )}
-              {tab==="employment" && (
+              {tab === "employment" && (
                 <div className="human-form-grid">
                   <label className="human-field"><span>Role / Position *</span>
-                    <select value={form.role||"Teacher"} onChange={f("role" as any)}>
-                      {ROLES.map(r=><option key={r}>{r}</option>)}
-                    </select>
+                    <select value={form.role} onChange={f("role")}>{ROLES.map(r => <option key={r}>{r}</option>)}</select>
                   </label>
                   <label className="human-field"><span>Department</span>
-                    <select value={form.department||"Mathematics"} onChange={f("department" as any)}>
-                      {DEPTS.map(d=><option key={d}>{d}</option>)}
+                    <select value={form.department} onChange={f("department")}>{DEPTS.map(d => <option key={d}>{d}</option>)}</select>
+                  </label>
+                  <label className="human-field"><span>Hire date</span><input type="date" value={form.hireDate} onChange={f("hireDate")}/></label>
+                  <label className="human-field"><span>Employment type</span>
+                    <select value={form.employmentTypeCode} onChange={f("employmentTypeCode")}>
+                      <option value="PERMANENT">Permanent</option>
+                      <option value="CONTRACT">Contract</option>
+                      <option value="PART_TIME">Part-time</option>
+                      <option value="VISITING">Visiting</option>
                     </select>
                   </label>
-                  <label className="human-field"><span>Join Date</span><input type="date" value={form.joinDate||""} onChange={f("joinDate" as any)}/></label>
-                  <label className="human-field"><span>Employment Type</span>
-                    <select>
-                      <option>Permanent</option><option>Contract</option><option>Part-time</option>
-                    </select>
-                  </label>
-                  <label className="human-field"><span>Basic Salary (PKR)</span><input type="number" placeholder="50000"/></label>
                   <label className="human-field"><span>Status</span>
-                    <select value={form.status||"Active"} onChange={f("status" as any)}>
-                      <option>Active</option><option>On Leave</option><option>Resigned</option><option>Terminated</option>
+                    <select value={form.status} onChange={f("status")}>
+                      <option value="ACTIVE">Active</option>
+                      <option value="ON_LEAVE">On Leave</option>
+                      <option value="INACTIVE">Inactive</option>
                     </select>
                   </label>
                 </div>
               )}
+              {error && <div style={{ color: "var(--text-danger)", fontSize: 12, marginTop: 4 }}>{error}</div>}
             </div>
-
-            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              {tab==="employment" && <button className="secondary" onClick={()=>setTab("personal")}>← Back</button>}
-              <div style={{flex:1}}/>
-              <button className="secondary" onClick={()=>setOpen(false)}>Cancel</button>
-              {tab==="personal"
-                ? <button className="primary" onClick={()=>setTab("employment")}>Next →</button>
-                : <button className="primary" onClick={save} disabled={saving||!form.name}>{saving?"Saving…":"Save Staff"}</button>
+            <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
+              {tab === "employment" && <button className="secondary" onClick={() => setTab("personal")}>← Back</button>}
+              <div style={{ flex: 1 }} />
+              <button className="secondary" onClick={() => setOpen(false)}>Cancel</button>
+              {tab === "personal"
+                ? <button className="primary" onClick={() => setTab("employment")}>Next →</button>
+                : <button className="primary" onClick={() => void save()} disabled={saving || !form.firstName}>{saving ? "Saving…" : "Save staff"}</button>
               }
             </div>
           </div>

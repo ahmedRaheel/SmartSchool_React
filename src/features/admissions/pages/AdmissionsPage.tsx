@@ -1,155 +1,204 @@
 import { useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard } from "../../../components/ui/StatCard";
-
-interface Application {
-  id: string; appNo: string; name: string; grade: string; guardian: string;
-  phone: string; source: string; date: string; score: string; status: string;
-}
-
-const MOCK: Application[] = [
-  { id:"1", appNo:"APP-2026-001", name:"Hassan Ali",   grade:"Grade 6",  guardian:"Mr. Ali",   phone:"0300-1234567", source:"Walk-In",  date:"Aug 20", score:"—",   status:"Review"   },
-  { id:"2", appNo:"APP-2026-002", name:"Mariam Shah",  grade:"Grade 9",  guardian:"Dr. Shah",  phone:"0301-2345678", source:"Website",  date:"Aug 18", score:"88%", status:"Approved" },
-  { id:"3", appNo:"APP-2026-003", name:"Usman Butt",   grade:"Grade 7",  guardian:"Mrs. Butt", phone:"0302-3456789", source:"Referral", date:"Aug 15", score:"72%", status:"Approved" },
-  { id:"4", appNo:"APP-2026-004", name:"Safia Noor",   grade:"Grade 11", guardian:"Mr. Noor",  phone:"0303-4567890", source:"Walk-In",  date:"Aug 12", score:"61%", status:"Rejected" },
-  { id:"5", appNo:"APP-2026-005", name:"Ali Cheema",   grade:"Grade 8",  guardian:"Mrs. Cheema",phone:"0304-5678901",source:"Website", date:"Aug 10", score:"—",   status:"Test Scheduled"},
-];
+import { StatCard }   from "../../../components/ui/StatCard";
+import { useAdmissions, useCreateAdmission } from "../../../core/api/queries";
+import { useAuth } from "../../auth/auth";
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import type { Admission } from "../../../core/api/smartschoolApi";
 
 const GRADES   = ["Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"];
-const SOURCES  = ["Walk-In","Website","Referral","AI Chatbot","Social Media"];
-const STATUSES = ["Review","Test Scheduled","Approved","Rejected","Enrolled"];
-const EMPTY = { name:"",grade:"Grade 9",guardian:"",phone:"",source:"Walk-In",score:"",status:"Review",date:"" };
+const SOURCES  = ["Walk-In","Website","Referral","AI Chatbot","Social Media","Phone"];
+const STATUSES = ["NEW","UNDER_REVIEW","TEST_SCHEDULED","APPROVED","REJECTED","ENROLLED","WITHDRAWN"];
+
+const STATUS_LABEL: Record<string,string> = {
+  NEW:"New", UNDER_REVIEW:"Under Review", TEST_SCHEDULED:"Test Scheduled",
+  APPROVED:"Approved", REJECTED:"Rejected", ENROLLED:"Enrolled", WITHDRAWN:"Withdrawn",
+};
+const STATUS_PILL: Record<string,string> = {
+  NEW:"warning", UNDER_REVIEW:"info", TEST_SCHEDULED:"info",
+  APPROVED:"success", REJECTED:"danger", ENROLLED:"purple", WITHDRAWN:"gray",
+};
+
+const EMPTY = {
+  applicantFirstName:"", applicantLastName:"", guardianName:"", guardianPhone:"",
+  guardianEmail:"", gradeApplied:"Grade 9", sourceOfInquiry:"Walk-In",
+  status:"NEW", notes:"",
+};
 
 export function AdmissionsPage() {
-  const [rows, setRows]       = useState<Application[]>(MOCK);
+  const { user } = useAuth();
+  const tenantId = effectiveTenantId(user);
+  const { data, isLoading, refetch } = useAdmissions();
+  const createAdmission = useCreateAdmission();
+
   const [q, setQ]             = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [open, setOpen]       = useState(false);
-  const [editing, setEditing] = useState<Application|null>(null);
   const [form, setForm]       = useState(EMPTY);
   const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState("");
 
-  const filtered = rows.filter(r =>
-    (statusFilter === "All" || r.status === statusFilter) &&
-    (r.name.toLowerCase().includes(q.toLowerCase()) || r.appNo.includes(q))
+  const admissions = data?.items ?? [];
+  const filtered   = admissions.filter(a =>
+    (statusFilter === "ALL" || a.status === statusFilter) &&
+    (`${a.applicantFirstName} ${a.applicantLastName ?? ""}`.toLowerCase().includes(q.toLowerCase()))
   );
 
-  function openAdd()           { setEditing(null); setForm(EMPTY); setOpen(true); }
-  function openEdit(r: Application){ setEditing(r); setForm(r); setOpen(true); }
-  function remove(r: Application)  { if(confirm(`Delete application from "${r.name}"?`)) setRows(p=>p.filter(x=>x.id!==r.id)); }
-  const f = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
-    setForm(p=>({...p,[k]:e.target.value}));
+  const f = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) =>
+    setForm(p => ({ ...p, [k]: e.target.value }));
 
   async function save() {
-    if(!form.name||!form.grade||!form.guardian) return;
-    setSaving(true);
-    await new Promise(r=>setTimeout(r,500));
-    if(editing) {
-      setRows(p=>p.map(x=>x.id===editing.id?{...x,...form}:x));
-    } else {
-      const appNo = `APP-${new Date().getFullYear()}-${String(rows.length+1).padStart(3,"0")}`;
-      setRows(p=>[...p,{...form,id:Date.now().toString(),appNo,date:new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short"})}]);
+    if (!form.applicantFirstName || !form.guardianName) {
+      setError("Applicant name and guardian name are required.");
+      return;
     }
-    setSaving(false); setOpen(false);
+    setSaving(true); setError("");
+    try {
+      await createAdmission.mutateAsync({
+        tenantId,
+        applicantFirstName: form.applicantFirstName.trim(),
+        applicantLastName:  form.applicantLastName.trim() || null,
+        guardianName:       form.guardianName.trim(),
+        guardianPhone:      form.guardianPhone || null,
+        guardianEmail:      form.guardianEmail || null,
+        gradeApplied:       form.gradeApplied,
+        sourceOfInquiry:    form.sourceOfInquiry,
+        status:             form.status,
+        notes:              form.notes || null,
+      });
+      setOpen(false);
+      void refetch();
+    } catch (err: any) {
+      setError(err?.message ?? "Could not create application. Please try again.");
+    } finally { setSaving(false); }
   }
 
-  const statusColors: Record<string,string> = {
-    "Review":"warning","Test Scheduled":"info","Approved":"success","Rejected":"danger","Enrolled":"purple"
+  const counts = {
+    approved:  admissions.filter(a => a.status === "APPROVED").length,
+    pending:   admissions.filter(a => ["NEW","UNDER_REVIEW","TEST_SCHEDULED"].includes(a.status)).length,
+    rejected:  admissions.filter(a => a.status === "REJECTED").length,
+    enrolled:  admissions.filter(a => a.status === "ENROLLED").length,
   };
 
   return (
     <>
       <PageHeader
         title="Admissions"
-        subtitle="Inquiry → application → test → decision → enrolment"
-        action={<div className="page-actions"><button className="primary" onClick={openAdd}><Plus size={15}/> New Application</button></div>}
+        subtitle="Inquiry → application → test → approval → enrolment pipeline"
+        action={
+          <div className="page-actions">
+            <button className="primary" onClick={() => { setForm(EMPTY); setOpen(true); setError(""); }}>
+              <Plus size={15}/> New application
+            </button>
+          </div>
+        }
       />
 
-      <section className="metric-grid" style={{marginBottom:20}}>
-        <StatCard label="Total Applications" value={String(rows.length)} note="This cycle" color="#2563EB" bg="#EFF6FF"><span style={{fontSize:20}}>📋</span></StatCard>
-        <StatCard label="Approved"  value={String(rows.filter(r=>r.status==="Approved").length)}  note="" color="#10B981" bg="#ECFDF5"><span style={{fontSize:20}}>✅</span></StatCard>
-        <StatCard label="Pending"   value={String(rows.filter(r=>["Review","Test Scheduled"].includes(r.status)).length)} note="" color="#D97706" bg="#FFFBEB"><span style={{fontSize:20}}>⏳</span></StatCard>
-        <StatCard label="Rejected"  value={String(rows.filter(r=>r.status==="Rejected").length)} note="" color="#EF4444" bg="#FFF0F1"><span style={{fontSize:20}}>❌</span></StatCard>
+      <section className="metric-grid" style={{ marginBottom: 20 }}>
+        <StatCard label="Total applications" value={String(admissions.length)}  note="This cycle"  color="#2563EB" bg="#EFF6FF"><span style={{fontSize:20}}>📋</span></StatCard>
+        <StatCard label="Approved"           value={String(counts.approved)}    note=""            color="#10B981" bg="#ECFDF5"><span style={{fontSize:20}}>✅</span></StatCard>
+        <StatCard label="Pending review"     value={String(counts.pending)}     note=""            color="#D97706" bg="#FFFBEB"><span style={{fontSize:20}}>⏳</span></StatCard>
+        <StatCard label="Enrolled"           value={String(counts.enrolled)}    note="Completed"   color="#8B5CF6" bg="#F5F3FF"><span style={{fontSize:20}}>🎓</span></StatCard>
       </section>
 
       <div className="surface">
         <div className="surface-head">
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            <label className="search-box" style={{maxWidth:260}}>
+          <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+            <label className="search-box" style={{ maxWidth:260 }}>
               <Search size={14}/>
-              <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search applicant…"/>
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search applicant…"/>
             </label>
-            <select style={{height:36,padding:"0 12px",border:"1.5px solid var(--line)",borderRadius:8,background:"var(--surface)",fontSize:12}}
-              value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-              <option value="All">All Statuses</option>
-              {STATUSES.map(s=><option key={s}>{s}</option>)}
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              style={{ height:36, padding:"0 12px", border:"1.5px solid var(--line)", borderRadius:8, background:"var(--surface)", fontSize:12 }}
+            >
+              <option value="ALL">All statuses</option>
+              {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
           </div>
-          <button className="primary" onClick={openAdd}><Plus size={14}/> New Application</button>
+          <button className="primary" onClick={() => { setForm(EMPTY); setOpen(true); setError(""); }}>
+            <Plus size={14}/> New application
+          </button>
         </div>
 
-        <div className="table-wrap">
-          <table className="premium-table">
-            <thead><tr><th>App No.</th><th>Applicant</th><th>Grade</th><th>Guardian</th><th>Source</th><th>Date</th><th>Test Score</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-              {filtered.map(r=>(
-                <tr key={r.id}>
-                  <td><code style={{fontSize:11}}>{r.appNo}</code></td>
-                  <td>
-                    <div className="person-cell">
-                      <span className="row-avatar" style={{background:"#EFF6FF",color:"#2563EB"}}>{r.name.split(" ").map((w:string)=>w[0]).join("")}</span>
-                      <b>{r.name}</b>
-                    </div>
-                  </td>
-                  <td>{r.grade}</td>
-                  <td>{r.guardian}<small>{r.phone}</small></td>
-                  <td>{r.source}</td>
-                  <td>{r.date}</td>
-                  <td><b>{r.score||"—"}</b></td>
-                  <td><span className={`status-pill ${statusColors[r.status]||"gray"}`}>{r.status}</span></td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="table-action" onClick={()=>openEdit(r)}>Edit</button>
-                      {r.status==="Approved" && <button className="table-action" style={{color:"var(--success)"}}>Enroll</button>}
-                      <button className="table-action" style={{color:"var(--danger)"}} onClick={()=>remove(r)}>Delete</button>
-                    </div>
-                  </td>
+        {isLoading ? (
+          <div style={{ padding:40, textAlign:"center", color:"var(--text-muted)" }}>Loading applications…</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead>
+                <tr>
+                  <th>Applicant</th><th>Grade applied</th><th>Guardian</th>
+                  <th>Source</th><th>Inquiry date</th><th>Status</th><th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="table-footer"><span>Showing {filtered.length} of {rows.length}</span></div>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign:"center", padding:30, color:"var(--text-muted)" }}>No applications found.</td></tr>
+                ) : filtered.map(a => (
+                  <tr key={a.admissionInquiryId}>
+                    <td>
+                      <div className="person-cell">
+                        <span className="row-avatar" style={{ background:"#EFF6FF", color:"#2563EB" }}>
+                          {(a.applicantFirstName[0] + (a.applicantLastName?.[0] ?? "")).toUpperCase()}
+                        </span>
+                        <b>{a.applicantFirstName} {a.applicantLastName ?? ""}</b>
+                      </div>
+                    </td>
+                    <td>{a.gradeApplied ?? "—"}</td>
+                    <td>{a.guardianName ?? "—"}</td>
+                    <td>{a.source ?? "—"}</td>
+                    <td>{new Date(a.inquiryDate).toLocaleDateString()}</td>
+                    <td><span className={`status-pill ${STATUS_PILL[a.status] ?? "gray"}`}>{STATUS_LABEL[a.status] ?? a.status}</span></td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="table-action">View</button>
+                        {a.status === "APPROVED" && <button className="table-action" style={{ color:"var(--text-success)" }}>Enroll</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="table-footer"><span>Showing {filtered.length} of {admissions.length}</span></div>
       </div>
 
       {open && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setOpen(false)}}>
-          <div className="modal-card" style={{width:"min(680px,96vw)"}}>
-            <div className="modal-head">
-              <h2>{editing?"Edit Application":"New Admission Application"}</h2>
-              <button className="icon-button" onClick={()=>setOpen(false)}><X size={18}/></button>
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
+          <div className="modal-card" style={{ width:"min(680px,96vw)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div className="modal-head" style={{ position:"sticky", top:0, zIndex:1, background:"var(--surface)" }}>
+              <h2>New admission application</h2>
+              <button className="icon-button" onClick={() => setOpen(false)}><X size={18}/></button>
             </div>
             <div className="human-form">
               <div className="human-form-grid">
-                <label className="human-field"><span>Applicant Name *</span><input value={form.name} onChange={f("name")} placeholder="Child full name"/></label>
-                <label className="human-field"><span>Grade Applying For *</span>
-                  <select value={form.grade} onChange={f("grade")}>{GRADES.map(g=><option key={g}>{g}</option>)}</select>
-                </label>
-                <label className="human-field"><span>Guardian Name *</span><input value={form.guardian} onChange={f("guardian")}/></label>
-                <label className="human-field"><span>Guardian Phone</span><input value={form.phone} onChange={f("phone")} placeholder="+92 300 0000000"/></label>
-                <label className="human-field"><span>Inquiry Source</span>
-                  <select value={form.source} onChange={f("source")}>{SOURCES.map(s=><option key={s}>{s}</option>)}</select>
+                <label className="human-field"><span>First name *</span><input value={form.applicantFirstName} onChange={f("applicantFirstName")} placeholder="Child's first name"/></label>
+                <label className="human-field"><span>Last name</span><input value={form.applicantLastName} onChange={f("applicantLastName")}/></label>
+                <label className="human-field"><span>Grade applying for *</span>
+                  <select value={form.gradeApplied} onChange={f("gradeApplied")}>{GRADES.map(g => <option key={g}>{g}</option>)}</select>
                 </label>
                 <label className="human-field"><span>Status</span>
-                  <select value={form.status} onChange={f("status")}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select>
+                  <select value={form.status} onChange={f("status")}>{STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}</select>
                 </label>
-                <label className="human-field"><span>Test Score (%)</span><input value={form.score} onChange={f("score")} placeholder="Leave blank if not taken"/></label>
+                <label className="human-field"><span>Guardian name *</span><input value={form.guardianName} onChange={f("guardianName")}/></label>
+                <label className="human-field"><span>Guardian phone</span><input value={form.guardianPhone} onChange={f("guardianPhone")} placeholder="+92 300 0000000"/></label>
+                <label className="human-field"><span>Guardian email</span><input type="email" value={form.guardianEmail} onChange={f("guardianEmail")}/></label>
+                <label className="human-field"><span>Source of inquiry</span>
+                  <select value={form.sourceOfInquiry} onChange={f("sourceOfInquiry")}>{SOURCES.map(s => <option key={s}>{s}</option>)}</select>
+                </label>
+                <label className="human-field field-wide"><span>Notes</span><textarea value={form.notes} onChange={f("notes")} style={{ minHeight:72 }} placeholder="Any additional information…"/></label>
               </div>
+              {error && <div style={{ color:"var(--text-danger)", fontSize:12 }}>{error}</div>}
             </div>
-            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              <button className="secondary" onClick={()=>setOpen(false)}>Cancel</button>
-              <button className="primary" onClick={save} disabled={saving||!form.name||!form.guardian}>{saving?"Saving…":"Save Application"}</button>
+            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
+              <button className="secondary" onClick={() => setOpen(false)}>Cancel</button>
+              <button className="primary" onClick={() => void save()} disabled={saving || !form.applicantFirstName || !form.guardianName}>
+                {saving ? "Saving…" : "Save application"}
+              </button>
             </div>
           </div>
         </div>

@@ -1,10 +1,45 @@
-import { BadgeCheck, Building2, Mail, MapPin, ShieldCheck, UserRound } from "lucide-react";
-import { PageHeader } from "../../../components/ui/PageHeader";
 import { useAuth } from "../../auth/auth";
+import { PageHeader } from "../../../components/ui/PageHeader";
 
 export function ProfilesPage() {
   const { user } = useAuth();
   if (!user) return null;
-  const actorNumber = user.studentId ? "Student profile" : user.teacherId ? "Teacher profile" : user.driverId ? "Driver profile" : user.examinerId ? "Examiner profile" : user.employeeId ? "Employee profile" : "Platform account";
-  return <div className="page-stack"><PageHeader title="My profile" subtitle="Your authenticated SmartSchool account and organizational context"/><section className="profile-hero"><span className="profile-avatar-xl">{user.initials}</span><div><span className="eyebrow">{actorNumber}</span><h2>{user.name}</h2><p><Mail size={15}/>{user.email}</p><div className="profile-badges"><span><ShieldCheck size={14}/>{user.role}</span>{user.impersonated && <span><BadgeCheck size={14}/>Support session</span>}</div></div></section><section className="profile-info-grid"><article><span className="profile-info-icon"><UserRound/></span><div><small>Account type</small><b>{user.accountType || "SmartSchool user"}</b><p>Your access is controlled by assigned roles and permissions.</p></div></article><article><span className="profile-info-icon"><Building2/></span><div><small>School context</small><b>{user.school || "Assigned school"}</b><p>{user.schoolId ? "School assigned to this account" : "Platform-level account"}</p></div></article><article><span className="profile-info-icon"><MapPin/></span><div><small>Branch context</small><b>{user.branchId ? "Assigned branch" : "All authorized branches"}</b><p>Branch scope is taken securely from your access token.</p></div></article><article><span className="profile-info-icon"><ShieldCheck/></span><div><small>Access roles</small><b>{user.roles.join(", ") || user.role}</b><p>Identity and business context are managed by SmartSchool.</p></div></article></section><section className="surface profile-security-note"><div><h3>Security & identity</h3><p>Internal database identifiers are intentionally hidden. Tenant, school, branch and actor scope are resolved from your authenticated session and are not editable here.</p></div></section></div>;
+
+  const fields = [
+    ["Name",        user.name],
+    ["Email",       user.email],
+    ["Role",        user.role],
+    ["Account type",user.accountType],
+    ["Tenant ID",   user.tenantId ?? "—"],
+    ["School ID",   user.schoolId ?? "—"],
+    ["Student ID",  user.studentId ?? "—"],
+    ["Employee ID", user.employeeId ?? "—"],
+    ["Driver ID",   user.driverId ?? "—"],
+  ].filter(([,v]) => v && v !== "—");
+
+  return (
+    <>
+      <PageHeader title="My Profile" subtitle="Account details and settings"/>
+      <div className="surface" style={{ maxWidth:640, padding:24 }}>
+        <div style={{ display:"flex", gap:16, alignItems:"center", marginBottom:24, paddingBottom:20, borderBottom:"1px solid var(--line)" }}>
+          <div style={{ width:60, height:60, borderRadius:16, background:"var(--navy)", color:"#fff", display:"grid", placeItems:"center", fontSize:22, fontWeight:700, flexShrink:0 }}>
+            {user.initials || user.name?.slice(0,2).toUpperCase()}
+          </div>
+          <div>
+            <h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>{user.name}</h2>
+            <div style={{ fontSize:12, color:"var(--muted)", marginTop:4 }}>{user.email}</div>
+            <span className="status-pill info" style={{ marginTop:6, display:"inline-block" }}>{user.role}</span>
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {fields.map(([l,v]) => (
+            <div key={l as string} style={{ padding:"12px 14px", border:"0.5px solid var(--line)", borderRadius:10, background:"var(--surface-2)" }}>
+              <div style={{ fontSize:10, color:"var(--muted)", fontWeight:700, textTransform:"uppercase", letterSpacing:.7, marginBottom:4 }}>{l}</div>
+              <div style={{ fontSize:13, fontWeight:500, overflow:"hidden", textOverflow:"ellipsis" }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
 }
