@@ -373,3 +373,8 @@ export function useCreateTeacherAssignment(eid: string) {
 export function useApplyTeacherLeave(eid: string) {
   return useMutation({ mutationFn: (b: object) => A.applyTeacherLeave(eid, b) });
 }
+
+export function useCreateRoute() {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn: (b: object) => A.createRoute(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["routes",tid] }) });
+}

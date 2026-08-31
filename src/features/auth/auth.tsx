@@ -214,6 +214,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const email = credentials.email.trim();
     if (!email || !credentials.password)
       return { success: false, message: "Email and password are required." };
+
+    // ── MOCK MODE: bypass identity server, create session from email ───────
+    if (env.useMocks) {
+      const MOCK_ROLES: Record<string, Partial<SessionUser>> = {
+        "superadmin@smartschool.local": { role:"SuperAdmin",   roles:["SuperAdmin"],  name:"Platform Admin",  accountType:"SuperAdmin",  school:"SmartSchool Platform" },
+        "owner@alnoor.edu.pk":          { role:"Tenant",       roles:["Tenant"],      name:"School Owner",    accountType:"Tenant",      school:"Al-Noor Academy" },
+        "principal@alnoor.edu.pk":      { role:"Principal",    roles:["Principal"],   name:"Principal",       accountType:"Principal",   school:"Al-Noor Academy" },
+        "admin@alnoor.edu.pk":          { role:"Admin",        roles:["Admin"],       name:"Admin Officer",   accountType:"Admin",       school:"Al-Noor Academy" },
+        "teacher@alnoor.edu.pk":        { role:"Teacher",      roles:["Teacher"],     name:"Aisha Siddiqui",  accountType:"Employee",    school:"Al-Noor Academy", employeeId:"33333333-3333-3333-3333-333333333333" },
+        "student@alnoor.edu.pk":        { role:"Student",      roles:["Student"],     name:"Ahmed Hassan",    accountType:"Student",     school:"Al-Noor Academy", studentId:"22222222-2222-2222-2222-222222222222" },
+        "parent@alnoor.edu.pk":         { role:"Parent",       roles:["Parent"],      name:"Ali Hassan",      accountType:"Guardian",    school:"Al-Noor Academy", businessEntityId:"44444444-4444-4444-4444-444444444444" },
+        "driver@alnoor.edu.pk":         { role:"Driver",       roles:["Driver"],      name:"Arif Khan",       accountType:"Employee",    school:"Al-Noor Academy", driverId:"55555555-5555-5555-5555-555555555555" },
+      };
+      const mock = MOCK_ROLES[email] ?? { role:"Admin", roles:["Admin"], name:email.split("@")[0], accountType:"Admin", school:"School" };
+      const mockUser: SessionUser = {
+        id: "mock-" + email,
+        tenantId: "11111111-1111-1111-1111-111111111111",
+        email,
+        initials: (mock.name ?? email).split(" ").map((w:string) => w[0]).join("").slice(0,2).toUpperCase(),
+        mustChangePassword: false,
+        impersonated: false,
+        impersonatorSubject: null,
+        schoolId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        branchId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        ...mock,
+      } as SessionUser;
+      persistSession("mock_access_token_" + Date.now(), mockUser);
+      return { success: true };
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     clearAuthenticationState();
     setUser(null);
     const body = new URLSearchParams({
