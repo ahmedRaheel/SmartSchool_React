@@ -1,380 +1,178 @@
 /**
  * TanStack Query hooks — all route through apiAdapter.
- * Toggle VITE_USE_MOCKS in .env to switch between mock and real API.
- * Zero code changes needed in pages.
+ * VITE_USE_MOCKS toggle requires zero hook changes.
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as A from "./apiAdapter";
 import { useAuth } from "../../features/auth/auth";
 import { effectiveTenantId } from "../tenant/tenantContext";
 
-function useTid() {
-  const { user } = useAuth();
-  return effectiveTenantId(user) ?? "";
-}
+function useTid() { const { user } = useAuth(); return effectiveTenantId(user) ?? ""; }
 
-// ─── Dashboard ──────────────────────────────────────────────────────────────
-export function useAdminDashboard() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["dashboard","admin",tid], queryFn: () => A.adminDashboard(tid), staleTime: 60_000 });
-}
-export function useStudentDashboard(sid?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = sid ?? user?.studentId ?? "";
-  return useQuery({ queryKey: ["dashboard","student",id], queryFn: () => A.studentDashboard(id, tid), enabled: !!id });
-}
-export function useTeacherDashboard(eid?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = eid ?? user?.employeeId ?? "";
-  return useQuery({ queryKey: ["dashboard","teacher",id], queryFn: () => A.teacherDashboard(id, tid), enabled: !!id });
-}
-export function useParentDashboard(gid?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = gid ?? user?.businessEntityId ?? "";
-  return useQuery({ queryKey: ["dashboard","parent",id], queryFn: () => A.parentDashboard(id, tid), enabled: !!id });
-}
-export function useDriverDashboard(did?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = did ?? user?.driverId ?? "";
-  return useQuery({ queryKey: ["dashboard","driver",id], queryFn: () => A.driverDashboard(id, tid), enabled: !!id });
-}
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+export const useAdminDashboard   = () => { const tid=useTid(); return useQuery({ queryKey:["dash","admin",tid],   queryFn:()=>A.adminDashboard(tid),   staleTime:60_000 }); };
+export const useStudentDashboard = (sid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=sid??user?.studentId??""; return useQuery({ queryKey:["dash","student",id], queryFn:()=>A.studentDashboard(id,tid), enabled:!!id }); };
+export const useTeacherDashboard = (eid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=eid??user?.employeeId??""; return useQuery({ queryKey:["dash","teacher",id], queryFn:()=>A.teacherDashboard(id,tid), enabled:!!id }); };
+export const useParentDashboard  = (gid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=gid??user?.businessEntityId??""; return useQuery({ queryKey:["dash","parent",id], queryFn:()=>A.parentDashboard(id,tid), enabled:!!id }); };
+export const useDriverDashboard  = (did?:string) => { const {user}=useAuth(); const tid=useTid(); const id=did??user?.driverId??""; return useQuery({ queryKey:["dash","driver",id], queryFn:()=>A.driverDashboard(id,tid), enabled:!!id }); };
 
-// ─── Students ───────────────────────────────────────────────────────────────
-export function useStudents(page = 1) {
-  const tid = useTid();
-  return useQuery({ queryKey: ["students",tid,page], queryFn: () => A.getStudentsPage(tid, page) });
-}
-export function useCreateStudent() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createStudent(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["students",tid] }) });
-}
-export function useApproveStudent() {
-  return useMutation({ mutationFn: ({ id, body }: { id: string; body: object }) => A.approveStudent(id, body) });
-}
+// ── Students ──────────────────────────────────────────────────────────────────
+export const useStudents        = (page=1) => { const tid=useTid(); return useQuery({ queryKey:["students",tid,page], queryFn:()=>A.getStudentsPage(tid,page) }); };
+export const useCreateStudent   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createStudent(b), onSuccess:()=>qc.invalidateQueries({queryKey:["students",tid]}) }); };
+export const useApproveStudent  = () => useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.approveStudent(id,body) });
+export const useEnrollments     = (studentId?:string) => { const tid=useTid(); return useQuery({ queryKey:["enrollments",tid,studentId], queryFn:()=>A.getEnrollments(tid,studentId), enabled:!!tid }); };
+export const useCreateEnrollment= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createEnrollment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["enrollments",tid]}) }); };
+export const useCreateGuardian  = () => useMutation({ mutationFn:(b:object)=>A.createGuardian(b) });
 
-// ─── HR ─────────────────────────────────────────────────────────────────────
-export function useEmployees(page = 1) {
-  const tid = useTid();
-  return useQuery({ queryKey: ["employees",tid,page], queryFn: () => A.getEmployeesPage(tid, page) });
-}
-export function useCreateEmployee() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createEmployee(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["employees",tid] }) });
-}
+// ── HR ───────────────────────────────────────────────────────────────────────
+export const useEmployees       = (page=1) => { const tid=useTid(); return useQuery({ queryKey:["employees",tid,page], queryFn:()=>A.getEmployeesPage(tid,page) }); };
+export const useCreateEmployee  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createEmployee(b), onSuccess:()=>qc.invalidateQueries({queryKey:["employees",tid]}) }); };
+export const useLeaveRequests   = () => { const tid=useTid(); return useQuery({ queryKey:["leave-requests",tid], queryFn:()=>A.getLeaveRequests(tid) }); };
+export const useCreateLeaveRequest=()=> { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createLeaveRequest(b), onSuccess:()=>qc.invalidateQueries({queryKey:["leave-requests",tid]}) }); };
 
-// ─── Finance ────────────────────────────────────────────────────────────────
-export function useInvoices(page = 1) {
-  const tid = useTid();
-  return useQuery({ queryKey: ["invoices",tid,page], queryFn: () => A.getInvoicesPage(tid, page) });
-}
-export function useCreateInvoice() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createInvoice(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices",tid] }) });
-}
-export function useCreatePayment() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createPayment(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices",tid] }) });
-}
-export function useFeeTypes() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["fee-types",tid], queryFn: () => A.getFeeTypes(tid) });
-}
-export function useCreateFeeType() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createFeeType(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["fee-types",tid] }) });
-}
-export function useFeeStructure() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["fee-structure",tid], queryFn: () => A.getFeeStructure(tid) });
-}
-export function useCreateFeeStructure() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createFeeStructure(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["fee-structure",tid] }) });
-}
+// ── Finance ───────────────────────────────────────────────────────────────────
+export const useInvoices        = (page=1) => { const tid=useTid(); return useQuery({ queryKey:["invoices",tid,page], queryFn:()=>A.getInvoicesPage(tid,page) }); };
+export const useCreateInvoice   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createInvoice(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
+export const useCreatePayment   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
+export const useFeeTypes        = () => { const tid=useTid(); return useQuery({ queryKey:["fee-types",tid], queryFn:()=>A.getFeeTypes(tid) }); };
+export const useCreateFeeType   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createFeeType(b), onSuccess:()=>qc.invalidateQueries({queryKey:["fee-types",tid]}) }); };
+export const useFeeStructure    = () => { const tid=useTid(); return useQuery({ queryKey:["fee-structure",tid], queryFn:()=>A.getFeeStructure(tid) }); };
+export const useCreateFeeStructure=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createFeeStructure(b), onSuccess:()=>qc.invalidateQueries({queryKey:["fee-structure",tid]}) }); };
 
-// ─── Admissions ─────────────────────────────────────────────────────────────
-export function useInquiries(page = 1) {
-  const tid = useTid();
-  return useQuery({ queryKey: ["inquiries",tid,page], queryFn: () => A.getInquiriesPage(tid, page) });
-}
-export function useCreateInquiry() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createInquiry(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["inquiries",tid] }) });
-}
-export function useUpdateInquiry() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: ({ id, body }: { id: string; body: object }) => A.updateInquiry(id, body), onSuccess: () => qc.invalidateQueries({ queryKey: ["inquiries",tid] }) });
-}
+// ── Admissions ────────────────────────────────────────────────────────────────
+export const useInquiries       = (page=1) => { const tid=useTid(); return useQuery({ queryKey:["inquiries",tid,page], queryFn:()=>A.getInquiriesPage(tid,page) }); };
+export const useCreateInquiry   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createInquiry(b), onSuccess:()=>qc.invalidateQueries({queryKey:["inquiries",tid]}) }); };
+export const useUpdateInquiry   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateInquiry(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["inquiries",tid]}) }); };
 
-// ─── Organization ───────────────────────────────────────────────────────────
-export function useSchools() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["schools",tid], queryFn: () => A.getSchools(tid) });
-}
-export function useCreateSchool() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createSchool(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["schools",tid] }) });
-}
-export function useCampuses() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["campuses",tid], queryFn: () => A.getCampuses(tid) });
-}
-export function useCreateCampus() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createCampus(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["campuses",tid] }) });
-}
-export function useDepartments() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["departments",tid], queryFn: () => A.getDepartments(tid) });
-}
-export function useCreateDepartment() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createDepartment(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["departments",tid] }) });
-}
-export function useDeleteDepartment() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (id: string) => A.deleteDepartment(id, tid), onSuccess: () => qc.invalidateQueries({ queryKey: ["departments",tid] }) });
-}
-export function useBranchGenderTypes() {
-  return useQuery({ queryKey: ["branch-gender-types"], queryFn: () => A.getBranchGenderTypes(), staleTime: 3_600_000 });
-}
-export function useEducationLevels() {
-  return useQuery({ queryKey: ["education-levels"], queryFn: () => A.getEducationLevels(), staleTime: 3_600_000 });
-}
+// ── Organization ──────────────────────────────────────────────────────────────
+export const useSchools         = () => { const tid=useTid(); return useQuery({ queryKey:["schools",tid], queryFn:()=>A.getSchools(tid) }); };
+export const useCreateSchool    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createSchool(b), onSuccess:()=>qc.invalidateQueries({queryKey:["schools",tid]}) }); };
+export const useUpdateSchool    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateSchool(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["schools",tid]}) }); };
+export const useCampuses        = () => { const tid=useTid(); return useQuery({ queryKey:["campuses",tid], queryFn:()=>A.getCampuses(tid) }); };
+export const useCreateCampus    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createCampus(b), onSuccess:()=>qc.invalidateQueries({queryKey:["campuses",tid]}) }); };
+export const useUpdateCampus    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateCampus(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["campuses",tid]}) }); };
+export const useDepartments     = () => { const tid=useTid(); return useQuery({ queryKey:["departments",tid], queryFn:()=>A.getDepartments(tid) }); };
+export const useCreateDepartment= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createDepartment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["departments",tid]}) }); };
+export const useDeleteDepartment= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteDepartment(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["departments",tid]}) }); };
+export const useBranchGenderTypes=()=> useQuery({ queryKey:["branch-gender-types"], queryFn:A.getBranchGenderTypes, staleTime:3_600_000 });
+export const useEducationLevels = ()=> useQuery({ queryKey:["education-levels"],    queryFn:A.getEducationLevels,    staleTime:3_600_000 });
 
-// ─── Academics ──────────────────────────────────────────────────────────────
-export function useAcademicYears(campusId?: string) {
-  const tid = useTid();
-  return useQuery({ queryKey: ["academic-years",tid,campusId], queryFn: () => A.getAcademicYears(tid, campusId) });
-}
-export function useCreateAcademicYear() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createAcademicYear(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["academic-years",tid] }) });
-}
-export function useDeleteAcademicYear() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (id: string) => A.deleteAcademicYear(id, tid), onSuccess: () => qc.invalidateQueries({ queryKey: ["academic-years",tid] }) });
-}
-export function useGradeLevels() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["grade-levels",tid], queryFn: () => A.getGradeLevels(tid) });
-}
-export function useCreateGradeLevel() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createGradeLevel(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["grade-levels",tid] }) });
-}
-export function useClassSections() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["sections",tid], queryFn: () => A.getClassSections(tid) });
-}
-export function useCreateClassSection() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createClassSection(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["sections",tid] }) });
-}
-export function useSubjects() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["subjects",tid], queryFn: () => A.getSubjects(tid) });
-}
-export function useCreateSubject() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createSubject(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["subjects",tid] }) });
-}
+// ── Academics ─────────────────────────────────────────────────────────────────
+export const useAcademicSystems = () => { const tid=useTid(); return useQuery({ queryKey:["academic-systems",tid], queryFn:()=>A.getAcademicSystems(tid) }); };
+export const useCreateAcademicSystem=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createAcademicSystem(b), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-systems",tid]}) }); };
+export const useAcademicYears   = (campusId?:string) => { const tid=useTid(); return useQuery({ queryKey:["academic-years",tid,campusId], queryFn:()=>A.getAcademicYears(tid,campusId) }); };
+export const useCreateAcademicYear=()=> { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createAcademicYear(b), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-years",tid]}) }); };
+export const useDeleteAcademicYear=()=> { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteAcademicYear(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-years",tid]}) }); };
+export const useGradeLevels     = () => { const tid=useTid(); return useQuery({ queryKey:["grade-levels",tid], queryFn:()=>A.getGradeLevels(tid) }); };
+export const useCreateGradeLevel= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createGradeLevel(b), onSuccess:()=>qc.invalidateQueries({queryKey:["grade-levels",tid]}) }); };
+export const useClassSections   = () => { const tid=useTid(); return useQuery({ queryKey:["sections",tid], queryFn:()=>A.getClassSections(tid) }); };
+export const useCreateClassSection=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createClassSection(b), onSuccess:()=>qc.invalidateQueries({queryKey:["sections",tid]}) }); };
+export const useSubjects        = () => { const tid=useTid(); return useQuery({ queryKey:["subjects",tid], queryFn:()=>A.getSubjects(tid) }); };
+export const useCreateSubject   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createSubject(b), onSuccess:()=>qc.invalidateQueries({queryKey:["subjects",tid]}) }); };
+export const useTimetable       = () => { const tid=useTid(); return useQuery({ queryKey:["timetable",tid], queryFn:()=>A.getTimetable(tid) }); };
+export const useCourseOfferings = () => { const tid=useTid(); return useQuery({ queryKey:["course-offerings",tid], queryFn:()=>A.getCourseOfferings(tid) }); };
+export const usePrograms        = () => { const tid=useTid(); return useQuery({ queryKey:["programs",tid], queryFn:()=>A.getPrograms(tid) }); };
+export const useTerms           = () => { const tid=useTid(); return useQuery({ queryKey:["terms",tid], queryFn:()=>A.getTerms(tid) }); };
 
-// ─── Tenancy ─────────────────────────────────────────────────────────────────
-export function useTenants() {
-  return useQuery({ queryKey: ["tenants"], queryFn: () => A.getTenants() });
-}
-export function useCreateTenant() {
-  const qc = useQueryClient();
-  return useMutation({ mutationFn: (b: object) => A.createTenant(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["tenants"] }) });
-}
+// ── Tenancy ───────────────────────────────────────────────────────────────────
+export const useTenants         = () => useQuery({ queryKey:["tenants"], queryFn:A.getTenants });
+export const useCreateTenant    = () => { const qc=useQueryClient(); return useMutation({ mutationFn:(b:object)=>A.createTenant(b), onSuccess:()=>qc.invalidateQueries({queryKey:["tenants"]}) }); };
 
-// ─── Transport ───────────────────────────────────────────────────────────────
-export function useVehicles() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["vehicles",tid], queryFn: () => A.getVehicles(tid) });
-}
-export function useCreateVehicle() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createVehicle(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["vehicles",tid] }) });
-}
-export function useRoutes() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["routes",tid], queryFn: () => A.getRoutes(tid) });
-}
-export function useDrivers() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["drivers",tid], queryFn: () => A.getDrivers(tid) });
-}
+// ── Transport ─────────────────────────────────────────────────────────────────
+export const useVehicles        = () => { const tid=useTid(); return useQuery({ queryKey:["vehicles",tid], queryFn:()=>A.getVehicles(tid) }); };
+export const useCreateVehicle   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createVehicle(b), onSuccess:()=>qc.invalidateQueries({queryKey:["vehicles",tid]}) }); };
+export const useRoutes          = () => { const tid=useTid(); return useQuery({ queryKey:["routes",tid], queryFn:()=>A.getRoutes(tid) }); };
+export const useCreateRoute     = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createRoute(b), onSuccess:()=>qc.invalidateQueries({queryKey:["routes",tid]}) }); };
+export const useStops           = () => { const tid=useTid(); return useQuery({ queryKey:["stops",tid], queryFn:()=>A.getStops(tid) }); };
 
-// ─── Library ─────────────────────────────────────────────────────────────────
-export function useBooks() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["books",tid], queryFn: () => A.getBooks(tid) });
-}
-export function useCreateBook() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createBook(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["books",tid] }) });
-}
+// ── Library ───────────────────────────────────────────────────────────────────
+export const useBooks           = () => { const tid=useTid(); return useQuery({ queryKey:["books",tid], queryFn:()=>A.getBooks(tid) }); };
+export const useCreateBook      = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createBook(b), onSuccess:()=>qc.invalidateQueries({queryKey:["books",tid]}) }); };
+export const useLoans           = () => { const tid=useTid(); return useQuery({ queryKey:["loans",tid], queryFn:()=>A.getLoans(tid) }); };
+export const useCreateLoan      = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createLoan(b), onSuccess:()=>qc.invalidateQueries({queryKey:["loans",tid]}) }); };
 
-// ─── Examinations ────────────────────────────────────────────────────────────
-export function useExams() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["exams",tid], queryFn: () => A.getExams(tid) });
-}
-export function useCreateExam() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createExam(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["exams",tid] }) });
-}
+// ── Examinations ──────────────────────────────────────────────────────────────
+export const useExams           = () => { const tid=useTid(); return useQuery({ queryKey:["exams",tid], queryFn:()=>A.getExams(tid) }); };
+export const useCreateExam      = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createExam(b), onSuccess:()=>qc.invalidateQueries({queryKey:["exams",tid]}) }); };
+export const useExamResults     = () => { const tid=useTid(); return useQuery({ queryKey:["exam-results",tid], queryFn:()=>A.getExamResults(tid) }); };
+export const useGradeScales     = () => { const tid=useTid(); return useQuery({ queryKey:["grade-scales",tid], queryFn:()=>A.getGradeScales(tid) }); };
 
-// ─── Communication ───────────────────────────────────────────────────────────
-export function useNotifications() {
-  const { user } = useAuth(); const tid = useTid();
-  return useQuery({ queryKey: ["notifications",tid,user?.id], queryFn: () => A.getNotifications(tid, user!.id), enabled: !!user?.id, refetchInterval: 30_000 });
-}
-export function useUnreadCount() {
-  const { user } = useAuth(); const tid = useTid();
-  return useQuery({
-    queryKey: ["unread-count",tid,user?.id],
-    queryFn: () => A.getUnreadCount(tid, user!.id).then(r => r.unreadCount ?? 0),
-    enabled: !!user?.id, refetchInterval: 30_000,
-  });
-}
-export function useMarkRead() {
-  const qc = useQueryClient(); const { user } = useAuth(); const tid = useTid();
-  return useMutation({
-    mutationFn: (id: string) => A.markNotificationRead(id, tid, user!.id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); qc.invalidateQueries({ queryKey: ["unread-count"] }); },
-  });
-}
-export function useMarkAllRead() {
-  const qc = useQueryClient(); const { user } = useAuth(); const tid = useTid();
-  return useMutation({
-    mutationFn: () => A.markAllRead(tid, user!.id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); qc.invalidateQueries({ queryKey: ["unread-count"] }); },
-  });
-}
-export function useConversations() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["conversations",tid], queryFn: () => A.getConversations(tid) });
-}
-export function useMessages(convId?: string) {
-  const tid = useTid();
-  return useQuery({ queryKey: ["messages",tid,convId], queryFn: () => A.getMessages(tid, convId!), enabled: !!convId, refetchInterval: 5_000 });
-}
-export function useSendMessage(convId: string) {
-  const qc = useQueryClient(); const { user } = useAuth(); const tid = useTid();
-  return useMutation({ mutationFn: (msg: string) => A.sendMessage(tid, convId, msg, user?.id ?? ""), onSuccess: () => qc.invalidateQueries({ queryKey: ["messages",tid,convId] }) });
-}
-export function useCreateConversation() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createConversation(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["conversations",tid] }) });
-}
+// ── Payroll ───────────────────────────────────────────────────────────────────
+export const usePayrollRuns     = () => { const tid=useTid(); return useQuery({ queryKey:["payroll-runs",tid], queryFn:()=>A.getPayrollRuns(tid) }); };
+export const useCreatePayrollRun= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayrollRun(b), onSuccess:()=>qc.invalidateQueries({queryKey:["payroll-runs",tid]}) }); };
+export const useSalaryStructures= () => { const tid=useTid(); return useQuery({ queryKey:["salary-structures",tid], queryFn:()=>A.getSalaryStructures(tid) }); };
+export const usePayslips        = () => { const tid=useTid(); return useQuery({ queryKey:["payslips",tid], queryFn:()=>A.getPayslips(tid) }); };
 
-// ─── AI Core ─────────────────────────────────────────────────────────────────
-export function useModelConfigs() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["model-configs",tid], queryFn: () => A.getModelConfigs(tid) });
-}
-export function useCreateModelConfig() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createModelConfig(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["model-configs",tid] }) });
-}
-export function useKnowledgeCollections() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["rag-collections",tid], queryFn: () => A.getKnowledgeCollections(tid) });
-}
-export function useCreateKnowledgeCollection() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createKnowledgeCollection(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["rag-collections",tid] }) });
-}
-export function useExecutionLogs() {
-  const tid = useTid();
-  return useQuery({ queryKey: ["exec-logs",tid], queryFn: () => A.getExecutionLogs(tid), refetchInterval: 15_000 });
-}
+// ── Learning ──────────────────────────────────────────────────────────────────
+export const useAssignments     = () => { const tid=useTid(); return useQuery({ queryKey:["assignments",tid], queryFn:()=>A.getAssignments(tid) }); };
+export const useCreateAssignment= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createAssignment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["assignments",tid]}) }); };
+export const useLessons         = () => { const tid=useTid(); return useQuery({ queryKey:["lessons",tid], queryFn:()=>A.getLessons(tid) }); };
+export const useLearningResources=()=>{ const tid=useTid(); return useQuery({ queryKey:["learning-resources",tid], queryFn:()=>A.getLearningResources(tid) }); };
 
-// ─── Reference ───────────────────────────────────────────────────────────────
-export function useLookupTypes() {
-  return useQuery({ queryKey: ["lookup-types"], queryFn: () => A.getLookupTypes() });
-}
-export function useLookupValues(typeCode: string) {
-  return useQuery({ queryKey: ["lookup-values",typeCode], queryFn: () => A.getLookupValues(typeCode), enabled: !!typeCode });
-}
-export function useCreateLookup() {
-  const qc = useQueryClient();
-  return useMutation({ mutationFn: (b: object) => A.createLookupValue(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["lookup-values"] }) });
-}
-export function useDeleteLookup() {
-  const qc = useQueryClient();
-  return useMutation({ mutationFn: (id: string) => A.deleteLookupValue(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["lookup-values"] }) });
-}
+// ── Activities ────────────────────────────────────────────────────────────────
+export const useActivities      = () => { const tid=useTid(); return useQuery({ queryKey:["activities",tid], queryFn:()=>A.getActivities(tid) }); };
+export const useCreateActivity  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createActivity(b), onSuccess:()=>qc.invalidateQueries({queryKey:["activities",tid]}) }); };
+export const useAwards          = () => { const tid=useTid(); return useQuery({ queryKey:["awards",tid], queryFn:()=>A.getAwards(tid) }); };
 
-// ─── AI mutations ─────────────────────────────────────────────────────────────
-export function useAskChatbot(bot: "student"|"teacher"|"parent"|"admissions"|"admin") {
-  const tid = useTid();
-  return useMutation({ mutationFn: (q: string) => A.askChatbot(bot, { question: q, tenantId: tid }) });
-}
-export function useAskAssistant() {
-  const tid = useTid();
-  return useMutation({ mutationFn: (q: string) => A.askAssistant({ question: q, tenantId: tid }) });
-}
-export function useStartTutorSession() {
-  return useMutation({ mutationFn: (b: object) => A.startTutorSession(b) });
-}
-export function useAskTutor() {
-  return useMutation({ mutationFn: (b: object) => A.askTutor(b) });
-}
-export function useGenerateQuiz() {
-  return useMutation({ mutationFn: (b: object) => A.generateQuiz(b) });
-}
-export function useStudentPrediction() {
-  const tid = useTid();
-  return useMutation({ mutationFn: ({ kind, ...rest }: { kind: string; [k: string]: unknown }) => A.predictStudent(kind, { tenantId: tid, ...rest }) });
-}
-export function useEarlyWarning(studentId: string) {
-  const tid = useTid();
-  return useQuery({
-    queryKey: ["early-warning",tid,studentId],
-    queryFn: () => A.getEarlyWarnings({ tenantId: tid, studentId }),
-    enabled: !!studentId && !!tid,
-    staleTime: 300_000,
-  });
-}
-export function useImpersonate() {
-  const { impersonate } = useAuth();
-  return useMutation({ mutationFn: ({ targetUserId, reason }: { targetUserId: string; reason: string }) => impersonate(targetUserId, reason) });
-}
+// ── Workflow ──────────────────────────────────────────────────────────────────
+export const useWorkflowDefs    = () => { const tid=useTid(); return useQuery({ queryKey:["workflow-defs",tid], queryFn:()=>A.getWorkflowDefs(tid) }); };
+export const useApprovals       = () => { const tid=useTid(); return useQuery({ queryKey:["approvals",tid], queryFn:()=>A.getApprovals(tid), refetchInterval:30_000 }); };
+export const useProcessApproval = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.processApproval(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["approvals",tid]}) }); };
+export const useWorkflowInstances=()=>{ const tid=useTid(); return useQuery({ queryKey:["workflow-instances",tid], queryFn:()=>A.getWorkflowInstances(tid) }); };
 
-// ─── Teachers ────────────────────────────────────────────────────────────────
-export function useTeacherStudents(eid?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = eid ?? user?.employeeId ?? "";
-  return useQuery({ queryKey: ["teacher-students",id,tid], queryFn: () => A.getTeacherStudents(id, tid), enabled: !!id });
-}
-export function useTeacherClasses(eid?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = eid ?? user?.employeeId ?? "";
-  return useQuery({ queryKey: ["teacher-classes",id,tid], queryFn: () => A.getTeacherClasses(id, tid), enabled: !!id });
-}
-export function useTeacherTimetable(eid?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = eid ?? user?.employeeId ?? "";
-  return useQuery({ queryKey: ["teacher-timetable",id,tid], queryFn: () => A.getTeacherTimetable(id, tid), enabled: !!id });
-}
-export function useTeacherWorkload(eid?: string) {
-  const { user } = useAuth(); const tid = useTid();
-  const id = eid ?? user?.employeeId ?? "";
-  return useQuery({ queryKey: ["teacher-workload",id,tid], queryFn: () => A.getTeacherWorkload(id, tid), enabled: !!id });
-}
-export function useCreateTeacherAssignment(eid: string) {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createTeacherAssignment(eid, b), onSuccess: () => qc.invalidateQueries({ queryKey: ["teacher-assignments",eid,tid] }) });
-}
-export function useApplyTeacherLeave(eid: string) {
-  return useMutation({ mutationFn: (b: object) => A.applyTeacherLeave(eid, b) });
-}
+// ── Inventory ─────────────────────────────────────────────────────────────────
+export const useInventoryItems  = () => { const tid=useTid(); return useQuery({ queryKey:["inventory",tid], queryFn:()=>A.getInventoryItems(tid) }); };
+export const useCreateInventoryItem=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createInventoryItem(b), onSuccess:()=>qc.invalidateQueries({queryKey:["inventory",tid]}) }); };
+export const usePurchaseOrders  = () => { const tid=useTid(); return useQuery({ queryKey:["purchase-orders",tid], queryFn:()=>A.getPurchaseOrders(tid) }); };
 
-export function useCreateRoute() {
-  const qc = useQueryClient(); const tid = useTid();
-  return useMutation({ mutationFn: (b: object) => A.createRoute(b), onSuccess: () => qc.invalidateQueries({ queryKey: ["routes",tid] }) });
-}
+// ── Communication ─────────────────────────────────────────────────────────────
+export const useNotifications   = () => { const {user}=useAuth(); const tid=useTid(); return useQuery({ queryKey:["notifs",tid,user?.id], queryFn:()=>A.getNotifications(tid,user!.id), enabled:!!user?.id, refetchInterval:30_000 }); };
+export const useUnreadCount     = () => { const {user}=useAuth(); const tid=useTid(); return useQuery({ queryKey:["unread",tid,user?.id], queryFn:()=>A.getUnreadCount(tid,user!.id).then(r=>(r as any).unreadCount??0), enabled:!!user?.id, refetchInterval:30_000 }); };
+export const useMarkRead        = () => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.markNotifRead(id,tid,user!.id), onSuccess:()=>{ qc.invalidateQueries({queryKey:["notifs"]}); qc.invalidateQueries({queryKey:["unread"]}); } }); };
+export const useMarkAllRead     = () => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:()=>A.markAllRead(tid,user!.id), onSuccess:()=>{ qc.invalidateQueries({queryKey:["notifs"]}); qc.invalidateQueries({queryKey:["unread"]}); } }); };
+export const useConversations   = () => { const tid=useTid(); return useQuery({ queryKey:["convs",tid], queryFn:()=>A.getConversations(tid) }); };
+export const useMessages        = (convId?:string) => { const tid=useTid(); return useQuery({ queryKey:["msgs",tid,convId], queryFn:()=>A.getMessages(tid,convId!), enabled:!!convId, refetchInterval:5_000 }); };
+export const useSendMessage     = (convId:string) => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:(msg:string)=>A.sendMessage(tid,convId,msg,user?.id??""), onSuccess:()=>qc.invalidateQueries({queryKey:["msgs",tid,convId]}) }); };
+export const useCreateConversation=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createConversation(b), onSuccess:()=>qc.invalidateQueries({queryKey:["convs",tid]}) }); };
+
+// ── AICore ────────────────────────────────────────────────────────────────────
+export const useModelConfigs    = () => { const tid=useTid(); return useQuery({ queryKey:["model-configs",tid], queryFn:()=>A.getModelConfigs(tid) }); };
+export const useCreateModelConfig=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createModelConfig(b), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
+export const useCollections     = () => { const tid=useTid(); return useQuery({ queryKey:["collections",tid], queryFn:()=>A.getCollections(tid) }); };
+export const useCreateCollection= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createCollection(b), onSuccess:()=>qc.invalidateQueries({queryKey:["collections",tid]}) }); };
+export const useIndexKnowledge  = () => useMutation({ mutationFn:(b:object)=>A.indexKnowledge(b) });
+export const useExecLogs        = () => { const tid=useTid(); return useQuery({ queryKey:["exec-logs",tid], queryFn:()=>A.getExecLogs(tid), refetchInterval:15_000 }); };
+export const usePromptTemplates = () => { const tid=useTid(); return useQuery({ queryKey:["prompt-templates",tid], queryFn:()=>A.getPromptTemplates(tid) }); };
+
+// ── AI mutations ──────────────────────────────────────────────────────────────
+export const useAskChatbot      = (bot:"student"|"teacher"|"parent"|"admissions"|"admin") => { const tid=useTid(); return useMutation({ mutationFn:(q:string)=>A.askChatbot(bot,{question:q,tenantId:tid}) }); };
+export const useAskAssistant    = () => { const tid=useTid(); return useMutation({ mutationFn:(q:string)=>A.askAssistant({question:q,tenantId:tid}) }); };
+export const useStartTutorSession=()=> useMutation({ mutationFn:(b:object)=>A.startTutorSession(b) });
+export const useAskTutor        = () => useMutation({ mutationFn:(b:object)=>A.askTutor(b) });
+export const useGenerateQuiz    = () => useMutation({ mutationFn:(b:object)=>A.generateQuiz(b) });
+export const useStudentPrediction=()=> { const tid=useTid(); return useMutation({ mutationFn:({kind,...rest}:{kind:string;[k:string]:unknown})=>A.predictStudent(kind,{tenantId:tid,...rest}) }); };
+export const useEarlyWarning    = (studentId:string) => { const tid=useTid(); return useQuery({ queryKey:["early-warning",tid,studentId], queryFn:()=>A.getEarlyWarnings({tenantId:tid,studentId}), enabled:!!studentId&&!!tid, staleTime:300_000 }); };
+export const useAskParentAI     = () => { const tid=useTid(); const {user}=useAuth(); return useMutation({ mutationFn:(msg:string)=>A.askParentAI({message:msg,tenantId:tid,guardianId:user?.businessEntityId??undefined}) }); };
+export const useHandleInquiryAI = () => { const tid=useTid(); return useMutation({ mutationFn:(msg:string)=>A.handleInquiryAI({message:msg,tenantId:tid}) }); };
+export const useExecuteAI       = () => useMutation({ mutationFn:(b:object)=>A.executeAI(b) });
+export const useIndexKnowledgeMutation=()=>useMutation({ mutationFn:(b:object)=>A.indexKnowledge(b) });
+
+// ── Reference / Lookups ───────────────────────────────────────────────────────
+export const useLookupTypes     = () => useQuery({ queryKey:["lookup-types"], queryFn:A.getLookupTypes });
+export const useLookupValues    = (typeCode:string) => useQuery({ queryKey:["lookup-values",typeCode], queryFn:()=>A.getLookupValues(typeCode), enabled:!!typeCode });
+export const useCreateLookup    = () => { const qc=useQueryClient(); return useMutation({ mutationFn:(b:object)=>A.createLookup(b), onSuccess:()=>qc.invalidateQueries({queryKey:["lookup-values"]}) }); };
+export const useDeleteLookup    = () => { const qc=useQueryClient(); return useMutation({ mutationFn:(id:string)=>A.deleteLookup(id), onSuccess:()=>qc.invalidateQueries({queryKey:["lookup-values"]}) }); };
+
+// ── Teachers ──────────────────────────────────────────────────────────────────
+export const useTeacherStudents = (eid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=eid??user?.employeeId??""; return useQuery({ queryKey:["teacher-students",id,tid], queryFn:()=>A.getTeacherStudents(id,tid), enabled:!!id }); };
+export const useTeacherClasses  = (eid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=eid??user?.employeeId??""; return useQuery({ queryKey:["teacher-classes",id,tid],  queryFn:()=>A.getTeacherClasses(id,tid),  enabled:!!id }); };
+export const useTeacherTimetable= (eid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=eid??user?.employeeId??""; return useQuery({ queryKey:["teacher-timetable",id,tid],queryFn:()=>A.getTeacherTimetable(id,tid),enabled:!!id }); };
+export const useTeacherWorkload = (eid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=eid??user?.employeeId??""; return useQuery({ queryKey:["teacher-workload",id,tid],  queryFn:()=>A.getTeacherWorkload(id,tid),  enabled:!!id }); };
+export const useCreateTeacherAssignment=(eid:string)=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createTeacherAssignment(eid,b), onSuccess:()=>qc.invalidateQueries({queryKey:["teacher-assignments",eid,tid]}) }); };
+export const useApplyTeacherLeave=(eid:string)=>useMutation({ mutationFn:(b:object)=>A.applyTeacherLeave(eid,b) });
+
+// ── Audit ─────────────────────────────────────────────────────────────────────
+export const useAuditLogs       = (page=1) => { const tid=useTid(); return useQuery({ queryKey:["audit-logs",tid,page], queryFn:()=>A.getAuditLogs(tid,page,50) }); };
+
+// ── Impersonation ─────────────────────────────────────────────────────────────
+export const useImpersonate     = () => { const {impersonate}=useAuth(); return useMutation({ mutationFn:({targetUserId,reason}:{targetUserId:string;reason:string})=>impersonate(targetUserId,reason) }); };

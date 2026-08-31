@@ -3,15 +3,15 @@ import { AppShell }            from "../../components/layout/AppShell";
 import { RouteErrorPage }      from "../../components/ui/RouteErrorPage";
 import { MockDataProvider }    from "../../mocks/MockDataProvider";
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// Auth
 import { LoginPage }           from "../../features/auth/pages/LoginPage";
 
-// ── Dashboard / Profiles ──────────────────────────────────────────────────────
+// Dashboard
 import { DashboardPage }       from "../../features/dashboard/pages/DashboardPage";
 import { ProfilesPage }        from "../../features/dashboard/pages/ProfilesPage";
 import { ParentPortalPage }    from "../../features/dashboard/pages/ParentPortalPage";
 
-// ── Core school operations ────────────────────────────────────────────────────
+// Core modules
 import { StudentsPage }        from "../../features/students/pages/StudentsPage";
 import { StudentPortalPage }   from "../../features/students/pages/StudentPortalPage";
 import { FinancePage }         from "../../features/finance/pages/FinancePage";
@@ -24,31 +24,29 @@ import { AiPage }              from "../../features/ai/pages/AiPage";
 import { AdmissionsPage }      from "../../features/admissions/pages/AdmissionsPage";
 import { CommunicationPage }   from "../../features/communication/pages/CommunicationPage";
 import { ReportsPage }         from "../../features/reports/pages/ReportsPage";
-import { AcademicsPage }       from "../../features/academics/pages/AcademicsPage";
 
-// ── HR / Payroll ──────────────────────────────────────────────────────────────
+// HR
 import { HrPage }              from "../../features/hr/pages/HrPage";
 import { PayrollPage }         from "../../features/hr/pages/PayrollPage";
 
-// ── Teacher workspace ─────────────────────────────────────────────────────────
+// Teacher
 import { TeachersPage }        from "../../features/teachers/pages/TeachersPage";
 
-// ── Tenant configuration (school owner) ──────────────────────────────────────
+// Organization / Setup
 import { TenantSetupPage }     from "../../features/organization/pages/TenantSetupPage";
-import { OrganizationPage }    from "../../features/organization/pages/OrganizationPage";
 import { SettingsPage }        from "../../features/settings/pages/SettingsPage";
 
-// ── Super Admin ───────────────────────────────────────────────────────────────
+// Platform / Super Admin
 import { TenantManagementPage }from "../../features/tenancy/pages/TenantManagementPage";
 import { SubscriptionsPage }   from "../../features/platform/pages/SubscriptionsPage";
 import { PlatformAdminPage }   from "../../features/platform/pages/PlatformAdminPage";
 import { AuditPage }           from "../../features/platform/pages/AuditPage";
 
-// ── Workflow ──────────────────────────────────────────────────────────────────
+// New complete modules
 import { WorkflowCenterPage }  from "../../features/workflow/pages/WorkflowCenterPage";
-
-// ── Fallback ──────────────────────────────────────────────────────────────────
-import { ModulePlaceholder }   from "../../components/ui/ModulePlaceholder";
+import { ActivitiesPage }      from "../../features/activities/pages/ActivitiesPage";
+import { LearningPage }        from "../../features/learning/pages/LearningPage";
+import { InventoryPage }       from "../../features/inventory/pages/InventoryPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -57,60 +55,64 @@ export const router = createBrowserRouter([
     element: <MockDataProvider><AppShell /></MockDataProvider>,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true,                   element: <DashboardPage /> },
+      // Dashboard
+      { index: true,                    element: <DashboardPage /> },
+      { path: "profiles",               element: <ProfilesPage /> },
 
-      // ── Actor portals ──────────────────────────────────────────
-      { path: "my-portal",             element: <StudentPortalPage /> },
-      { path: "parent-portal",         element: <ParentPortalPage /> },
-      { path: "driver-portal",         element: <DriverPortalPage /> },
-      { path: "teacher-workspace",     element: <TeachersPage /> },
-      { path: "profiles",              element: <ProfilesPage /> },
+      // Actor portals
+      { path: "my-portal",              element: <StudentPortalPage /> },
+      { path: "parent-portal",          element: <ParentPortalPage /> },
+      { path: "driver-portal",          element: <DriverPortalPage /> },
+      { path: "teacher-workspace",      element: <TeachersPage /> },
 
-      // ── Core school modules ────────────────────────────────────
-      { path: "students",              element: <StudentsPage /> },
-      { path: "finance",               element: <FinancePage /> },
-      { path: "attendance",            element: <AttendancePage /> },
-      { path: "transport",             element: <TransportPage /> },
-      { path: "library",               element: <LibraryPage /> },
-      { path: "examinations",          element: <ExaminationsPage /> },
-      { path: "ai",                    element: <AiPage /> },
-      { path: "admissions",            element: <AdmissionsPage /> },
-      { path: "communication",         element: <CommunicationPage /> },
-      { path: "reports",               element: <ReportsPage /> },
-      { path: "academics",             element: <AcademicsPage /> },
+      // School operations
+      { path: "students",               element: <StudentsPage /> },
+      { path: "finance",                element: <FinancePage /> },
+      { path: "attendance",             element: <AttendancePage /> },
+      { path: "transport",              element: <TransportPage /> },
+      { path: "library",                element: <LibraryPage /> },
+      { path: "examinations",           element: <ExaminationsPage /> },
+      { path: "admissions",             element: <AdmissionsPage /> },
+      { path: "communication",          element: <CommunicationPage /> },
+      { path: "notifications",          element: <CommunicationPage /> },
+      { path: "reports",                element: <ReportsPage /> },
+      { path: "ai",                     element: <AiPage /> },
 
-      // ── HR / Staff ─────────────────────────────────────────────
-      { path: "hr",                    element: <HrPage /> },
-      { path: "teachers",              element: <TeachersPage /> },
-      { path: "payroll",               element: <PayrollPage /> },
+      // HR
+      { path: "hr",                     element: <HrPage /> },
+      { path: "payroll",                element: <PayrollPage /> },
+      { path: "teachers",               element: <TeachersPage /> },
 
-      // ── Tenant self-configuration ──────────────────────────────
-      { path: "organization",          element: <OrganizationPage /> },
-      { path: "setup",                 element: <TenantSetupPage /> },
-      { path: "setup/*",               element: <TenantSetupPage /> },
-      { path: "setup-finance",         element: <SettingsPage /> },
-      { path: "setup-hr",              element: <HrPage /> },
-      { path: "setup-lookup",          element: <SettingsPage /> },
-      { path: "ai-config",             element: <TenantSetupPage /> },
-      { path: "settings",              element: <SettingsPage /> },
+      // New complete modules
+      { path: "workflow",               element: <WorkflowCenterPage /> },
+      { path: "activities",             element: <ActivitiesPage /> },
+      { path: "learning",               element: <LearningPage /> },
+      { path: "assignments",            element: <LearningPage /> },
+      { path: "inventory",              element: <InventoryPage /> },
 
-      // ── Super Admin platform ───────────────────────────────────
-      { path: "tenancy",               element: <TenantManagementPage /> },
-      { path: "subscriptions",         element: <SubscriptionsPage /> },
-      { path: "modules",               element: <ModulePlaceholder module="Module Manager" /> },
-      { path: "platform",              element: <PlatformAdminPage /> },
-      { path: "ai-platform",           element: <PlatformAdminPage /> },
-      { path: "ai-rag",                element: <PlatformAdminPage /> },
-      { path: "ai-predictions",        element: <PlatformAdminPage /> },
-      { path: "ai-tutor-mgmt",         element: <PlatformAdminPage /> },
-      { path: "audit",                 element: <AuditPage /> },
+      // School configuration
+      { path: "setup",                  element: <TenantSetupPage /> },
+      { path: "setup/*",                element: <TenantSetupPage /> },
+      { path: "organization",           element: <TenantSetupPage /> },
+      { path: "settings",               element: <SettingsPage /> },
+      { path: "ai-config",              element: <TenantSetupPage /> },
+      { path: "setup-finance",          element: <SettingsPage /> },
+      { path: "setup-hr",               element: <HrPage /> },
+      { path: "setup-lookup",           element: <SettingsPage /> },
 
-      // ── Shared ────────────────────────────────────────────────
-      { path: "workflow",              element: <WorkflowCenterPage /> },
-      { path: "learning",              element: <ModulePlaceholder module="Learning & Assignments" /> },
-      { path: "activities",            element: <ModulePlaceholder module="Events & Activities" /> },
-      { path: "notifications",         element: <CommunicationPage /> },
-      { path: "documents",             element: <ModulePlaceholder module="Documents" /> },
+      // Super Admin platform
+      { path: "tenancy",                element: <TenantManagementPage /> },
+      { path: "subscriptions",          element: <SubscriptionsPage /> },
+      { path: "platform",               element: <PlatformAdminPage /> },
+      { path: "ai-platform",            element: <PlatformAdminPage /> },
+      { path: "ai-rag",                 element: <PlatformAdminPage /> },
+      { path: "ai-predictions",         element: <AiPage /> },
+      { path: "ai-tutor-mgmt",          element: <PlatformAdminPage /> },
+      { path: "audit",                  element: <AuditPage /> },
+      { path: "modules",                element: <PlatformAdminPage /> },
+
+      // Misc
+      { path: "documents",              element: <PlatformAdminPage /> },
     ],
   },
 ]);
