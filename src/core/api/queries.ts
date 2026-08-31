@@ -176,3 +176,8 @@ export const useAuditLogs       = (page=1) => { const tid=useTid(); return useQu
 
 // ── Impersonation ─────────────────────────────────────────────────────────────
 export const useImpersonate     = () => { const {impersonate}=useAuth(); return useMutation({ mutationFn:({targetUserId,reason}:{targetUserId:string;reason:string})=>impersonate(targetUserId,reason) }); };
+
+// ── Aliases for pages that import the longer names ───────────────────────────
+export const useKnowledgeCollections      = useCollections;
+export const useCreateKnowledgeCollection = useCreateCollection;
+export const useExecutionLogs = useExecLogs;

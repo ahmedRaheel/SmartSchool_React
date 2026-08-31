@@ -1,147 +1,51 @@
-import axios, { AxiosError } from "axios";
+/**
+ * SmartSchool API Client
+ * Sends mock auth headers when VITE_USE_MOCKS=false but using mock backend.
+ * When VITE_USE_MOCKS=true, all calls go through apiAdapter mocks (never hits network).
+ * When VITE_USE_MOCKS=false, sends JWT Bearer token (or mock headers in dev).
+ */
+import axios from "axios";
 import { env } from "../../config/env";
-import { clearAuthenticationState } from "../../features/auth/auth";
-import { validateContactPayload } from "../validation/contactInformation";
-
-export type ApiError = {
-  code: string;
-  message: string;
-};
-
-export type Result<T> = {
-  isSuccess: boolean;
-  isFailure: boolean;
-  error: ApiError;
-  value?: T | null;
-};
-
-export class SmartSchoolApiError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly status?: number,
-  ) {
-    super(message);
-    this.name = "SmartSchoolApiError";
-  }
-}
-
-function publishApiError(error: unknown): void {
-  let message = "The request could not be completed.";
-
-  if (error instanceof SmartSchoolApiError) {
-    message = error.message;
-  } else if (axios.isAxiosError(error)) {
-    const result = error.response?.data as Result<unknown> | undefined;
-    message = result?.error?.message ?? error.message ?? message;
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
-  window.dispatchEvent(
-    new CustomEvent("smartschool:api-error", {
-      detail: { message },
-    }),
-  );
-}
-
-let pendingRequests = 0;
-function publishBusy(delta: number) { pendingRequests = Math.max(0, pendingRequests + delta); window.dispatchEvent(new CustomEvent("smartschool:api-busy", { detail: pendingRequests > 0 })); }
 
 export const api = axios.create({
   baseURL: env.apiBaseUrl,
-  timeout: 30_000,
+  headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
+// Request interceptor — attach JWT or mock headers
 api.interceptors.request.use((config) => {
-  if (config.data && !(config.data instanceof FormData)) {
-    validateContactPayload(config.data);
-  }
+  const token = localStorage.getItem("access_token");
 
-  publishBusy(1);
-  const token = localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token");
-
-  if (token) {
+  if (token && token !== "" && !token.startsWith("mock_")) {
+    // Real JWT
     config.headers.Authorization = `Bearer ${token}`;
   } else {
-    delete config.headers.Authorization;
+    // Mock mode headers — backend reads these to simulate the actor
+    try {
+      const sessionRaw = localStorage.getItem("smartschool.session");
+      if (sessionRaw) {
+        const session = JSON.parse(sessionRaw);
+        config.headers["X-Mock-Role"]     = session.role ?? "SchoolAdmin";
+        config.headers["X-Mock-UserId"]   = session.id ?? "00000000-0000-0000-0000-000000000001";
+        config.headers["X-Mock-TenantId"] = session.tenantId ?? "11111111-1111-1111-1111-111111111111";
+        // Actor-specific entity ID
+        const entityId = session.employeeId ?? session.studentId ?? session.driverId ?? session.businessEntityId;
+        if (entityId) config.headers["X-Mock-EntityId"] = entityId;
+      }
+    } catch { /* silently ignore parse errors */ }
   }
-
-  config.headers.Accept = "application/json";
   return config;
 });
 
+// Response interceptor — handle 401/403
 api.interceptors.response.use(
-  (response) => {
-    publishBusy(-1);
-    const result = response.data as Result<unknown>;
-
-    if (result && typeof result === "object" && "isSuccess" in result) {
-      if (!result.isSuccess) {
-        const apiError = new SmartSchoolApiError(
-          result.error?.code ?? "REQUEST_FAILED",
-          result.error?.message ?? "The request could not be completed.",
-          response.status,
-        );
-
-        publishApiError(apiError);
-        throw apiError;
-      }
-
-      response.data = result.value ?? null;
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      // Fire event — AppShell listens and redirects to login
+      window.dispatchEvent(new Event("smartschool:unauthorized"));
     }
-
-    return response;
-  },
-  async (error: AxiosError<Result<unknown>>) => {
-    publishBusy(-1);
-    const originalRequest = error.config as (typeof error.config & { _smartSchoolRetried?: boolean });
-
-    if (error.response?.status === 401 && originalRequest && !originalRequest._smartSchoolRetried) {
-      const refreshToken = localStorage.getItem("refresh_token") ?? sessionStorage.getItem("refresh_token");
-      if (refreshToken) {
-        originalRequest._smartSchoolRetried = true;
-        try {
-          const tokenUrl = import.meta.env.DEV ? "/identity/connect/token" : `${env.identityBaseUrl}/connect/token`;
-          const body = new URLSearchParams({
-            grant_type: "refresh_token",
-            client_id: "smartschool-login-api",
-            refresh_token: refreshToken,
-          });
-          const refreshResponse = await axios.post(tokenUrl, body.toString(), {
-            headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-            timeout: 30_000,
-          });
-          const accessToken = refreshResponse.data?.access_token;
-          if (accessToken) {
-            localStorage.setItem("access_token", accessToken);
-            if (refreshResponse.data?.refresh_token) localStorage.setItem("refresh_token", refreshResponse.data.refresh_token);
-            originalRequest.headers = originalRequest.headers ?? {};
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-            return api.request(originalRequest);
-          }
-        } catch {
-          // Refresh really failed; only now end the persisted login session.
-        }
-      }
-      clearAuthenticationState();
-      window.dispatchEvent(new CustomEvent("smartschool:unauthorized"));
-    }
-
-    const result = error.response?.data;
-
-    if (result && typeof result === "object" && "isSuccess" in result) {
-      const apiError = new SmartSchoolApiError(
-        result.error?.code ?? "REQUEST_FAILED",
-        result.error?.message ?? error.message,
-        error.response?.status,
-      );
-
-      publishApiError(apiError);
-      return Promise.reject(apiError);
-    }
-
-    publishApiError(error);
-    return Promise.reject(error);
-  },
+    return Promise.reject(err);
+  }
 );
