@@ -1,3 +1,4 @@
+import { env } from "./config/env";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { AppProviders } from "./app/providers/AppProviders";
@@ -23,3 +24,5 @@ createRoot(rootElement).render(
         <AppProviders />
     </StrictMode>,
 );
+
+console.info("[SmartSchool API mode]", env.useMocks ? "MOCK" : "REAL", env.apiBaseUrl);

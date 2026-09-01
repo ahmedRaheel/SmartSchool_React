@@ -153,7 +153,11 @@ export function AdmissionsPage() {
       setSelected((p:any) => p?.Id === appId ? { ...p, Status:status, DecisionNotes:notes??null } : p);
     } else {
       const s = JSON.parse(localStorage.getItem("smartschool.session")??"{}");
-      const headers: Record<string,string> = { "Content-Type":"application/json", "X-Mock-Role":s.role??"SchoolAdmin", "X-Mock-TenantId":tid };
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const token = localStorage.getItem("access_token");
+      if (token && !token.startsWith("mock_")) {
+        headers.Authorization = `Bearer ${token}`;
+      }
       await fetch(`${env.apiBaseUrl}/api/admissions/workflow/applications/${appId}/status`, {
         method:"PUT", headers, body: JSON.stringify({ tenantId:tid, status, notes:notes??null })
       });
