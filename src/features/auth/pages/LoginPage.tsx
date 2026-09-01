@@ -225,7 +225,7 @@ export function LoginPage() {
               Currently in <code style={{ background:"#E2E8F0", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>
                 {import.meta.env.VITE_USE_MOCKS === "true" ? "MOCK" : "REAL API"}
               </code> mode.{" "}
-              {import.meta.env.VITE_USE_MOCKS === "true"
+              {import.meta.env.VITE_USE_MOCKS === "false"
                 ? "Set VITE_USE_MOCKS=false in .env for real backend."
                 : `API: ${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:7001"}`}
             </div>

@@ -13,28 +13,26 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor — attach JWT or mock headers
+// Request interceptor.
+// REAL mode: Bearer authentication only. No X-Mock-* fallback is permitted.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
 
-  if (token && token !== "" && !token.startsWith("mock_")) {
-    // Real JWT
-    config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    // Mock mode headers — backend reads these to simulate the actor
-    try {
-      const sessionRaw = localStorage.getItem("smartschool.session");
-      if (sessionRaw) {
-        const session = JSON.parse(sessionRaw);
-        config.headers["X-Mock-Role"]     = session.role ?? "SchoolAdmin";
-        config.headers["X-Mock-UserId"]   = session.id ?? "00000000-0000-0000-0000-000000000001";
-        config.headers["X-Mock-TenantId"] = session.tenantId ?? "11111111-1111-1111-1111-111111111111";
-        // Actor-specific entity ID
-        const entityId = session.employeeId ?? session.studentId ?? session.driverId ?? session.businessEntityId;
-        if (entityId) config.headers["X-Mock-EntityId"] = entityId;
-      }
-    } catch { /* silently ignore parse errors */ }
+  if (!env.useMocks) {
+    delete config.headers["X-Mock-Role"];
+    delete config.headers["X-Mock-UserId"];
+    delete config.headers["X-Mock-TenantId"];
+    delete config.headers["X-Mock-EntityId"];
+
+    if (token && token.trim() !== "" && !token.startsWith("mock_")) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
+    }
+
+    return config;
   }
+
   return config;
 });
 

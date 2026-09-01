@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router-dom";
 import { AuthProvider } from "../../features/auth/auth";
 import { UiProvider } from "../../components/ui/InteractiveUi";
 import { MockDataProvider } from "../../mocks/MockDataProvider";
+import { env } from "../../config/env";
 import { router } from "../router/router";
 import { GlobalApiLoader } from "../../components/ui/GlobalApiLoader";
 import { GlobalApiFeedback } from "../../components/ui/GlobalApiFeedback";
@@ -12,11 +13,17 @@ const queryClient = new QueryClient({
 export function AppProviders() {
     return (<QueryClientProvider client={queryClient}>
       <UiProvider><GlobalApiLoader/><GlobalApiFeedback/>
-<MockDataProvider>
-<AuthProvider>
-<RouterProvider router={router}/>
-</AuthProvider>
-</MockDataProvider>
+{env.useMocks ? (
+  <MockDataProvider>
+    <AuthProvider>
+      <RouterProvider router={router}/>
+    </AuthProvider>
+  </MockDataProvider>
+) : (
+  <AuthProvider>
+    <RouterProvider router={router}/>
+  </AuthProvider>
+)}
 </UiProvider>
     </QueryClientProvider>);
 }

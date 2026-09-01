@@ -5,15 +5,6 @@ import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-// Mock audit data since endpoint returns empty in mock mode
-const MOCK_AUDIT_LOGS = [
-  { id:"al1", code:"AUD-001", name:"Student enrolled", metadataJson: JSON.stringify({ actor:"admin@alnoor.edu", action:"CreateStudent", entity:"Student", entityId:"22222222-2222-2222-2222-222222222222", ipAddress:"192.168.1.1", timestamp:"2026-08-30T14:32:00Z", status:"Success" }) },
-  { id:"al2", code:"AUD-002", name:"Payment recorded", metadataJson: JSON.stringify({ actor:"accountant@alnoor.edu", action:"CreatePayment", entity:"Invoice", entityId:"inv1", ipAddress:"192.168.1.2", timestamp:"2026-08-30T14:15:00Z", status:"Success" }) },
-  { id:"al3", code:"AUD-003", name:"Staff added",      metadataJson: JSON.stringify({ actor:"admin@alnoor.edu", action:"CreateEmployee", entity:"Employee", entityId:"33333333-3333-3333-3333-333333333333", ipAddress:"192.168.1.1", timestamp:"2026-08-30T13:00:00Z", status:"Success" }) },
-  { id:"al4", code:"AUD-004", name:"Login attempt",    metadataJson: JSON.stringify({ actor:"unknown@email.com", action:"Login", entity:"User", entityId:null, ipAddress:"203.0.113.42", timestamp:"2026-08-30T11:00:00Z", status:"Failed" }) },
-  { id:"al5", code:"AUD-005", name:"Fee type created", metadataJson: JSON.stringify({ actor:"admin@alnoor.edu", action:"CreateFeeType", entity:"FeeType", entityId:"ft1", ipAddress:"192.168.1.1", timestamp:"2026-08-29T09:00:00Z", status:"Success" }) },
-];
-
 function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
 
 export function AuditPage() {
@@ -22,7 +13,7 @@ export function AuditPage() {
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey:["audit-logs",tid], queryFn: () => A.getAuditLogs(tid) });
   const rawItems = (data as any)?.items ?? (data as any) ?? [];
-  const items    = rawItems.length === 0 ? MOCK_AUDIT_LOGS : rawItems;
+  const items    = rawItems;
   const filtered = items.filter((l:any) => `${l.name} ${l.code}`.toLowerCase().includes(q.toLowerCase()));
 
   return (

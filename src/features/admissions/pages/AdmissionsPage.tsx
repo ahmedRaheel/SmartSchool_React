@@ -90,8 +90,8 @@ export function AdmissionsPage() {
   const [newInqModal, setNewInq] = useState(false);
   const [docCompliant, setDocComp] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [apps, setApps]          = useState(MOCK_APPLICATIONS);
-  const [inqs, setInqs]          = useState(MOCK_INQUIRIES);
+  const [apps, setApps]          = useState(env.useMocks ? MOCK_APPLICATIONS : []);
+  const [inqs, setInqs]          = useState(env.useMocks ? MOCK_INQUIRIES : []);
 
   const { data: schoolsData }  = useSchools();
   const { data: campusesData } = useCampuses();
@@ -125,7 +125,7 @@ export function AdmissionsPage() {
   const filteredYears    = appForm.branchId ? years.filter((y:any)=>{ try{return JSON.parse(y.metadataJson||"{}").campusId===appForm.branchId;}catch{return true;}}) : years;
 
   // Check criteria against application form
-  const criteria = appForm.branchId ? MOCK_CRITERIA.find(c=>c.BranchName===campuses.find((c:any)=>c.id===appForm.branchId)?.name) : null;
+  const criteria = env.useMocks && appForm.branchId ? MOCK_CRITERIA.find(c=>c.BranchName===campuses.find((c:any)=>c.id===appForm.branchId)?.name) : null;
   const marks = parseFloat(appForm.previousMarks || "0");
   const criteriaCheck = criteria ? {
     marks:    marks >= criteria.MinimumMarks,
@@ -152,8 +152,11 @@ export function AdmissionsPage() {
       setApps(p => p.map(a => a.Id === appId ? { ...a, Status:status, DecisionNotes:notes??null, StudentId: status==="ADMISSION_ACCEPTED" ? `stu-${Date.now()}` : a.StudentId } : a));
       setSelected((p:any) => p?.Id === appId ? { ...p, Status:status, DecisionNotes:notes??null } : p);
     } else {
-      const s = JSON.parse(localStorage.getItem("smartschool.session")??"{}");
-      const headers: Record<string,string> = { "Content-Type":"application/json", "X-Mock-Role":s.role??"SchoolAdmin", "X-Mock-TenantId":tid };
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const token = localStorage.getItem("access_token");
+      if (token && !token.startsWith("mock_")) {
+        headers.Authorization = `Bearer ${token}`;
+      }
       await fetch(`${env.apiBaseUrl}/api/admissions/workflow/applications/${appId}/status`, {
         method:"PUT", headers, body: JSON.stringify({ tenantId:tid, status, notes:notes??null })
       });
@@ -468,7 +471,7 @@ export function AdmissionsPage() {
                 <tr><th>Branch</th><th>Class</th><th>Min marks</th><th>Entrance test</th><th>Age range</th><th>Gender policy</th><th>Interview</th><th>Seats</th><th>Fill %</th></tr>
               </thead>
               <tbody>
-                {MOCK_CRITERIA.map(c => (
+                {(env.useMocks ? MOCK_CRITERIA : []).map(c => (
                   <tr key={c.Id}>
                     <td><b style={{fontSize:12}}>{c.BranchName}</b></td>
                     <td>{c.ClassName}</td>
