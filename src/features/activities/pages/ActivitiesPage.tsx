@@ -1,72 +1,96 @@
 import { useState } from "react";
-import { Calendar, Plus, Star, X } from "lucide-react";
+import { Plus, X, Star, Trophy, Users } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useActivities, useCreateActivity, useAwards } from "../../../core/api/queries";
+import { useActivities, useCreateActivity, useAwards, useCreateAward, useStudents } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
-const ACTIVITY_TYPES = ["Sports","Academic","Co-curricular","Cultural","Trip","Competition","Seminar","Other"];
-const STATUS_PILL: Record<string,string> = { UPCOMING:"info", COMPLETED:"success", CANCELLED:"danger", ONGOING:"warning" };
+const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
+const ACT_TYPES = ["SPORTS","CULTURAL","ACADEMIC","SCIENCE_FAIR","DEBATE","ART","COMMUNITY","FIELD_TRIP","CEREMONY"];
+const AWD_TYPES = ["ACADEMIC","SPORTS","CULTURAL","ATTENDANCE","LEADERSHIP","COMMUNITY","SPECIAL"];
+const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning", COMPLETED:"success", CANCELLED:"danger" };
 
 export function ActivitiesPage() {
-  const { user } = useAuth();
-  const tid = effectiveTenantId(user) ?? "";
-  const [tab, setTab] = useState<"activities"|"awards">("activities");
-  const [open, setOpen] = useState(false);
+  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const [tab, setTab]  = useState<"activities"|"awards">("activities");
+  const [aModal, setAModal] = useState(false);
+  const [wModal, setWModal] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name:"", type:"Sports", date:"", venue:"", description:"" });
 
-  const { data: actData, isLoading } = useActivities();
+  const { data, isLoading } = useActivities();
   const { data: awardsData } = useAwards();
+  const { data: studData }   = useStudents();
   const createActivity = useCreateActivity();
+  const createAward    = useCreateAward();
 
-  const activities = (actData     as any)?.items ?? (actData     as any) ?? [];
-  const awards     = (awardsData  as any)?.items ?? (awardsData  as any) ?? [];
+  const activities = (data as any)?.items       ?? (data as any) ?? [];
+  const awards     = (awardsData as any)?.items  ?? (awardsData as any) ?? [];
+  const students   = (studData as any)?.items    ?? (studData as any) ?? [];
 
-  function sf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setForm(p=>({...p,[k]:e.target.value})); }
+  const [aForm, setAForm] = useState({ name:"", activityType:"SPORTS", activityDate:"", venue:"", description:"", maxParticipants:"", status:"UPCOMING" });
+  const [wForm, setWForm] = useState({ studentId:"", title:"", awardType:"ACADEMIC", awardDate:"", description:"" });
+  const af = (k:string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setAForm(p=>({...p,[k]:e.target.value}));
+  const wf = (k:string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setWForm(p=>({...p,[k]:e.target.value}));
 
-  async function save() {
-    if (!form.name || !form.date) { setError("Name and date required"); return; }
+  async function saveActivity() {
+    if (!aForm.name || !aForm.activityDate) { setError("Name and date required"); return; }
     try {
-      await createActivity.mutateAsync({ tenantId:tid, name:form.name, metadataJson:JSON.stringify({ type:form.type, date:form.date, venue:form.venue, description:form.description, status:"UPCOMING" }) });
-      setOpen(false); setForm({ name:"", type:"Sports", date:"", venue:"", description:"" }); setError("");
+      await createActivity.mutateAsync({ tenantId:tid, name:aForm.name, metadataJson:JSON.stringify({ type:aForm.activityType, date:aForm.activityDate, venue:aForm.venue, description:aForm.description, maxParticipants:Number(aForm.maxParticipants)||undefined, status:aForm.status }) });
+      setAModal(false); setAForm({ name:"", activityType:"SPORTS", activityDate:"", venue:"", description:"", maxParticipants:"", status:"UPCOMING" }); setError("");
     } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
-  const byType = (t:string) => activities.filter((a:any)=>parseMeta(a.metadataJson).type===t).length;
+  async function saveAward() {
+    if (!wForm.studentId || !wForm.title || !wForm.awardDate) { setError("Student, title and date required"); return; }
+    const stu = students.find((s:any) => s.id === wForm.studentId);
+    try {
+      await createAward.mutateAsync({ tenantId:tid, name:wForm.title, metadataJson:JSON.stringify({ studentId:wForm.studentId, studentName:`${stu?.firstName??""} ${stu?.lastName??""}`.trim(), type:wForm.awardType, date:wForm.awardDate, description:wForm.description }) });
+      setWModal(false); setWForm({ studentId:"", title:"", awardType:"ACADEMIC", awardDate:"", description:"" }); setError("");
+    } catch(e:any) { setError(e?.message??"Failed"); }
+  }
+
+  const upcoming   = activities.filter((a:any) => parseMeta(a.metadataJson).status === "UPCOMING").length;
+  const completed  = activities.filter((a:any) => parseMeta(a.metadataJson).status === "COMPLETED").length;
 
   return (
     <>
-      <PageHeader title="Activities & Events" subtitle={`${activities.length} activities scheduled`}
-        action={<div className="page-actions"><button className="primary" onClick={()=>{setOpen(true);setError("");}}><Plus size={14}/> Add activity</button></div>}/>
-
+      <PageHeader title="Activities & Awards" subtitle="Co-curricular activities, events and student recognition"
+        action={<div className="page-actions">
+          {tab==="activities" && <button className="primary" onClick={()=>{setAModal(true);setError("");}}><Plus size={14}/> Add activity</button>}
+          {tab==="awards"     && <button className="primary" onClick={()=>{setWModal(true);setError("");}}><Star size={14}/> Give award</button>}
+        </div>}
+      />
       <section className="metric-grid" style={{marginBottom:20}}>
-        <StatCard label="Total activities" value={String(activities.length)}                                                         note=""           color="#2563EB" bg="#EFF6FF"><Calendar size={20}/></StatCard>
-        <StatCard label="Upcoming"         value={String(activities.filter((a:any)=>parseMeta(a.metadataJson).status==="UPCOMING").length)} note=""   color="#0F2241" bg="#EEF2FF"><Calendar size={20}/></StatCard>
-        <StatCard label="Completed"        value={String(activities.filter((a:any)=>parseMeta(a.metadataJson).status==="COMPLETED").length)}note=""  color="#10B981" bg="#ECFDF5"><Calendar size={20}/></StatCard>
-        <StatCard label="Awards given"     value={String(awards.length)}                                                             note=""           color="#D97706" bg="#FFFBEB"><Star size={20}/></StatCard>
+        <StatCard label="Total activities" value={String(activities.length)} note=""           color="#2563EB" bg="#EFF6FF"><Users size={20}/></StatCard>
+        <StatCard label="Upcoming"         value={String(upcoming)}          note=""           color="#D97706" bg="#FFFBEB"><Users size={20}/></StatCard>
+        <StatCard label="Completed"        value={String(completed)}         note="this term"  color="#10B981" bg="#ECFDF5"><Users size={20}/></StatCard>
+        <StatCard label="Awards given"     value={String(awards.length)}     note=""           color="#8B5CF6" bg="#F5F3FF"><Trophy size={20}/></StatCard>
       </section>
 
       <div className="section-tabs" style={{marginBottom:14}}>
-        <button className={tab==="activities"?"active":""} onClick={()=>setTab("activities")}>📅 Activities ({activities.length})</button>
+        <button className={tab==="activities"?"active":""} onClick={()=>setTab("activities")}>🏅 Activities ({activities.length})</button>
         <button className={tab==="awards"?"active":""} onClick={()=>setTab("awards")}>🏆 Awards ({awards.length})</button>
       </div>
 
-      {tab === "activities" && (
+      {tab==="activities" && (
         <div className="surface">
-          <div className="surface-head"><h3>All activities</h3></div>
           {isLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Activity</th><th>Type</th><th>Date</th><th>Venue</th><th>Status</th></tr></thead>
+                <thead><tr><th>Activity</th><th>Type</th><th>Date</th><th>Venue</th><th>Capacity</th><th>Status</th></tr></thead>
                 <tbody>
-                  {activities.length===0 ? <tr><td colSpan={5} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No activities yet.</td></tr>
-                  : activities.map((a:any)=>{
-                    const meta=parseMeta(a.metadataJson);
-                    return <tr key={a.id}><td><b>{a.name}</b></td><td><span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"#EEF2FF",color:"#6366F1"}}>{meta.type??"-"}</span></td><td>{meta.date??"-"}</td><td>{meta.venue??"-"}</td><td><span className={`status-pill ${STATUS_PILL[meta.status??"UPCOMING"]??"info"}`}>{meta.status??"UPCOMING"}</span></td></tr>;
-                  })}
+                  {activities.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No activities yet.</td></tr>
+                  : activities.map((a:any) => { const m=parseMeta(a.metadataJson); return (
+                    <tr key={a.id}>
+                      <td><b style={{fontSize:12}}>{a.name}</b>{m.description&&<div style={{fontSize:10,color:"var(--muted)"}}>{m.description}</div>}</td>
+                      <td><span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"#EEF2FF",color:"#6366F1",fontWeight:700}}>{m.type??"—"}</span></td>
+                      <td style={{fontSize:11}}>{m.date??"—"}</td>
+                      <td style={{fontSize:11}}>{m.venue??"—"}</td>
+                      <td style={{fontSize:11}}>{m.maxParticipants??"Open"}</td>
+                      <td><span className={`status-pill ${STATUS_PILL[m.status??"UPCOMING"]??"info"}`}>{m.status??"UPCOMING"}</span></td>
+                    </tr>
+                  );})}
                 </tbody>
               </table>
             </div>
@@ -74,36 +98,72 @@ export function ActivitiesPage() {
         </div>
       )}
 
-      {tab === "awards" && (
+      {tab==="awards" && (
         <div className="surface">
-          <div className="surface-head"><h3>Awards & Recognition</h3></div>
-          <div style={{padding:"0 20px 20px"}}>
-            {awards.length===0 ? <div style={{padding:32,textAlign:"center",color:"var(--muted)"}}>No awards yet.</div>
-            : awards.map((a:any)=>(
-              <div key={a.id} style={{padding:"12px 14px",borderRadius:10,border:"1px solid var(--line)",marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
-                <span style={{fontSize:24}}>🏆</span>
-                <div><b style={{fontSize:12}}>{a.name}</b><div style={{fontSize:11,color:"var(--muted)"}}>{a.code}</div></div>
-              </div>
-            ))}
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Award</th><th>Student</th><th>Type</th><th>Date</th><th>Description</th></tr></thead>
+              <tbody>
+                {awards.length===0 ? <tr><td colSpan={5} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No awards given yet.</td></tr>
+                : awards.map((w:any)=>{ const m=parseMeta(w.metadataJson); return (
+                  <tr key={w.id}>
+                    <td><div style={{display:"flex",alignItems:"center",gap:8}}><Trophy size={14} style={{color:"#F59E0B",flexShrink:0}}/><b style={{fontSize:12}}>{w.name}</b></div></td>
+                    <td style={{fontSize:11}}>{m.studentName??"—"}</td>
+                    <td><span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"#FFFBEB",color:"#D97706",fontWeight:700}}>{m.type??"—"}</span></td>
+                    <td style={{fontSize:11}}>{m.date??"—"}</td>
+                    <td style={{fontSize:11,color:"var(--muted)"}}>{m.description??"—"}</td>
+                  </tr>
+                );})}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {open && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setOpen(false)}}>
-          <div className="modal-card" style={{width:"min(500px,96vw)"}}>
-            <div className="modal-head"><h2>Add activity</h2><button className="icon-button" onClick={()=>setOpen(false)}><X size={18}/></button></div>
+      {aModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setAModal(false)}}>
+          <div className="modal-card" style={{width:"min(520px,96vw)"}}>
+            <div className="modal-head"><h2>Add activity</h2><button className="icon-button" onClick={()=>setAModal(false)}><X size={18}/></button></div>
             <div className="human-form"><div className="human-form-grid">
-              <label className="human-field field-wide"><span>Activity name *</span><input value={form.name} onChange={sf("name")} placeholder="e.g. Annual Sports Day 2026"/></label>
-              <label className="human-field"><span>Type</span><select value={form.type} onChange={sf("type")}>{ACTIVITY_TYPES.map(t=><option key={t}>{t}</option>)}</select></label>
-              <label className="human-field"><span>Date *</span><input type="date" value={form.date} onChange={sf("date")}/></label>
-              <label className="human-field field-wide"><span>Venue</span><input value={form.venue} onChange={sf("venue")} placeholder="e.g. School Ground"/></label>
+              <label className="human-field field-wide"><span>Name *</span><input value={aForm.name} onChange={af("name")} placeholder="e.g. Annual Sports Day"/></label>
+              <label className="human-field"><span>Type</span><select value={aForm.activityType} onChange={af("activityType")}>{ACT_TYPES.map(t=><option key={t}>{t}</option>)}</select></label>
+              <label className="human-field"><span>Status</span><select value={aForm.status} onChange={af("status")}>{["UPCOMING","ONGOING","COMPLETED","CANCELLED"].map(s=><option key={s}>{s}</option>)}</select></label>
+              <label className="human-field"><span>Date *</span><input type="date" value={aForm.activityDate} onChange={af("activityDate")}/></label>
+              <label className="human-field"><span>Venue</span><input value={aForm.venue} onChange={af("venue")} placeholder="e.g. Main Ground"/></label>
+              <label className="human-field"><span>Max participants</span><input type="number" value={aForm.maxParticipants} onChange={af("maxParticipants")}/></label>
+              <label className="human-field field-wide"><span>Description</span><input value={aForm.description} onChange={af("description")}/></label>
             </div>
             {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
             <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              <button className="secondary" onClick={()=>setOpen(false)}>Cancel</button>
-              <button className="primary" onClick={save} disabled={createActivity.isPending}>{createActivity.isPending?"Saving…":"Save"}</button>
+              <button className="secondary" onClick={()=>setAModal(false)}>Cancel</button>
+              <button className="primary" onClick={saveActivity} disabled={createActivity.isPending}>{createActivity.isPending?"Saving…":"Add activity"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {wModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setWModal(false)}}>
+          <div className="modal-card" style={{width:"min(480px,96vw)"}}>
+            <div className="modal-head"><h2>Give award</h2><button className="icon-button" onClick={()=>setWModal(false)}><X size={18}/></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Student *</span>
+                <select value={wForm.studentId} onChange={wf("studentId")}>
+                  <option value="">— Select student —</option>
+                  {students.map((s:any)=><option key={s.id} value={s.id}>{s.firstName} {s.lastName??""}</option>)}
+                </select>
+              </label>
+              <label className="human-field field-wide"><span>Award title *</span><input value={wForm.title} onChange={wf("title")} placeholder="e.g. Best in Mathematics"/></label>
+              <label className="human-field"><span>Type</span><select value={wForm.awardType} onChange={wf("awardType")}>{AWD_TYPES.map(t=><option key={t}>{t}</option>)}</select></label>
+              <label className="human-field"><span>Date *</span><input type="date" value={wForm.awardDate} onChange={wf("awardDate")}/></label>
+              <label className="human-field field-wide"><span>Description</span><input value={wForm.description} onChange={wf("description")}/></label>
+            </div>
+            {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+            </div>
+            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
+              <button className="secondary" onClick={()=>setWModal(false)}>Cancel</button>
+              <button className="primary" onClick={saveAward} disabled={createAward.isPending}>{createAward.isPending?"Saving…":"Give award"}</button>
             </div>
           </div>
         </div>

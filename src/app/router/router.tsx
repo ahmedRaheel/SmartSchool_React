@@ -112,7 +112,7 @@ export const router = createBrowserRouter([
       { path: "modules",                element: <PlatformAdminPage /> },
 
       // Misc
-      { path: "documents",              element: <PlatformAdminPage /> },
+      { path: "documents",              element: <DocumentsPage /> },
     ],
   },
 ]);

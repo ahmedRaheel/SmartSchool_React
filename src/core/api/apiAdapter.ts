@@ -263,3 +263,9 @@ export const impersonateUser   = (body: { targetUserId:string; tenantId?:string;
 
 // ── Workflow catalog ──────────────────────────────────────────────────────────
 export const getWorkflowCatalog= ()                               => M ? ms([]) : api.get("/api/workflows/catalog").then(r=>r.data);
+
+// ── Missing adapters (added to satisfy new hooks) ─────────────────────────────
+export const createGradeScale  = (body: object) => M ? ms({ id:uid() }) : api.post("/api/examinations/grade-scale", body).then(r=>r.data);
+export const createLesson      = (body: object) => M ? ms({ id:uid() }) : api.post("/api/learning/lesson", body).then(r=>r.data);
+export const createAward       = (body: object) => M ? ms({ id:uid() }) : api.post("/api/activities/award", body).then(r=>r.data);
+export const createWorkflowDef = (body: object) => M ? ms({ id:uid() }) : api.post("/api/workflow/workflow-definition", body).then(r=>r.data);
