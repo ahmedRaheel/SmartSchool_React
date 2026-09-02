@@ -21,6 +21,7 @@ import {
   MOCK_BRANCH_GENDER_TYPES, MOCK_EDUCATION_LEVELS,
   MOCK_INQUIRIES, MOCK_WORKFLOW_DEFS, MOCK_APPROVALS,
   MOCK_ACTIVITIES, MOCK_ASSIGNMENTS, MOCK_INVENTORY,
+  MOCK_LEAVE_REQUESTS,
   page,
 } from "./mockData";
 
@@ -53,7 +54,7 @@ export const getEmployeesPage  = (tenantId: string, p=1, ps=50) => M ? ms(pg(MOC
 export const createEmployee    = (body: object)                   => M ? ms({...MOCK_EMPLOYEES[0], id:uid(), employeeNumber:`EMP-${Date.now()}`}) : api.post("/api/hr/employee", body).then(r=>r.data);
 export const approveEmployee   = (id: string, body: object)       => M ? ms({}) : api.post(`/api/hr/employee/${id}/approve`, body).then(r=>r.data);
 export const terminateEmployee = (id: string, body: object)       => M ? ms({}) : api.post(`/api/hr/employee/${id}/terminate`, body).then(r=>r.data);
-export const getLeaveRequests  = (tenantId: string)               => M ? ms(pg([])) : api.get("/api/hr/leave-request", { params:{tenantId,page:1,pageSize:50} }).then(r=>r.data);
+export const getLeaveRequests  = (tenantId: string)               => M ? ms(pg(MOCK_LEAVE_REQUESTS)) : api.get("/api/hr/leave-request", { params:{tenantId,page:1,pageSize:50} }).then(r=>r.data);
 export const createLeaveRequest= (body: object)                   => M ? ms({ id:uid() }) : api.post("/api/hr/leave-request", body).then(r=>r.data);
 
 // ── Finance ───────────────────────────────────────────────────────────────────

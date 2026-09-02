@@ -191,3 +191,21 @@ export const useCreatePurchaseOrder    = () => { const qc=useQueryClient(); cons
 export const useCreateWorkflowDefinition = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createWorkflowDef(b), onSuccess:()=>qc.invalidateQueries({queryKey:["workflow-defs",tid]}) }); };
 export const useItems                  = useInventoryItems;
 export const useWorkflowDefinitions    = useWorkflowDefs;
+
+// ── Leave approval hooks ──────────────────────────────────────────────────────
+export const useApproveLeave = () => {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
+      A.approveLeave(id, { tenantId: tid, notes }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["leave-requests", tid] }),
+  });
+};
+export const useRejectLeave = () => {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      A.rejectLeave(id, { tenantId: tid, reason }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["leave-requests", tid] }),
+  });
+};

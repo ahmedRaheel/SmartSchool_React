@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, X, CheckCircle2, XCircle, Clock, CalendarOff, MessageSquare } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
-import { useEmployees, useCreateEmployee, useCampuses, useDepartments } from "../../../core/api/queries";
+import {
+  useEmployees, useCreateEmployee, useCampuses, useDepartments,
+  useLeaveRequests, useApproveLeave, useRejectLeave,
+} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { usePermissions } from "../../../core/rbac/usePermissions";
 import { Users, Briefcase, UserCheck, AlertCircle } from "lucide-react";
 
 const STAFF_TYPES = ["TEACHER","DRIVER","PRINCIPAL","ADMIN_OFFICER","ACCOUNTANT","HR","LIBRARIAN","TRANSPORT","OTHER"];
@@ -14,7 +18,8 @@ const EMPLOYMENT_TYPES = ["PERMANENT","CONTRACT","PART_TIME"];
 export function HrPage() {
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
-  const [tab, setTab] = useState<"list"|"new">("list");
+  const perms = usePermissions();
+  const [tab, setTab] = useState<"list"|"leaves"|"new">("list");
   const [search, setSearch] = useState("");
   const [step, setStep] = useState<1|2|3>(1);
   const [newEmpId, setNewEmpId] = useState("");
@@ -22,9 +27,19 @@ export function HrPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  // Leave request state
+  const [leaveFilter, setLeaveFilter] = useState<"ALL"|"PENDING"|"APPROVED"|"REJECTED">("ALL");
+  const [rejectModal, setRejectModal] = useState<any|null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [localLeaves, setLocalLeaves] = useState<any[]>([]);
+
   const [localEmp, setLocalEmp] = useState<any[]>([]);
   const { data, isLoading } = useEmployees();
+  const { data: leavesData } = useLeaveRequests();
+  const approveLeave = useApproveLeave();
+  const rejectLeave  = useRejectLeave();
   useEffect(()=>{ setLocalEmp((data as any)?.items??(data as any)??[]); },[data]);
+  useEffect(()=>{ setLocalLeaves((leavesData as any)?.items??(leavesData as any)??[]); },[leavesData]);
   const { data: campusesData } = useCampuses();
   const { data: deptsData } = useDepartments();
   const createEmployee = useCreateEmployee();
@@ -32,6 +47,24 @@ export function HrPage() {
   const employees = localEmp;
   const campuses  = (campusesData as any)?.items ?? (campusesData as any) ?? [];
   const depts     = (deptsData as any)?.items ?? (deptsData as any) ?? [];
+
+  const pendingLeaves = localLeaves.filter((l:any) => l.status === "PENDING").length;
+
+  async function handleApprove(leave: any) {
+    try {
+      await approveLeave.mutateAsync({ id: leave.id, notes: "Approved by HR" });
+      setLocalLeaves(p => p.map((l:any) => l.id === leave.id ? { ...l, status: "APPROVED", approverNotes: "Approved by HR", approvedAt: new Date().toISOString() } : l));
+    } catch { /* toast */ }
+  }
+
+  async function handleReject() {
+    if (!rejectModal) return;
+    try {
+      await rejectLeave.mutateAsync({ id: rejectModal.id, reason: rejectReason || "Rejected by HR" });
+      setLocalLeaves(p => p.map((l:any) => l.id === rejectModal.id ? { ...l, status: "REJECTED", approverNotes: rejectReason || "Rejected by HR", rejectedAt: new Date().toISOString() } : l));
+      setRejectModal(null); setRejectReason("");
+    } catch { /* toast */ }
+  }
 
   const [form, setForm] = useState({
     schoolId: "", branchId: "", departmentId: "",
@@ -97,8 +130,207 @@ export function HrPage() {
         action={<div className="page-actions">
           {tab === "list" && <button className="primary" onClick={() => { setTab("new"); setStep(1); setNewEmpId(""); setDocComp(false); setSubmitted(false); setError(""); }}><Plus size={14}/> Add staff</button>}
           {tab === "new"  && <button className="secondary" onClick={() => setTab("list")}>← Back to list</button>}
+          {tab === "leaves" && perms.can("hr.leave.apply") && !perms.can("hr.leave.approve") && (
+            <button className="primary" onClick={() => {/* apply own leave */}}><Plus size={14}/> Apply leave</button>
+          )}
         </div>}
       />
+
+      {/* Tab bar — only show if not in "new" wizard */}
+      {tab !== "new" && (
+        <div className="section-tabs" style={{ marginBottom: 16 }}>
+          <button className={tab === "list"   ? "active" : ""} onClick={() => setTab("list")}>
+            👥 Staff ({employees.length})
+          </button>
+          {perms.canAny(["hr.leave.approve", "hr.leave.manage", "hr.leave.apply"]) && (
+            <button className={tab === "leaves" ? "active" : ""} onClick={() => setTab("leaves")}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              📅 Leave requests
+              {pendingLeaves > 0 && (
+                <span style={{ background: "#EF4444", color: "white", borderRadius: 20, fontSize: 9, padding: "1px 6px", fontWeight: 800 }}>
+                  {pendingLeaves}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── LEAVE REQUESTS TAB ─────────────────────────────────────────────── */}
+      {tab === "leaves" && (
+        <>
+          <section className="metric-grid" style={{ marginBottom: 20 }}>
+            <StatCard label="Pending"  value={String(localLeaves.filter((l:any)=>l.status==="PENDING").length)}  note="awaiting action" color="#D97706" bg="#FFFBEB"><Clock size={20}/></StatCard>
+            <StatCard label="Approved" value={String(localLeaves.filter((l:any)=>l.status==="APPROVED").length)} note="this month"     color="#059669" bg="#ECFDF5"><CheckCircle2 size={20}/></StatCard>
+            <StatCard label="Rejected" value={String(localLeaves.filter((l:any)=>l.status==="REJECTED").length)} note=""             color="#DC2626" bg="#FEF2F2"><XCircle size={20}/></StatCard>
+            <StatCard label="Total"    value={String(localLeaves.length)}                                          note=""             color="#6366F1" bg="#EEF2FF"><CalendarOff size={20}/></StatCard>
+          </section>
+
+          <div className="surface">
+            <div className="surface-head">
+              <h3>Leave requests</h3>
+              <div style={{ display: "flex", gap: 6 }}>
+                {(["ALL","PENDING","APPROVED","REJECTED"] as const).map(f => (
+                  <button key={f} onClick={() => setLeaveFilter(f)}
+                    className={leaveFilter === f ? "primary" : "secondary"}
+                    style={{ height: 30, fontSize: 11, padding: "0 12px" }}>
+                    {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
+                    {f !== "ALL" && ` (${localLeaves.filter((l:any)=>l.status===f).length})`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="table-wrap">
+              <table className="premium-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Role</th>
+                    <th>Leave type</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Days</th>
+                    <th>Reason</th>
+                    <th>Applied</th>
+                    <th>Status</th>
+                    {perms.can("hr.leave.approve") && <th>Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {localLeaves
+                    .filter((l:any) => leaveFilter === "ALL" || l.status === leaveFilter)
+                    .length === 0 ? (
+                      <tr><td colSpan={perms.can("hr.leave.approve") ? 10 : 9} style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>
+                        No {leaveFilter === "ALL" ? "" : leaveFilter.toLowerCase()} leave requests.
+                      </td></tr>
+                    ) : localLeaves
+                      .filter((l:any) => leaveFilter === "ALL" || l.status === leaveFilter)
+                      .map((leave: any) => {
+                        const isPending  = leave.status === "PENDING";
+                        const isApproved = leave.status === "APPROVED";
+                        const isRejected = leave.status === "REJECTED";
+                        return (
+                          <tr key={leave.id} style={{ background: isPending ? "var(--warning-bg)" : "" }}>
+                            <td>
+                              <div className="person-cell">
+                                <div style={{ width: 32, height: 32, borderRadius: 9, background: "var(--indigo-soft)", color: "var(--indigo)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
+                                  {leave.employeeName?.split(" ").map((n:string)=>n[0]).slice(0,2).join("")}
+                                </div>
+                                <div>
+                                  <b style={{ fontSize: 12 }}>{leave.employeeName}</b>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "var(--indigo-soft)", color: "var(--indigo)", fontWeight: 700 }}>
+                                {leave.staffType}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: leave.leaveType === "SICK" ? "#DC2626" : leave.leaveType === "EMERGENCY" ? "#7C3AED" : "#0369A1" }}>
+                                {leave.leaveType}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: 11 }}>{leave.startDate}</td>
+                            <td style={{ fontSize: 11 }}>{leave.endDate}</td>
+                            <td style={{ textAlign: "center" }}><b>{leave.days}</b></td>
+                            <td style={{ maxWidth: 200 }}>
+                              <div style={{ fontSize: 11, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {leave.reason}
+                              </div>
+                            </td>
+                            <td style={{ fontSize: 10, color: "var(--muted)" }}>
+                              {new Date(leave.appliedAt).toLocaleDateString("en-PK")}
+                            </td>
+                            <td>
+                              <div>
+                                <span className={`status-pill ${isApproved ? "success" : isRejected ? "danger" : "warning"}`} style={{ fontSize: 9 }}>
+                                  {leave.status}
+                                </span>
+                                {(isApproved || isRejected) && leave.approverNotes && (
+                                  <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 3, fontStyle: "italic" }}>
+                                    "{leave.approverNotes}"
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            {perms.can("hr.leave.approve") && (
+                              <td>
+                                {isPending && (
+                                  <div className="row-actions">
+                                    <button
+                                      className="table-action approve"
+                                      style={{ fontSize: 10, display: "flex", alignItems: "center", gap: 4 }}
+                                      disabled={approveLeave.isPending}
+                                      onClick={() => handleApprove(leave)}>
+                                      <CheckCircle2 size={11} /> Approve
+                                    </button>
+                                    <button
+                                      className="table-action reject"
+                                      style={{ fontSize: 10, display: "flex", alignItems: "center", gap: 4 }}
+                                      onClick={() => { setRejectModal(leave); setRejectReason(""); }}>
+                                      <XCircle size={11} /> Reject
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div className="table-footer">
+              <span>
+                {localLeaves.filter((l:any) => leaveFilter === "ALL" || l.status === leaveFilter).length} leave requests
+                {perms.can("hr.leave.approve") && pendingLeaves > 0 && (
+                  <span style={{ marginLeft: 10, color: "#D97706", fontWeight: 700 }}>· {pendingLeaves} pending your action</span>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* Reject reason modal */}
+          {rejectModal && (
+            <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setRejectModal(null); }}>
+              <div className="modal-card" style={{ width: "min(420px,96vw)" }}>
+                <div className="modal-head">
+                  <div>
+                    <h2 style={{ fontSize: 17 }}>Reject leave request</h2>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>{rejectModal.employeeName} · {rejectModal.days} day{rejectModal.days>1?"s":""} ({rejectModal.leaveType})</p>
+                  </div>
+                  <button className="icon-button" onClick={() => setRejectModal(null)}><X size={18}/></button>
+                </div>
+                <div className="human-form">
+                  <div style={{ padding: "10px 14px", background: "var(--surface-2)", borderRadius: 10, fontSize: 12 }}>
+                    <b>Reason for leave:</b> {rejectModal.reason}
+                  </div>
+                  <label className="human-field field-wide">
+                    <span>Rejection reason (shown to employee)</span>
+                    <textarea
+                      value={rejectReason}
+                      onChange={e => setRejectReason(e.target.value)}
+                      placeholder="e.g. Exam week — cannot grant leave. Please re-apply after exams."
+                      style={{ minHeight: 80, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius: 10, width: "100%", fontSize: 13, resize: "vertical" }}
+                    />
+                  </label>
+                </div>
+                <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
+                  <button className="secondary" onClick={() => setRejectModal(null)}>Cancel</button>
+                  <button
+                    style={{ height: 36, padding: "0 16px", borderRadius: 9, border: "none", background: "var(--danger)", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                    onClick={handleReject} disabled={rejectLeave.isPending}>
+                    <XCircle size={13} /> {rejectLeave.isPending ? "Rejecting…" : "Confirm rejection"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {tab === "list" && (
         <>

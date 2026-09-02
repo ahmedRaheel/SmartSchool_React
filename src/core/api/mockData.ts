@@ -407,6 +407,17 @@ export const MOCK_PREDICTION: PredictionResult = {
   ],
 };
 
+// ── Mock leave requests ───────────────────────────────────────────────────────
+export const MOCK_LEAVE_REQUESTS = [
+  { id:"lr1", employeeId:"33333333-3333-3333-3333-333333333333", employeeName:"Aisha Siddiqui",   staffType:"TEACHER",      leaveType:"SICK",     startDate:"2026-09-03", endDate:"2026-09-04", days:2, reason:"Fever and flu, doctor's certificate attached.",  status:"PENDING",  appliedAt:"2026-09-02T08:00:00Z", approverNotes:"" },
+  { id:"lr2", employeeId:"55555555-5555-5555-5555-555555555555", employeeName:"Arif Khan",         staffType:"DRIVER",       leaveType:"ANNUAL",   startDate:"2026-09-10", endDate:"2026-09-12", days:3, reason:"Family function out of city.",                    status:"PENDING",  appliedAt:"2026-09-01T14:30:00Z", approverNotes:"" },
+  { id:"lr3", employeeId:"66666666-6666-6666-6666-666666666666", employeeName:"Zulfiqar Ahmed",    staffType:"ACCOUNTANT",   leaveType:"CASUAL",   startDate:"2026-09-05", endDate:"2026-09-05", days:1, reason:"Personal errand at government office.",            status:"PENDING",  appliedAt:"2026-09-02T09:15:00Z", approverNotes:"" },
+  { id:"lr4", employeeId:"77777777-7777-7777-7777-777777777777", employeeName:"Nadia Pervez",      staffType:"HR",           leaveType:"SICK",     startDate:"2026-08-28", endDate:"2026-08-28", days:1, reason:"Medical check-up.",                                status:"APPROVED", appliedAt:"2026-08-27T10:00:00Z", approverNotes:"Approved. Get well soon.", approvedAt:"2026-08-27T11:00:00Z" },
+  { id:"lr5", employeeId:"88888888-8888-8888-8888-888888888888", employeeName:"Dr. Tariq Malik",   staffType:"EXAMINER",     leaveType:"ANNUAL",   startDate:"2026-08-20", endDate:"2026-08-22", days:3, reason:"Planned vacation.",                                status:"APPROVED", appliedAt:"2026-08-15T08:00:00Z", approverNotes:"Approved.",                approvedAt:"2026-08-16T09:00:00Z" },
+  { id:"lr6", employeeId:"33333333-3333-3333-3333-333333333334", employeeName:"Tariq Jameel",      staffType:"TEACHER",      leaveType:"EMERGENCY",startDate:"2026-09-01", endDate:"2026-09-02", days:2, reason:"Family emergency.",                                status:"APPROVED", appliedAt:"2026-09-01T07:00:00Z", approverNotes:"Approved — emergency grant.", approvedAt:"2026-09-01T07:30:00Z" },
+  { id:"lr7", employeeId:"33333333-3333-3333-3333-333333333335", employeeName:"Rehana Pervez",     staffType:"TEACHER",      leaveType:"CASUAL",   startDate:"2026-09-08", endDate:"2026-09-08", days:1, reason:"Personal work.",                                   status:"REJECTED", appliedAt:"2026-09-01T12:00:00Z", approverNotes:"Exam week — leave not possible.",  rejectedAt:"2026-09-01T13:00:00Z" },
+];
+
 export const MOCK_EARLY_WARNINGS: PredictionResult[] = [
   { kind:"DropoutRisk",     score:0.73, probability:0.73, riskLevel:"High",     outcome:"High dropout risk",          confidence:0.89, modelVersion:"v2.1.0", usedMachineLearning:true, factors:["Low attendance","Declining grades","Missing assignments"] },
   { kind:"GradeDecline",    score:0.55, probability:0.55, riskLevel:"Medium",   outcome:"Grade decline detected",     confidence:0.81, modelVersion:"v2.1.0", usedMachineLearning:true, factors:["Avg grade dropped 13 points","Missed 2 labs"] },
