@@ -75,7 +75,11 @@ export const usePrograms        = () => { const tid=useTid(); return useQuery({ 
 export const useTerms           = () => { const tid=useTid(); return useQuery({ queryKey:["terms",tid], queryFn:()=>A.getTerms(tid) }); };
 
 // ── Tenancy ───────────────────────────────────────────────────────────────────
-export const useTenants         = () => useQuery({ queryKey:["tenants"], queryFn:A.getTenants });
+export const useTenants         = (page = 1, pageSize = 25) => useQuery({
+  queryKey: ["tenants", page, pageSize],
+  queryFn: () => A.getTenants(page, pageSize),
+  placeholderData: previousData => previousData,
+});
 export const useCreateTenant    = () => { const qc=useQueryClient(); return useMutation({ mutationFn:(b:object)=>A.createTenant(b), onSuccess:()=>qc.invalidateQueries({queryKey:["tenants"]}) }); };
 
 // ── Transport ─────────────────────────────────────────────────────────────────

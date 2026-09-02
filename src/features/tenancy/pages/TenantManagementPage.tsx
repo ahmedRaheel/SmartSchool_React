@@ -24,15 +24,20 @@ export function TenantManagementPage() {
     contactName:"", contactEmail:"", contactPhone:"", contactAddress:"",
   });
 
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(25);
   const [localTenants, setLocalTenants] = React.useState<any[]>([]);
-  const { data, isLoading } = useTenants();
-  React.useEffect(()=>{ setLocalTenants((data as any)?.items??(data as any)??[]); },[data]);
-  const parseMeta = (j?: string|null) => { try { return JSON.parse(j??'{}'); } catch { return {}; } };
+  const { data, isLoading, isFetching } = useTenants(page, pageSize);
+  React.useEffect(()=>{
+    const rows = (data as any)?.items;
+    setLocalTenants(Array.isArray(rows) ? rows : []);
+  },[data]);
   const createTenant = useCreateTenant();
   const impersonate  = useImpersonate();
 
   const tenants = localTenants;
-  const total   = (data as any)?.totalCount ?? tenants.length;
+  const total   = (data as any)?.totalCount ?? (data as any)?.total ?? tenants.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   function sf(k:string){ return (e:React.ChangeEvent<HTMLInputElement>)=>setForm(p=>({...p,[k]:e.target.value})); }
 
@@ -119,6 +124,28 @@ export function TenantManagementPage() {
             </table>
           </div>
         )}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"12px 16px",borderTop:"1px solid var(--line)",flexWrap:"wrap"}}>
+          <div style={{fontSize:12,color:"var(--muted)"}}>
+            Page {page} of {totalPages} · {total} tenants {isFetching && !isLoading ? "· Refreshing…" : ""}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <label style={{fontSize:12,color:"var(--muted)"}}>
+              Rows&nbsp;
+              <select
+                value={pageSize}
+                onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                style={{padding:"6px 8px",border:"1px solid var(--line)",borderRadius:6}}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </label>
+            <button className="secondary" disabled={page <= 1 || isFetching} onClick={() => setPage(p => Math.max(1, p - 1))}>Previous</button>
+            <button className="secondary" disabled={page >= totalPages || isFetching} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
+          </div>
+        </div>
       </div>
 
       {open && (

@@ -33,6 +33,21 @@ const pg = <T>(items: T[], p = 1, ps = 50): PagedResult<T> => {
 };
 const uid = () => crypto.randomUUID();
 
+// Backend Result<T> endpoints wrap successful values in { value, isSuccess, ... }.
+// Keep the adapter contract stable so UI list/grid components always receive PagedResult<T>.
+const unwrapPaged = <T>(payload: any): PagedResult<T> => {
+  const value = payload?.value ?? payload;
+  if (Array.isArray(value)) {
+    return { items: value, page: 1, pageSize: value.length || 1, totalCount: value.length };
+  }
+  return {
+    items: Array.isArray(value?.items) ? value.items : [],
+    page: Number(value?.page ?? value?.pageNumber ?? 1),
+    pageSize: Number(value?.pageSize ?? value?.items?.length ?? 25),
+    totalCount: Number(value?.totalCount ?? value?.total ?? value?.items?.length ?? 0),
+  };
+};
+
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 export const adminDashboard   = (tenantId?: string)                    => M ? ms(MOCK_ADMIN_DASHBOARD)   : api.get("/api/dashboard/admin",                    { params: { tenantId } }).then(r=>r.data);
 export const studentDashboard = (studentId: string, tenantId: string) => M ? ms(MOCK_STUDENT_DASHBOARD) : api.get(`/api/dashboard/student/${studentId}`,     { params: { tenantId } }).then(r=>r.data);
@@ -107,7 +122,9 @@ export const getPrograms       = (tenantId: string)               => M ? ms(pg([
 export const getTerms          = (tenantId: string)               => M ? ms(pg([])) : api.get("/api/academics/term",              { params:{tenantId,page:1,pageSize:50}  }).then(r=>r.data);
 
 // ── Tenancy ───────────────────────────────────────────────────────────────────
-export const getTenants        = ()                               => M ? ms(pg(MOCK_TENANTS)) : api.get("/api/tenancy/tenant").then(r=>r.data);
+export const getTenants        = (page = 1, pageSize = 25)             => M
+  ? ms(pg(MOCK_TENANTS, page, pageSize))
+  : api.get("/api/tenancy/tenant", { params: { page, pageSize } }).then(r => unwrapPaged<any>(r.data));
 export const createTenant      = (body: object)                   => M ? ms({ tenantId:uid(), id:uid(), code:`TNT-${Date.now()}`, name:(body as any).name, adminAccount:{ userId:uid(), email:(body as any).adminEmail, temporaryPassword:"TempPass123!", mustChangePassword:true } }) : api.post("/api/tenancy/tenant", body).then(r=>r.data);
 export const getCampusBranding = (tenantId: string)               => M ? ms(pg([])) : api.get("/api/tenancy/campus-branding", { params:{tenantId,page:1,pageSize:20} }).then(r=>r.data);
 
