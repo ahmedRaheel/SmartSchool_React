@@ -270,6 +270,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "student@alnoor.edu.pk":        { role:"Student",      roles:["Student"],     name:"Ahmed Hassan",    accountType:"Student",     school:"Al-Noor Academy", studentId:"22222222-2222-2222-2222-222222222222" },
         "parent@alnoor.edu.pk":         { role:"Parent",       roles:["Parent"],      name:"Ali Hassan",      accountType:"Guardian",    school:"Al-Noor Academy", businessEntityId:"44444444-4444-4444-4444-444444444444" },
         "driver@alnoor.edu.pk":         { role:"Driver",       roles:["Driver"],      name:"Arif Khan",       accountType:"Employee",    school:"Al-Noor Academy", driverId:"55555555-5555-5555-5555-555555555555" },
+        "accountant@alnoor.edu.pk":     { role:"Accountant",   roles:["Accountant"],  name:"Zulfiqar Ahmed",  accountType:"Employee",    school:"Al-Noor Academy", employeeId:"66666666-6666-6666-6666-666666666666" },
+        "hrmanager@alnoor.edu.pk":      { role:"HRManager",    roles:["HRManager"],   name:"Nadia Pervez",    accountType:"Employee",    school:"Al-Noor Academy", employeeId:"77777777-7777-7777-7777-777777777777" },
+        "examiner@alnoor.edu.pk":       { role:"Examiner",     roles:["Examiner"],    name:"Dr. Tariq Malik", accountType:"Employee",    school:"Al-Noor Academy", examinerId:"88888888-8888-8888-8888-888888888888" },
       };
       const mock = MOCK_ROLES[email] ?? { role:"Admin", roles:["Admin"], name:email.split("@")[0], accountType:"Admin", school:"School" };
       const mockUser: SessionUser = {

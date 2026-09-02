@@ -374,21 +374,19 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
 function resolveMenuKey(roles: readonly string[]): string {
   const r = roles.map(x => x.toLowerCase().trim());
 
-  if (r.some(x => x === "superadmin"))            return "superadmin";
-  if (r.some(x => x === "principal"))             return "principal";
-  if (r.some(x => x === "examiner"))              return "examiner";
-  if (r.some(x => x === "accountant"))            return "accountant";
-  if (r.some(x => x === "hrmanager"))             return "hrmanager";
-  if (r.some(x => x === "librarian"))             return "librarian";
-  if (r.some(x => x === "driver"))                return "driver";
-  if (r.some(x => x === "parent" || x === "guardian")) return "parent";
-  if (r.some(x => x === "student"))               return "student";
-  if (r.some(x => x === "teacher"))               return "teacher";
-  // SchoolAdmin, Admin, AdminOfficer → admin ops menu
-  // Tenant / School Owner — check BEFORE generic admin so "TenantAdmin" routes here
+  if (r.some(x => x === "superadmin"))                                        return "superadmin";
+  // Tenant/Owner BEFORE admin — "TenantAdmin" must not fall to admin
   if (r.some(x => ["tenant","schoolowner","tenantadmin","owner"].includes(x))) return "tenant";
+  if (r.some(x => x === "principal"))                                          return "principal";
+  if (r.some(x => x === "examiner"))                                           return "examiner";
+  if (r.some(x => x === "accountant"))                                         return "accountant";
+  if (r.some(x => ["hrmanager","hr"].includes(x)))                             return "hrmanager";
+  if (r.some(x => x === "librarian"))                                          return "librarian";
+  if (r.some(x => x === "driver"))                                             return "driver";
+  if (r.some(x => x === "parent" || x === "guardian"))                         return "parent";
+  if (r.some(x => x === "student"))                                            return "student";
+  if (r.some(x => x === "teacher"))                                            return "teacher";
   if (r.some(x => ["admin","schooladmin","adminofficer","staff"].includes(x))) return "admin";
-  // Default fallback for unknown roles
   return "admin";
 }
 
