@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Building2, Plus, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -20,21 +20,24 @@ export function TenantManagementPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<any>(null);
   const [form, setForm] = useState({
-    organizationName:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"",
+    name:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"",
     contactName:"", contactEmail:"", contactPhone:"", contactAddress:"",
   });
 
+  const [localTenants, setLocalTenants] = React.useState<any[]>([]);
   const { data, isLoading } = useTenants();
+  React.useEffect(()=>{ setLocalTenants((data as any)?.items??(data as any)??[]); },[data]);
+  const parseMeta = (j?: string|null) => { try { return JSON.parse(j??'{}'); } catch { return {}; } };
   const createTenant = useCreateTenant();
   const impersonate  = useImpersonate();
 
-  const tenants = (data as any)?.items ?? (data as any) ?? [];
+  const tenants = localTenants;
   const total   = (data as any)?.totalCount ?? tenants.length;
 
   function sf(k:string){ return (e:React.ChangeEvent<HTMLInputElement>)=>setForm(p=>({...p,[k]:e.target.value})); }
 
   async function save() {
-    if (!form.organizationName||!form.adminEmail||!form.adminFirstName||!form.contactName||!form.contactEmail||!form.contactPhone||!form.contactAddress) {
+    if (!form.name||!form.adminEmail||!form.adminFirstName||!form.contactName||!form.contactEmail||!form.contactPhone||!form.contactAddress) {
       setError("All required fields must be filled"); return;
     }
     try {
@@ -86,8 +89,27 @@ export function TenantManagementPage() {
                       <td><span className={`status-pill ${meta.status==="ACTIVE"?"success":meta.status==="TRIAL"?"warning":"gray"}`}>{meta.status??"ACTIVE"}</span></td>
                       <td>
                         <div className="row-actions">
-                          <button className="table-action" style={{fontSize:10}} onClick={()=>doImpersonate(t.tenantId)}>Enter</button>
-                          <button className="table-action" style={{fontSize:10}}>Edit</button>
+                          <button className="table-action" style={{fontSize:10}} onClick={()=>doImpersonate(t.tenantId)}>
+                            🔐 Enter
+                          </button>
+                          {meta.status !== "ACTIVE" && (
+                            <button className="table-action approve" style={{fontSize:10}}
+                              onClick={()=>setLocalTenants(p=>p.map((x:any)=>x.id===t.id?{...x,metadataJson:JSON.stringify({...parseMeta(x.metadataJson),status:"ACTIVE"})}:x))}>
+                              ✓ Activate
+                            </button>
+                          )}
+                          {meta.status === "ACTIVE" && (
+                            <button className="table-action hold" style={{fontSize:10}}
+                              onClick={()=>setLocalTenants(p=>p.map((x:any)=>x.id===t.id?{...x,metadataJson:JSON.stringify({...parseMeta(x.metadataJson),status:"TRIAL"})}:x))}>
+                              → Trial
+                            </button>
+                          )}
+                          {meta.status !== "SUSPENDED" && (
+                            <button className="table-action reject" style={{fontSize:10}}
+                              onClick={()=>setLocalTenants(p=>p.map((x:any)=>x.id===t.id?{...x,metadataJson:JSON.stringify({...parseMeta(x.metadataJson),status:"SUSPENDED"})}:x))}>
+                              ✗ Suspend
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -126,7 +148,7 @@ export function TenantManagementPage() {
                 <div className="human-form">
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>School info</div>
                   <div className="human-form-grid">
-                    <label className="human-field field-wide"><span>School name *</span><input value={form.organizationName} onChange={sf("organizationName")} placeholder="e.g. Al-Noor Academy"/></label>
+                    <label className="human-field field-wide"><span>School name *</span><input value={form.name} onChange={sf("name")} placeholder="e.g. Al-Noor Academy"/></label>
                   </div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Admin account</div>
                   <div className="human-form-grid">

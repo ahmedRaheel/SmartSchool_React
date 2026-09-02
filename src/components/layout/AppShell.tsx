@@ -84,7 +84,13 @@ export function AppShell() {
     return () => clearTimeout(t);
   }, [toasts]);
 
-  if (!user) return null;
+  if (!user) {
+    // Not authenticated — redirect to login, preserving the intended destination
+    const returnTo = encodeURIComponent(location.pathname + location.search);
+    const dest = returnTo === "%2F" ? "/login" : `/login?returnTo=${returnTo}`;
+    navigate(dest, { replace: true });
+    return null;
+  }
 
   const isImpersonating = user.impersonated === true;
   const initials = user.initials || user.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?";

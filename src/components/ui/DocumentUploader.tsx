@@ -183,12 +183,8 @@ export function DocumentUploader({
 
       const headers: Record<string,string> = {};
       const token = localStorage.getItem("access_token");
-      if (token && !token.startsWith("mock_")) {
-        headers.Authorization = `Bearer ${token}`;
-      } else if (env.useMocks) {
-        headers["X-Mock-Role"] = session.role ?? "SchoolAdmin";
-        headers["X-Mock-TenantId"] = tenantId;
-      }
+      if (token && !token.startsWith("mock_")) headers.Authorization = `Bearer ${token}`;
+      else { headers["X-Mock-Role"]=session.role??"SchoolAdmin"; headers["X-Mock-TenantId"]=tenantId; }
 
       const res = await fetch(`${env.apiBaseUrl}/api/documents/files`, { method:"POST", body:form, headers });
       const data = await res.json();

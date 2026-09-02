@@ -489,6 +489,8 @@ export function DashboardPage() {
   if (role.includes("examiner"))                            return <ExaminerDashboard/>;
   if (role.includes("accountant"))                          return <AccountantDashboard/>;
   if (role.includes("principal"))                           return <AdminDashboard role="Principal"/>;
+  // Tenant / School Owner — full admin dashboard
+  if (role === "tenant" || role.includes("owner"))          return <AdminDashboard role="School Owner"/>;
   // SchoolAdmin, Admin, HRManager, all others
   return <AdminDashboard/>;
 }

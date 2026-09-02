@@ -37,7 +37,15 @@ export function LoginPage() {
   const [loading, setLoading]   = useState(false);
   const [activeRole, setActiveRole] = useState("SuperAdmin");
 
-  if (user) return <Navigate to="/" replace />;
+  // Parse query params for returnTo and reason
+  const searchParams = new URLSearchParams(location.search);
+  const returnTo = searchParams.get("returnTo");
+  const reason   = searchParams.get("reason"); // "expired" | null
+
+  if (user) {
+    const dest = returnTo ? decodeURIComponent(returnTo) : "/";
+    return <Navigate to={dest} replace />;
+  }
 
   function pickRole(r: typeof DEMO_ROLES[0]) {
     setActiveRole(r.role);
@@ -52,8 +60,9 @@ export function LoginPage() {
     const result = await login({ email, password });
     setLoading(false);
     if (!result.success) { setError(result.message ?? "Unable to sign in."); return; }
-    const from = (location.state as { from?: string } | null)?.from ?? "/";
-    navigate(from, { replace: true });
+    // Redirect to where the user was, or home
+    const dest = returnTo ? decodeURIComponent(returnTo) : (location.state as any)?.from ?? "/";
+    navigate(dest, { replace: true });
   }
 
   return (
@@ -126,6 +135,26 @@ export function LoginPage() {
       {/* ── RIGHT PANEL ───────────────────────────────────────────────────── */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"48px 40px", background:"#FAFBFC", overflowY:"auto" }}>
         <div style={{ width:"100%", maxWidth:440 }}>
+
+          {/* Session-ended banners */}
+          {reason === "expired" && (
+            <div style={{ padding:"12px 16px", background:"#FFFBEB", border:"1.5px solid #FDE68A", borderRadius:12, marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+              <span style={{ fontSize:18, flexShrink:0 }}>⏱</span>
+              <div>
+                <b style={{ fontSize:12, color:"#92400E", display:"block" }}>Your session has expired</b>
+                <span style={{ fontSize:12, color:"#78350F" }}>For your security, you were signed out after being inactive. Please sign in again to continue.</span>
+              </div>
+            </div>
+          )}
+          {!reason && returnTo && (
+            <div style={{ padding:"12px 16px", background:"#EFF6FF", border:"1.5px solid #BFDBFE", borderRadius:12, marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+              <span style={{ fontSize:18, flexShrink:0 }}>🔒</span>
+              <div>
+                <b style={{ fontSize:12, color:"#1E40AF", display:"block" }}>Sign in required</b>
+                <span style={{ fontSize:12, color:"#1D4ED8" }}>Please sign in to access that page. You'll be redirected automatically.</span>
+              </div>
+            </div>
+          )}
 
           {/* Header */}
           <div style={{ marginBottom:32 }}>
@@ -225,7 +254,7 @@ export function LoginPage() {
               Currently in <code style={{ background:"#E2E8F0", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>
                 {import.meta.env.VITE_USE_MOCKS === "true" ? "MOCK" : "REAL API"}
               </code> mode.{" "}
-              {import.meta.env.VITE_USE_MOCKS === "false"
+              {import.meta.env.VITE_USE_MOCKS === "true"
                 ? "Set VITE_USE_MOCKS=false in .env for real backend."
                 : `API: ${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:7001"}`}
             </div>

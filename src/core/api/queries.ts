@@ -11,9 +11,9 @@ function useTid() { const { user } = useAuth(); return effectiveTenantId(user) ?
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const useAdminDashboard   = () => { const tid=useTid(); return useQuery({ queryKey:["dash","admin",tid],   queryFn:()=>A.adminDashboard(tid),   staleTime:60_000 }); };
-//export const useStudentDashboard = (sid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=sid??user?.studentId??""; return useQuery({ queryKey:["dash","student",id], queryFn:()=>A.studentDashboard(id,tid), enabled:!!id }); };
+export const useStudentDashboard = (sid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=sid??user?.studentId??""; return useQuery({ queryKey:["dash","student",id], queryFn:()=>A.studentDashboard(id,tid), enabled:!!id }); };
 export const useTeacherDashboard = (eid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=eid??user?.employeeId??""; return useQuery({ queryKey:["dash","teacher",id], queryFn:()=>A.teacherDashboard(id,tid), enabled:!!id }); };
-//export const useParentDashboard  = (gid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=gid??user?.businessEntityId??""; return useQuery({ queryKey:["dash","parent",id], queryFn:()=>A.parentDashboard(id,tid), enabled:!!id }); };
+export const useParentDashboard  = (gid?:string) => { const {user}=useAuth(); const tid=useTid(); const id=gid??user?.businessEntityId??""; return useQuery({ queryKey:["dash","parent",id], queryFn:()=>A.parentDashboard(id,tid), enabled:!!id }); };
 export const useDriverDashboard  = (did?:string) => { const {user}=useAuth(); const tid=useTid(); const id=did??user?.driverId??""; return useQuery({ queryKey:["dash","driver",id], queryFn:()=>A.driverDashboard(id,tid), enabled:!!id }); };
 
 // ── Students ──────────────────────────────────────────────────────────────────
@@ -32,12 +32,12 @@ export const useCreateLeaveRequest=()=> { const qc=useQueryClient(); const tid=u
 
 // ── Finance ───────────────────────────────────────────────────────────────────
 export const useInvoices        = (page=1) => { const tid=useTid(); return useQuery({ queryKey:["invoices",tid,page], queryFn:()=>A.getInvoicesPage(tid,page) }); };
-//export const useCreateInvoice   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createInvoice(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
-//export const useCreatePayment   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
+export const useCreateInvoice   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createInvoice(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
+export const useCreatePayment   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
 export const useFeeTypes        = () => { const tid=useTid(); return useQuery({ queryKey:["fee-types",tid], queryFn:()=>A.getFeeTypes(tid) }); };
 export const useCreateFeeType   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createFeeType(b), onSuccess:()=>qc.invalidateQueries({queryKey:["fee-types",tid]}) }); };
 export const useFeeStructure    = () => { const tid=useTid(); return useQuery({ queryKey:["fee-structure",tid], queryFn:()=>A.getFeeStructure(tid) }); };
-//export const useCreateFeeStructure=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createFeeStructure(b), onSuccess:()=>qc.invalidateQueries({queryKey:["fee-structure",tid]}) }); };
+export const useCreateFeeStructure=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createFeeStructure(b), onSuccess:()=>qc.invalidateQueries({queryKey:["fee-structure",tid]}) }); };
 
 // ── Admissions ────────────────────────────────────────────────────────────────
 export const useInquiries       = (page=1) => { const tid=useTid(); return useQuery({ queryKey:["inquiries",tid,page], queryFn:()=>A.getInquiriesPage(tid,page) }); };
@@ -67,7 +67,7 @@ export const useGradeLevels     = () => { const tid=useTid(); return useQuery({ 
 export const useCreateGradeLevel= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createGradeLevel(b), onSuccess:()=>qc.invalidateQueries({queryKey:["grade-levels",tid]}) }); };
 export const useClassSections   = () => { const tid=useTid(); return useQuery({ queryKey:["sections",tid], queryFn:()=>A.getClassSections(tid) }); };
 export const useCreateClassSection=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createClassSection(b), onSuccess:()=>qc.invalidateQueries({queryKey:["sections",tid]}) }); };
-//export const useSubjects        = () => { const tid=useTid(); return useQuery({ queryKey:["subjects",tid], queryFn:()=>A.getSubjects(tid) }); };
+export const useSubjects        = () => { const tid=useTid(); return useQuery({ queryKey:["subjects",tid], queryFn:()=>A.getSubjects(tid) }); };
 export const useCreateSubject   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createSubject(b), onSuccess:()=>qc.invalidateQueries({queryKey:["subjects",tid]}) }); };
 export const useTimetable       = () => { const tid=useTid(); return useQuery({ queryKey:["timetable",tid], queryFn:()=>A.getTimetable(tid) }); };
 export const useCourseOfferings = () => { const tid=useTid(); return useQuery({ queryKey:["course-offerings",tid], queryFn:()=>A.getCourseOfferings(tid) }); };
@@ -88,19 +88,19 @@ export const useStops           = () => { const tid=useTid(); return useQuery({ 
 // ── Library ───────────────────────────────────────────────────────────────────
 export const useBooks           = () => { const tid=useTid(); return useQuery({ queryKey:["books",tid], queryFn:()=>A.getBooks(tid) }); };
 export const useCreateBook      = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createBook(b), onSuccess:()=>qc.invalidateQueries({queryKey:["books",tid]}) }); };
-//export const useLoans           = () => { const tid=useTid(); return useQuery({ queryKey:["loans",tid], queryFn:()=>A.getLoans(tid) }); };
+export const useLoans           = () => { const tid=useTid(); return useQuery({ queryKey:["loans",tid], queryFn:()=>A.getLoans(tid) }); };
 export const useCreateLoan      = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createLoan(b), onSuccess:()=>qc.invalidateQueries({queryKey:["loans",tid]}) }); };
 
 // ── Examinations ──────────────────────────────────────────────────────────────
 export const useExams           = () => { const tid=useTid(); return useQuery({ queryKey:["exams",tid], queryFn:()=>A.getExams(tid) }); };
 export const useCreateExam      = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createExam(b), onSuccess:()=>qc.invalidateQueries({queryKey:["exams",tid]}) }); };
-//export const useExamResults     = () => { const tid=useTid(); return useQuery({ queryKey:["exam-results",tid], queryFn:()=>A.getExamResults(tid) }); };
-//export const useGradeScales     = () => { const tid=useTid(); return useQuery({ queryKey:["grade-scales",tid], queryFn:()=>A.getGradeScales(tid) }); };
+export const useExamResults     = () => { const tid=useTid(); return useQuery({ queryKey:["exam-results",tid], queryFn:()=>A.getExamResults(tid) }); };
+export const useGradeScales     = () => { const tid=useTid(); return useQuery({ queryKey:["grade-scales",tid], queryFn:()=>A.getGradeScales(tid) }); };
 
 // ── Payroll ───────────────────────────────────────────────────────────────────
-//export const usePayrollRuns     = () => { const tid=useTid(); return useQuery({ queryKey:["payroll-runs",tid], queryFn:()=>A.getPayrollRuns(tid) }); };
-//export const useCreatePayrollRun= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayrollRun(b), onSuccess:()=>qc.invalidateQueries({queryKey:["payroll-runs",tid]}) }); };
-//export const useSalaryStructures= () => { const tid=useTid(); return useQuery({ queryKey:["salary-structures",tid], queryFn:()=>A.getSalaryStructures(tid) }); };
+export const usePayrollRuns     = () => { const tid=useTid(); return useQuery({ queryKey:["payroll-runs",tid], queryFn:()=>A.getPayrollRuns(tid) }); };
+export const useCreatePayrollRun= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayrollRun(b), onSuccess:()=>qc.invalidateQueries({queryKey:["payroll-runs",tid]}) }); };
+export const useSalaryStructures= () => { const tid=useTid(); return useQuery({ queryKey:["salary-structures",tid], queryFn:()=>A.getSalaryStructures(tid) }); };
 export const usePayslips        = () => { const tid=useTid(); return useQuery({ queryKey:["payslips",tid], queryFn:()=>A.getPayslips(tid) }); };
 
 // ── Learning ──────────────────────────────────────────────────────────────────
@@ -182,44 +182,12 @@ export const useKnowledgeCollections      = useCollections;
 export const useCreateKnowledgeCollection = useCreateCollection;
 export const useExecutionLogs = useExecLogs;
 
-// ── Missing hooks: aliases for renamed/new entities ──────────────────────────
-// Inventory — pages use useItems / useCreateItem / useCreatePurchaseOrder
-export const useItems                  = useInventoryItems;
-export const useCreateItem             = useCreateInventoryItem;
-export const useCreatePurchaseOrder    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPurchaseOrder(b), onSuccess:()=>qc.invalidateQueries({queryKey:["purchase-orders",tid]}) }); };
-
-// Learning — pages use useCreateLesson
-export const useCreateLesson           = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createLesson(b), onSuccess:()=>qc.invalidateQueries({queryKey:["lessons",tid]}) }); };
-
-// Activities — pages use useCreateAward
+// ── Extended hooks (new entities, aliases) ─────────────────────────────────
 export const useCreateAward            = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createAward(b), onSuccess:()=>qc.invalidateQueries({queryKey:["awards",tid]}) }); };
-
-// Examinations — pages use useGradeScales / useCreateGradeScale / useExamResults
-export const useGradeScales            = () => { const tid=useTid(); return useQuery({ queryKey:["grade-scales",tid], queryFn:()=>A.getGradeScales(tid) }); };
 export const useCreateGradeScale       = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createGradeScale(b), onSuccess:()=>qc.invalidateQueries({queryKey:["grade-scales",tid]}) }); };
-export const useExamResults            = () => { const tid=useTid(); return useQuery({ queryKey:["exam-results",tid], queryFn:()=>A.getExamResults(tid) }); };
-
-// Workflow — pages use useWorkflowDefinitions / useCreateWorkflowDefinition
-export const useWorkflowDefinitions    = () => { const tid=useTid(); return useQuery({ queryKey:["workflow-defs",tid], queryFn:()=>A.getWorkflowDefs(tid) }); };
-export const useCreateWorkflowDefinition=() => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createWorkflowDef(b), onSuccess:()=>qc.invalidateQueries({queryKey:["workflow-defs",tid]}) }); };
-
-// HR — payroll aliases
-export const usePayrollRuns            = () => { const tid=useTid(); return useQuery({ queryKey:["payroll-runs",tid], queryFn:()=>A.getPayrollRuns(tid) }); };
-export const useCreatePayrollRun       = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayrollRun(b), onSuccess:()=>qc.invalidateQueries({queryKey:["payroll-runs",tid]}) }); };
-export const useSalaryStructures       = () => { const tid=useTid(); return useQuery({ queryKey:["salary-structures",tid], queryFn:()=>A.getSalaryStructures(tid) }); };
-
-// Library — loans
-export const useLoans                  = () => { const tid=useTid(); return useQuery({ queryKey:["loans",tid], queryFn:()=>A.getLoans(tid) }); };
-//export const useCreateLoan             = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createLoan(b), onSuccess:()=>qc.invalidateQueries({queryKey:["loans",tid]}) }); };
-
-// Finance — missing create hooks
-export const useCreateInvoice          = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createInvoice(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
-export const useCreatePayment          = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPayment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
-export const useCreateFeeStructure     = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createFeeStructure(b), onSuccess:()=>qc.invalidateQueries({queryKey:["fee-structure",tid]}) }); };
-
-// Academics
-export const useSubjects               = () => { const tid=useTid(); return useQuery({ queryKey:["subjects",tid], queryFn:()=>A.getSubjects(tid) }); };
-
-// Tenancy - for parent/student dashboards
-export const useParentDashboard        = () => useQuery({ queryKey:["parent-dashboard"], queryFn:()=>Promise.resolve({children:2,attendance:"94%"}) });
-export const useStudentDashboard       = () => useQuery({ queryKey:["student-dashboard"], queryFn:()=>Promise.resolve({ClassName:"9-A",avgGrade:"B+"}) });
+export const useCreateItem             = useCreateInventoryItem;
+export const useCreateLesson           = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createLesson(b), onSuccess:()=>qc.invalidateQueries({queryKey:["lessons",tid]}) }); };
+export const useCreatePurchaseOrder    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPurchaseOrder(b), onSuccess:()=>qc.invalidateQueries({queryKey:["purchase-orders",tid]}) }); };
+export const useCreateWorkflowDefinition = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createWorkflowDef(b), onSuccess:()=>qc.invalidateQueries({queryKey:["workflow-defs",tid]}) }); };
+export const useItems                  = useInventoryItems;
+export const useWorkflowDefinitions    = useWorkflowDefs;

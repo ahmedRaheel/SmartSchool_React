@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Search, X, GraduationCap, Users, CheckCircle2, AlertCircle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -20,7 +20,9 @@ export function StudentsPage() {
   const [docCompliant, setDocComp] = useState(false);
   const [error, setError] = useState("");
 
+  const [students, setStudents] = useState<any[]>([]);
   const { data, isLoading } = useStudents();
+  useEffect(()=>{ const s=(data as any)?.items??(data as any)??[]; setStudents(s); },[data]);
   const { data: campusesData } = useCampuses();
   const { data: yearsData }    = useAcademicYears();
   const { data: sectionsData } = useClassSections();
@@ -28,7 +30,6 @@ export function StudentsPage() {
   const createStudent    = useCreateStudent();
   const createEnrollment = useCreateEnrollment();
 
-  const students = (data as any)?.items ?? (data as any) ?? [];
   const campuses = (campusesData as any)?.items ?? (campusesData as any) ?? [];
   const years    = (yearsData as any)?.items    ?? (yearsData as any) ?? [];
   const sections = (sectionsData as any)?.items ?? (sectionsData as any) ?? [];
@@ -41,11 +42,12 @@ export function StudentsPage() {
   });
 
   function sf(k: string) {
-    return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(p => ({ ...p, [k]: e.target.value }));
   }
 
-  const filtered = students.filter((s: any) =>
+  const filteredStu = students;  // use mutable local state
+  const filtered = filteredStu.filter((s: any) =>
     `${s.firstName} ${s.lastName} ${s.studentNumber}`.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -118,7 +120,7 @@ export function StudentsPage() {
             {isLoading ? <div style={{ padding:40, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
               <div className="table-wrap">
                 <table className="premium-table">
-                  <thead><tr><th>Name</th><th>Reg #</th><th>Gender</th><th>DOB</th><th>Admission date</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Name</th><th>Reg #</th><th>Gender</th><th>DOB</th><th>Admission date</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
                     {filtered.length === 0
                       ? <tr><td colSpan={6} style={{ textAlign:"center", padding:32, color:"var(--muted)" }}>No students found.</td></tr>
@@ -136,7 +138,29 @@ export function StudentsPage() {
                           <td>{s.gender ?? "—"}</td>
                           <td style={{ fontSize:11 }}>{s.dateOfBirth ?? "—"}</td>
                           <td style={{ fontSize:11 }}>{s.admissionDate ?? "—"}</td>
-                          <td><span className={`status-pill ${s.status === "ACTIVE" ? "success" : "warning"}`}>{s.status}</span></td>
+                          <td><span className={`status-pill ${s.status === "ACTIVE" ? "success" : s.status === "PENDING" ? "warning" : s.status === "SUSPENDED" ? "danger" : "gray"}`}>{s.status}</span></td>
+                          <td>
+                            <div className="row-actions">
+                              {s.status !== "ACTIVE" && (
+                                <button className="table-action approve" title="Approve student"
+                                  onClick={e => { e.stopPropagation(); setStudents(p => p.map((x:any) => x.id===s.id ? {...x,status:"ACTIVE"}:x)); }}>
+                                  ✓ Approve
+                                </button>
+                              )}
+                              {s.status === "ACTIVE" && (
+                                <button className="table-action hold" title="Put on hold"
+                                  onClick={e => { e.stopPropagation(); setStudents(p => p.map((x:any) => x.id===s.id ? {...x,status:"ON_HOLD"}:x)); }}>
+                                  ⏸ Hold
+                                </button>
+                              )}
+                              {s.status !== "SUSPENDED" && (
+                                <button className="table-action reject" title="Suspend student"
+                                  onClick={e => { e.stopPropagation(); setStudents(p => p.map((x:any) => x.id===s.id ? {...x,status:"SUSPENDED"}:x)); }}>
+                                  ✗
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                   </tbody>

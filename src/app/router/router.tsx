@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppShell }            from "../../components/layout/AppShell";
 import { RouteErrorPage }      from "../../components/ui/RouteErrorPage";
+import { MockDataProvider }    from "../../mocks/MockDataProvider";
 
 // Auth
 import { LoginPage }           from "../../features/auth/pages/LoginPage";
@@ -46,12 +47,13 @@ import { WorkflowCenterPage }  from "../../features/workflow/pages/WorkflowCente
 import { ActivitiesPage }      from "../../features/activities/pages/ActivitiesPage";
 import { LearningPage }        from "../../features/learning/pages/LearningPage";
 import { InventoryPage }       from "../../features/inventory/pages/InventoryPage";
+import { DocumentsPage }       from "../../features/documents/pages/DocumentsPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   {
     path: "/",
-    element: <AppShell />,
+    element: <MockDataProvider><AppShell /></MockDataProvider>,
     errorElement: <RouteErrorPage />,
     children: [
       // Dashboard
@@ -111,7 +113,7 @@ export const router = createBrowserRouter([
       { path: "modules",                element: <PlatformAdminPage /> },
 
       // Misc
-     // { path: "documents",              element: <DocumentsPage /> },
+      { path: "documents",              element: <DocumentsPage /> },
     ],
   },
 ]);

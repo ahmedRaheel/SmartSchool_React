@@ -193,173 +193,31 @@ export function StudentPortalPage() {
         </div>
       )}
 
-      {tab === "ai" && (
-        <div
-          className="surface"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            height: "calc(100vh - 360px)",
-            minHeight: 400,
-          }}
-        >
-          <div
-            style={{
-              padding: "14px 16px",
-              borderBottom: "1px solid var(--line)",
-            }}
-          >
-            <b
-              style={{
-                fontSize: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <Bot size={15} style={{ color: "#8B5CF6" }} />
-              AI Tutor Assistant
-            </b>
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--muted)",
-                marginTop: 2,
-              }}
-            >
-              Powered by RAG — answers from school knowledge base
-            </div>
+      {tab==="ai" && (
+        <div className="surface" style={{display:"flex",flexDirection:"column",height:"calc(100vh - 360px)",minHeight:400}}>
+          <div style={{padding:"14px 16px",borderBottom:"1px solid var(--line)"}}>
+            <b style={{fontSize:14,display:"flex",alignItems:"center",gap:8}}><Bot size={15} style={{color:"#8B5CF6"}}/>AI Tutor Assistant</b>
+            <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>Powered by RAG — answers from school knowledge base</div>
           </div>
-
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: 16,
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
-          >
-            {aiHistory.map((message, index) => (
-              <div
-                key={index}
-                style={{
-                  display: "flex",
-                  justifyContent:
-                    message.role === "user" ? "flex-end" : "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: "78%",
-                    padding: "9px 13px",
-                    borderRadius:
-                      message.role === "user"
-                        ? "16px 16px 4px 16px"
-                        : "16px 16px 16px 4px",
-                    background:
-                      message.role === "user"
-                        ? "#6366F1"
-                        : "var(--surface-2)",
-                    color:
-                      message.role === "user"
-                        ? "white"
-                        : "var(--text)",
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {message.text}
+          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:8}}>
+            {aiHistory.map((m,i) => (
+              <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+                <div style={{maxWidth:"78%",padding:"9px 13px",borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",background:m.role==="user"?"#6366F1":"var(--surface-2)",color:m.role==="user"?"white":"var(--text)",fontSize:13,lineHeight:1.6}}>
+                  {m.text}
                 </div>
               </div>
             ))}
-
-            {aiLoading && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--muted)",
-                  padding: "4px 12px",
-                }}
-              >
-                Thinking...
-              </div>
-            )}
+            {aiLoading&&<div style={{fontSize:12,color:"var(--muted)",padding:"4px 12px"}}>Thinking…</div>}
           </div>
-
-          <div
-            style={{
-              padding: "10px 14px",
-              borderTop: "1px solid var(--line)",
-              display: "flex",
-              gap: 8,
-            }}
-          >
-            <input
-              value={aiMsg}
-              onChange={(event) => setAiMsg(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  sendAi();
-                }
-              }}
-              placeholder="Ask about homework, subjects, exams..."
-              style={{
-                flex: 1,
-                height: 38,
-                padding: "0 14px",
-                border: "1.5px solid var(--line)",
-                borderRadius: 20,
-                background: "var(--surface-2)",
-                fontSize: 13,
-                outline: "none",
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={sendAi}
-              disabled={!aiMsg.trim() || aiLoading}
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: "50%",
-                border: "none",
-                background: aiMsg.trim()
-                  ? "#8B5CF6"
-                  : "var(--line)",
-                color: "white",
-                cursor: aiMsg.trim()
-                  ? "pointer"
-                  : "default",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {aiLoading ? (
-                <RefreshCw
-                  size={14}
-                  style={{
-                    animation: "spin 1s linear infinite",
-                  }}
-                />
-              ) : (
-                <Send size={14} />
-              )}
+          <div style={{padding:"10px 14px",borderTop:"1px solid var(--line)",display:"flex",gap:8}}>
+            <input value={aiMsg} onChange={e=>setAiMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendAi();}} placeholder="Ask about homework, subjects, exams…"
+              style={{flex:1,height:38,padding:"0 14px",border:"1.5px solid var(--line)",borderRadius:20,background:"var(--surface-2)",fontSize:13,outline:"none"}}/>
+            <button onClick={sendAi} disabled={!aiMsg.trim()||aiLoading}
+              style={{width:38,height:38,borderRadius:"50%",border:"none",background:aiMsg.trim()?"#8B5CF6":"var(--line)",color:"white",cursor:aiMsg.trim()?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {aiLoading?<RefreshCw size={14} style={{animation:"spin 1s linear infinite"}}/>:<Send size={14}/>}
             </button>
           </div>
-
-          <style>
-            {`
-              @keyframes spin {
-                to {
-                  transform: rotate(360deg);
-                }
-              }
-            `}
-          </style>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       )}
     </>

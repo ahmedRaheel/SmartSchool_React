@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -22,12 +22,14 @@ export function HrPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  const [localEmp, setLocalEmp] = useState<any[]>([]);
   const { data, isLoading } = useEmployees();
+  useEffect(()=>{ setLocalEmp((data as any)?.items??(data as any)??[]); },[data]);
   const { data: campusesData } = useCampuses();
   const { data: deptsData } = useDepartments();
   const createEmployee = useCreateEmployee();
 
-  const employees = (data as any)?.items ?? (data as any) ?? [];
+  const employees = localEmp;
   const campuses  = (campusesData as any)?.items ?? (campusesData as any) ?? [];
   const depts     = (deptsData as any)?.items ?? (deptsData as any) ?? [];
 
@@ -42,7 +44,7 @@ export function HrPage() {
   });
 
   function sf(k: string) {
-    return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(p => ({ ...p, [k]: e.target.value }));
   }
 
@@ -116,7 +118,7 @@ export function HrPage() {
             {isLoading ? <div style={{ padding:40, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
               <div className="table-wrap">
                 <table className="premium-table">
-                  <thead><tr><th>Name</th><th>Employee #</th><th>Role</th><th>Department</th><th>Campus</th><th>Hire date</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Name</th><th>Employee #</th><th>Role</th><th>Department</th><th>Campus</th><th>Hire date</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
                     {filtered.length === 0
                       ? <tr><td colSpan={7} style={{ textAlign:"center", padding:32, color:"var(--muted)" }}>No staff found.</td></tr>
@@ -137,7 +139,29 @@ export function HrPage() {
                           <td style={{ fontSize:11 }}>{e.department ?? "—"}</td>
                           <td style={{ fontSize:11 }}>{e.jobTitle ?? "—"}</td>
                           <td style={{ fontSize:11 }}>{e.hireDate ? new Date(e.hireDate).toLocaleDateString() : "—"}</td>
-                          <td><span className={`status-pill ${e.status === "ACTIVE" ? "success" : e.status === "ON_LEAVE" ? "warning" : "gray"}`}>{e.status}</span></td>
+                          <td><span className={`status-pill ${e.status === "ACTIVE" ? "success" : e.status === "ON_LEAVE" ? "warning" : e.status === "PENDING" ? "info" : "danger"}`}>{e.status}</span></td>
+                          <td>
+                            <div className="row-actions">
+                              {e.status !== "ACTIVE" && e.status !== "TERMINATED" && (
+                                <button className="table-action approve"
+                                  onClick={ev => { ev.stopPropagation(); setLocalEmp(p => p.map((x:any) => x.id===e.id ? {...x,status:"ACTIVE"}:x)); }}>
+                                  ✓ Approve
+                                </button>
+                              )}
+                              {e.status === "ACTIVE" && (
+                                <button className="table-action hold"
+                                  onClick={ev => { ev.stopPropagation(); setLocalEmp(p => p.map((x:any) => x.id===e.id ? {...x,status:"ON_LEAVE"}:x)); }}>
+                                  ⏸ Leave
+                                </button>
+                              )}
+                              {e.status !== "TERMINATED" && (
+                                <button className="table-action reject"
+                                  onClick={ev => { ev.stopPropagation(); setLocalEmp(p => p.map((x:any) => x.id===e.id ? {...x,status:"TERMINATED"}:x)); }}>
+                                  ✗
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                   </tbody>

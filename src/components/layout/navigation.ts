@@ -54,7 +54,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
     ],
   },
 
-  // School Owner — same as SchoolAdmin but with Setup tab
+  // School Owner — full access to all school modules
   tenant: {
     title: "School Owner",
     sections: [
@@ -62,24 +62,41 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
         title: "Overview",
         items: [
           D,
-          { path: "/reports",        label: "Reports",           icon: BarChart3 },
+          { path: "/reports",        label: "Reports & Analytics", icon: BarChart3 },
+          { path: "/ai",             label: "AI Insights",       icon: Sparkles },
+        ],
+      },
+      {
+        title: "Students",
+        items: [
+          { path: "/students",       label: "Students",          icon: GraduationCap },
+          { path: "/admissions",     label: "Admissions",        icon: ClipboardCheck },
+          { path: "/attendance",     label: "Attendance",        icon: CalendarCheck },
+          { path: "/examinations",   label: "Examinations",      icon: ClipboardCheck },
+          { path: "/learning",       label: "Assignments",       icon: FileCheck2 },
+        ],
+      },
+      {
+        title: "Operations",
+        items: [
+          { path: "/finance",        label: "Finance & Fees",    icon: Wallet },
+          { path: "/hr",             label: "HR & Staff",        icon: BriefcaseBusiness },
+          { path: "/payroll",        label: "Payroll",           icon: Briefcase },
+          { path: "/transport",      label: "Transport",         icon: Bus },
+          { path: "/library",        label: "Library",           icon: Library },
+          { path: "/inventory",      label: "Inventory",         icon: Package },
+          { path: "/documents",      label: "Documents",         icon: FileText },
+          { path: "/activities",     label: "Activities",        icon: Star },
+          { path: "/workflow",       label: "Workflow",          icon: Workflow },
         ],
       },
       {
         title: "Configuration",
         items: [
-          { path: "/setup",          label: "School & Campuses", icon: Building2 },
+          { path: "/setup",          label: "School Setup",      icon: Building2 },
           { path: "/settings",       label: "Settings",          icon: Settings },
-          { path: "/ai-config",      label: "AI Configuration",  icon: Brain },
-        ],
-      },
-      {
-        title: "School Ops",
-        items: [
-          { path: "/students",       label: "Students",          icon: GraduationCap },
-          { path: "/hr",             label: "HR & Staff",        icon: BriefcaseBusiness },
-          { path: "/finance",        label: "Finance",           icon: Wallet },
-          { path: "/admissions",     label: "Admissions",        icon: ClipboardCheck },
+          { path: "/ai-config",      label: "AI Config",         icon: Brain },
+          { path: "/communication",  label: "Messages",          icon: MessageCircle },
         ],
       },
     ],
@@ -368,9 +385,9 @@ function resolveMenuKey(roles: readonly string[]): string {
   if (r.some(x => x === "student"))               return "student";
   if (r.some(x => x === "teacher"))               return "teacher";
   // SchoolAdmin, Admin, AdminOfficer → admin ops menu
-  if (r.some(x => ["admin","schooladmin","adminofficer","staff"].includes(x))) return "admin";
-  // Tenant / School Owner → tenant menu
+  // Tenant / School Owner — check BEFORE generic admin so "TenantAdmin" routes here
   if (r.some(x => ["tenant","schoolowner","tenantadmin","owner"].includes(x))) return "tenant";
+  if (r.some(x => ["admin","schooladmin","adminofficer","staff"].includes(x))) return "admin";
   // Default fallback for unknown roles
   return "admin";
 }

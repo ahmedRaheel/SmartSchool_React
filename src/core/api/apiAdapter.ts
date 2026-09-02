@@ -269,3 +269,48 @@ export const createGradeScale  = (body: object) => M ? ms({ id:uid() }) : api.po
 export const createLesson      = (body: object) => M ? ms({ id:uid() }) : api.post("/api/learning/lesson", body).then(r=>r.data);
 export const createAward       = (body: object) => M ? ms({ id:uid() }) : api.post("/api/activities/award", body).then(r=>r.data);
 export const createWorkflowDef = (body: object) => M ? ms({ id:uid() }) : api.post("/api/workflow/workflow-definition", body).then(r=>r.data);
+
+// ── Knowledge / RAG document upload ───────────────────────────────────────────
+export const uploadKnowledgeDoc = (collectionId: string, file: File, tenantId: string): Promise<{id:string;title:string;chunks:number;status:string}> => {
+  if (M) return ms({ id: uid(), title: file.name, chunks: Math.floor(file.size/800)+1, status:"INDEXED" }, 1500) as any;
+  const form = new FormData();
+  form.append("file", file);
+  form.append("collectionId", collectionId);
+  form.append("tenantId", tenantId);
+  form.append("title", file.name);
+  return api.post("/api/aicore/knowledge/upload", form, { headers:{"Content-Type":"multipart/form-data"} }).then(r=>r.data);
+};
+
+// ── Exam result entry ─────────────────────────────────────────────────────────
+export const enterExamResult  = (body: object) => M ? ms({ id:uid(), status:"ENTERED" }, 300) : api.post("/api/examinations/student-exam-result", body).then(r=>r.data);
+export const updateExamResult = (id: string, body: object) => M ? ms({ id, status:"UPDATED" }, 300) : api.put(`/api/examinations/student-exam-result/${id}`, body).then(r=>r.data);
+export const publishResults   = (examId: string, tenantId: string) => M ? ms({ published:true, count:30 }, 800) : api.post(`/api/examinations/exam/${examId}/publish`, { tenantId }).then(r=>r.data);
+
+// ── Assignment submission (student) ───────────────────────────────────────────
+export const submitAssignment = (assignmentId: string, file: File|null, comment: string, tenantId: string, studentId: string) => {
+  if (M) return ms({ id:uid(), status:"SUBMITTED", submittedAt: new Date().toISOString() }, 700);
+  const form = new FormData();
+  if (file) form.append("file", file);
+  form.append("assignmentId", assignmentId);
+  form.append("comment", comment);
+  form.append("tenantId", tenantId);
+  form.append("studentId", studentId);
+  return api.post("/api/learning/assignment-submission", form, { headers:{"Content-Type":"multipart/form-data"} }).then(r=>r.data);
+};
+export const gradeSubmission  = (submissionId: string, body: object) => M ? ms({ id: submissionId, graded:true }, 400) : api.put(`/api/learning/assignment-submission/${submissionId}/grade`, body).then(r=>r.data);
+export const getSubmissions   = (assignmentId: string, tenantId: string) => M ? ms(pg([], 1, 50)) : api.get("/api/learning/assignment-submission", { params:{assignmentId, tenantId, page:1, pageSize:100} }).then(r=>r.data);
+
+// ── Leave management ──────────────────────────────────────────────────────────
+export const approveLeave     = (id: string, body: object) => M ? ms({ id, status:"APPROVED" }, 400) : api.put(`/api/hr/leave-request/${id}/approve`, body).then(r=>r.data);
+export const rejectLeave      = (id: string, body: object) => M ? ms({ id, status:"REJECTED" }, 400) : api.put(`/api/hr/leave-request/${id}/reject`, body).then(r=>r.data);
+
+// ── Attendance (real save) ────────────────────────────────────────────────────
+export const saveAttendanceBulk = (body: object) => M ? ms({ saved:true, count:(body as any).records?.length ?? 0 }, 600) : api.post("/api/students/attendance", body).then(r=>r.data);
+
+// ── Quiz submission (student) ─────────────────────────────────────────────────
+export const submitQuizAttempt = (body: object) => M ? ms({ id:uid(), score:0, passed:false }, 500) : api.post("/api/aitutor/operations/quizzes/submit", body).then(r=>r.data);
+
+// ── Chatbot with conversation history ────────────────────────────────────────
+export const sendChatbotMessage = (bot: string, body: { message: string; conversationId?: string; tenantId: string; contextId?: string }) =>
+  M ? ms({ answer: MOCK_AI_RESPONSE.answer, conversationId: uid(), citations: MOCK_AI_RESPONSE.citations }, 900) :
+  api.post(`/api/chatbots/${bot}/ask`, body).then(r=>r.data);
