@@ -122,6 +122,15 @@ export function TenantManagementPage() {
                           )}
                         </div>
                       </td>
+<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                              <RowActions
+                                onView={() => t.id}
+                                onEdit={() => setViewTenant(t)}
+                                onDelete={() => { setEditTenant(t) }}
+                                deleteLabel="setLocalTenants && setLocalTenants((p:any)=>p.filter((x:any)=>x.id!==t.id))"
+                                school
+                              />
+                            </td>
                     </tr>
                   );
                 })}
@@ -206,6 +215,40 @@ export function TenantManagementPage() {
             )}
           </div>
         </div>
+      )}
+
+      {viewTenant && (
+        <ViewDrawer
+          title="School"
+          item={viewTenant}
+          onClose={() => setViewTenant(null)}
+          onEdit={() => { setEditTenant(viewTenant!); setViewTenant(null); }}
+          fields={[
+            { key: "organizationName", label: "School name", wide: true },
+            { key: "code", label: "Code" },
+            { key: "city", label: "City" },
+            { key: "plan", label: "Plan" },
+            { key: "status", label: "Status" },
+            { key: "adminEmail", label: "Admin email", wide: true },
+          ]}
+        />
+      )}
+      {editTenant && (
+        <EditModal
+          title="School"
+          item={editTenant}
+          onClose={() => setEditTenant(null)}
+          onSave={async data => {
+            /* update local state; real app calls API */
+            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editTenant!.id ? { ...x, ...data } : x));
+            setEditTenant(null);
+          }}
+          fields={[
+            { key: "organizationName", label: "School name", type: "text", required: true, wide: true },
+            { key: "contactEmail", label: "Contact email", type: "pk-email", wide: true },
+            { key: "contactPhone", label: "Contact phone", type: "pk-phone", wide: true },
+          ]}
+        />
       )}
     </>
   );

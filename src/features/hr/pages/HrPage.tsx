@@ -574,6 +574,24 @@ export function HrPage() {
           )}
         </div>
       )}
+
+      {viewEmp && (
+        <ViewDrawer
+          title="Staff member"
+          item={viewEmp}
+          onClose={() => setViewEmp(null)}
+          fields={[
+            { key: "firstName", label: "First name" },
+            { key: "lastName", label: "Last name" },
+            { key: "employeeNumber", label: "Employee #" },
+            { key: "staffType", label: "Role" },
+            { key: "employmentType", label: "Employment" },
+            { key: "joiningDate", label: "Joined" },
+            { key: "phone", label: "Phone" },
+            { key: "email", label: "Email", wide: true },
+          ]}
+        />
+      )}
     </>
   );
 }

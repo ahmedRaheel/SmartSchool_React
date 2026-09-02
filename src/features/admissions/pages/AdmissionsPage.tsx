@@ -695,6 +695,44 @@ export function AdmissionsPage() {
           </div>
         </div>
       )}
+
+      {viewApp && (
+        <ViewDrawer
+          title="Application"
+          item={viewApp}
+          onClose={() => setViewApp(null)}
+          onEdit={() => { setEditApp(viewApp!); setViewApp(null); }}
+          fields={[
+            { key: "FirstName", label: "First name" },
+            { key: "LastName", label: "Last name" },
+            { key: "DateOfBirth", label: "Date of birth" },
+            { key: "Gender", label: "Gender" },
+            { key: "ApplyingForClass", label: "Applying for" },
+            { key: "GuardianName", label: "Guardian" },
+            { key: "GuardianPhone", label: "Guardian phone" },
+            { key: "Status", label: "Status" },
+            { key: "PreviousSchool", label: "Previous school", wide: true },
+          ]}
+        />
+      )}
+      {editApp && (
+        <EditModal
+          title="Application"
+          item={editApp}
+          onClose={() => setEditApp(null)}
+          onSave={async data => {
+            /* update local state; real app calls API */
+            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.Id === editApp!.Id ? { ...x, ...data } : x));
+            setEditApp(null);
+          }}
+          fields={[
+            { key: "FirstName", label: "First name", type: "text", required: true },
+            { key: "LastName", label: "Last name", type: "text", required: true },
+            { key: "GuardianName", label: "Guardian name", type: "text" },
+            { key: "GuardianPhone", label: "Guardian phone", type: "pk-phone", wide: true },
+          ]}
+        />
+      )}
     </>
   );
 }

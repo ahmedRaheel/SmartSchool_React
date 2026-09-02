@@ -19,6 +19,9 @@ import { env } from "../../../config/env";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { RowActions } from "../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { EditModal }  from "../../../components/ui/EditModal";
 
 const parseMeta = (j?: string | null) => { try { return JSON.parse(j ?? "{}"); } catch { return {}; } };
 const TYPES = ["HOMEWORK","PROJECT","ESSAY","LAB_REPORT","PRESENTATION","RESEARCH","CLASSWORK"];
@@ -36,6 +39,8 @@ const MOCK_SUBMISSIONS = [
 function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose: () => void; onDone: () => void }) {
   const meta = parseMeta(assignment.metadataJson);
   const { user } = useAuth();
+  const [editAsgn, setEditAsgn] = useState<any|null>(null);
+  const [viewAsgn, setViewAsgn] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile]       = useState<File | null>(null);
@@ -242,8 +247,8 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Student", "Submitted", "File", "Grade", "Status", "Action"].map(h => (
-                    <th key={h} style={{ padding: "10px 14px", background: "var(--surface-2)", borderBottom: "1.5px solid var(--line)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".6px", color: "var(--muted)", textAlign: "left", whiteSpace: "nowrap" }}>{h}</th>
+                  {["Student", "Submitted", "File", "Grade", "Status", "Actions"].map(h => (
+                    <th key={h} style={{ padding: "10px 14px", background: "var(--surface-2)", borderBottom: "1.5px solid var(--line)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".6px", color: "var(--muted)", textAlign: h === "Actions" ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -282,6 +287,15 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                         </button>
                       )}
                     </td>
+<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                              <RowActions
+                                onView={() => a.id}
+                                onEdit={() => setViewAsgn(a)}
+                                onDelete={() => { setEditAsgn(a) }}
+                                deleteLabel="setLocalItems && setLocalItems((p:any)=>p.filter((x:any)=>x.id!==a.id))"
+                                assignment
+                              />
+                            </td>
                   </tr>
                 ))}
               </tbody>
@@ -494,6 +508,7 @@ export function LearningPage() {
                     <th>Assignment</th><th>Type</th><th>Subject</th>
                     <th>Class</th><th>Due</th><th>Marks</th><th>Status</th>
                     <th style={{ textAlign: "right" }}>Action</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -697,6 +712,42 @@ export function LearningPage() {
       {/* ── TEACHER GRADE DRAWER ─────────────────────────────────────────────── */}
       {gradeDrawer && (
         <GradeDrawer assignment={gradeDrawer} onClose={() => setGrade(null)} />
+      )}
+
+      {viewAsgn && (
+        <ViewDrawer
+          title="Assignment"
+          item={viewAsgn}
+          onClose={() => setViewAsgn(null)}
+          onEdit={() => { setEditAsgn(viewAsgn!); setViewAsgn(null); }}
+          fields={[
+            { key: "name", label: "Title", wide: true },
+            { key: "type", label: "Type" },
+            { key: "subject", label: "Subject" },
+            { key: "dueDate", label: "Due date" },
+            { key: "totalMarks", label: "Total marks" },
+            { key: "status", label: "Status" },
+            { key: "description", label: "Instructions", wide: true },
+          ]}
+        />
+      )}
+      {editAsgn && (
+        <EditModal
+          title="Assignment"
+          item={editAsgn}
+          onClose={() => setEditAsgn(null)}
+          onSave={async data => {
+            /* update local state; real app calls API */
+            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editAsgn!.id ? { ...x, ...data } : x));
+            setEditAsgn(null);
+          }}
+          fields={[
+            { key: "name", label: "Title", type: "text", required: true, wide: true },
+            { key: "dueDate", label: "Due date", type: "date" },
+            { key: "totalMarks", label: "Total marks", type: "number" },
+            { key: "description", label: "Instructions", type: "textarea", wide: true },
+          ]}
+        />
       )}
     </>
   );

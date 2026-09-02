@@ -4,11 +4,14 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { useTenants, useModelConfigs, useExecLogs, useAuditLogs } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
+import { RowActions } from "../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 
 const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 
 export function PlatformAdminPage() {
   const { user } = useAuth();
+  const [viewItem, setViewItem] = useState<any|null>(null);
   const [tab, setTab] = useState<"overview"|"tenants"|"ai"|"logs">("overview");
 
   const { data: tenantsData } = useTenants();
@@ -82,7 +85,8 @@ export function PlatformAdminPage() {
           <div className="surface-head"><h3>Tenant registry</h3></div>
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>School</th><th>Domain</th><th>Plan</th><th>Students</th><th>Status</th><th>Since</th></tr></thead>
+              <thead><tr><th>School</th><th>Domain</th><th>Plan</th><th>Students</th><th>Status</th><th>Since</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
               <tbody>
                 {tenants.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No tenants.</td></tr>
                 : tenants.map((t:any)=>{ const m=parseMeta(t.metadataJson); return (
@@ -93,6 +97,12 @@ export function PlatformAdminPage() {
                     <td>{m.studentCount??0}</td>
                     <td><span className={`status-pill ${m.status==="ACTIVE"?"success":m.status==="TRIAL"?"warning":"gray"}`}>{m.status??"ACTIVE"}</span></td>
                     <td style={{fontSize:10,color:"var(--muted)"}}>{m.createdAt?new Date(m.createdAt).toLocaleDateString():"—"}</td>
+<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                              <RowActions
+                                onView={() => setViewItem(t)}
+                                deleteLabel="tenant"
+                              />
+                            </td>
                   </tr>
                 );})}
               </tbody>
@@ -140,7 +150,8 @@ export function PlatformAdminPage() {
           <div className="surface-head"><h3>Execution logs</h3><p>AI operation history and system events</p></div>
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Operation</th><th>Actor</th><th>Provider</th><th>Tokens</th><th>Latency</th><th>Status</th><th>Time</th></tr></thead>
+              <thead><tr><th>Operation</th><th>Actor</th><th>Provider</th><th>Tokens</th><th>Latency</th><th>Status</th><th>Time</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
               <tbody>
                 {execLogs.length===0 ? <tr><td colSpan={7} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No execution logs yet.</td></tr>
                 : execLogs.map((l:any)=>{ const m=parseMeta(l.metadataJson); return (
@@ -158,6 +169,22 @@ export function PlatformAdminPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {viewItem && (
+        <ViewDrawer
+          title="Tenant"
+          item={viewItem}
+          onClose={() => setViewItem(null)}
+          fields={[
+            { key: "name", label: "School name", wide: true },
+            { key: "domain", label: "Domain" },
+            { key: "plan", label: "Plan" },
+            { key: "studentCount", label: "Students" },
+            { key: "status", label: "Status" },
+            { key: "createdAt", label: "Created", wide: true },
+          ]}
+        />
       )}
     </>
   );

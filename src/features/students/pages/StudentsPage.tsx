@@ -150,17 +150,19 @@ export function StudentsPage() {
                           <td>
                             <div className="row-actions">
                               {s.status !== "ACTIVE" && (
-                                <RowActions
-                                  onView={() => setViewStudent(s)}
-                                  onEdit={() => setEditStudent(s)}
-                                  onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== s.id))}
-                                  deleteLabel="student"
-                                  extra={[]}
-                                />
-                                <button className="table-action approve" title="Approve student"
-                                  onClick={e => { e.stopPropagation(); setStudents(p => p.map((x:any) => x.id===s.id ? {...x,status:"ACTIVE"}:x)); }}>
-                                  ✓ Approve
-                                </button>
+                                <>
+                                  <RowActions
+                                    onView={() => setViewStudent(s)}
+                                    onEdit={() => setEditStudent(s)}
+                                    onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== s.id))}
+                                    deleteLabel="student"
+                                    extra={[]}
+                                  />
+                                  <button className="table-action approve" title="Approve student"
+                                    onClick={e => { e.stopPropagation(); setStudents(p => p.map((x:any) => x.id===s.id ? {...x,status:"ACTIVE"}:x)); }}>
+                                    ✓ Approve
+                                  </button>
+                                </>
                               )}
                               {s.status === "ACTIVE" && (
                                 <button className="table-action hold" title="Put on hold"
@@ -320,6 +322,22 @@ export function StudentsPage() {
             </div>
           )}
         </div>
+      )}
+
+      {viewStudent && (
+        <ViewDrawer
+          title="Student"
+          item={viewStudent}
+          onClose={() => setViewStudent(null)}
+          fields={[
+            { key: "firstName", label: "First name" },
+            { key: "lastName", label: "Last name" },
+            { key: "studentNumber", label: "Reg #" },
+            { key: "gender", label: "Gender" },
+            { key: "dateOfBirth", label: "Date of birth" },
+            { key: "status", label: "Status" },
+          ]}
+        />
       )}
     </>
   );

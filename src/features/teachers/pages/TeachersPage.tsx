@@ -346,7 +346,8 @@ export function TeachersPage() {
             <div className="table-wrap">
               <table className="premium-table">
                 <thead>
-                  <tr><th>Name</th><th>Reg #</th><th>Attendance</th><th>Last grade</th><th>Status</th></tr>
+                  <tr><th>Name</th><th>Reg #</th><th>Attendance</th><th>Last grade</th><th>Status</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr>
                 </thead>
                 <tbody>
                   {(env.useMocks ? MOCK_MY_STUDENTS : [])
@@ -380,6 +381,14 @@ export function TeachersPage() {
                           </b>
                         </td>
                         <td><span className={`status-pill ${s.status === "ACTIVE" ? "success" : "warning"}`}>{s.status}</span></td>
+<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                              <RowActions
+                                onView={() => s.studentId}
+                                onEdit={() => setViewSt(s)}
+                                                                deleteLabel="record"
+                                student
+                              />
+                            </td>
                       </tr>
                     ))}
                   {(env.useMocks ? MOCK_MY_STUDENTS : []).filter(s => s.section === selectedClass.classSection).length === 0 && (
@@ -408,6 +417,7 @@ export function TeachersPage() {
                   <th>Subject</th>
                   <th>Class</th>
                   <th>Room</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -474,7 +484,8 @@ export function TeachersPage() {
           <div className="table-wrap">
             <table className="premium-table">
               <thead>
-                <tr><th>Student</th><th>Reg #</th><th>Class</th><th>Attendance</th><th>Last grade</th><th>Status</th></tr>
+                <tr><th>Student</th><th>Reg #</th><th>Class</th><th>Attendance</th><th>Last grade</th><th>Status</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr>
               </thead>
               <tbody>
                 {filteredStudents.map(s => {
@@ -525,7 +536,6 @@ export function TeachersPage() {
           <div className="table-footer"><span>{filteredStudents.length} students shown</span></div>
         </div>
       )}
-    </>
 
       {viewSt && (
         <ViewDrawer title="Student" item={viewSt} onClose={() => setViewSt(null)}
@@ -538,5 +548,6 @@ export function TeachersPage() {
             { key: "pendingAssignments", label: "Pending work" },
           ]} />
       )}
+    </>
   );
 }

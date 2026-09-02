@@ -43,7 +43,7 @@ export function AuditPage() {
         {isLoading ? <div style={{ padding:48, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Ref</th><th>Action</th><th>Actor</th><th>Entity</th><th>IP</th><th>Time</th><th>Status</th></tr></thead>
+              <thead><tr><th>Ref</th><th>Action</th><th>Actor</th><th>Entity</th><th>IP</th><th>Time</th><th>Status</th><th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
               <tbody>
                 {filtered.map((l:any) => {
                   const meta = parseMeta(l.metadataJson);
@@ -56,6 +56,12 @@ export function AuditPage() {
                       <td><code style={{ fontSize:10 }}>{meta.ipAddress ?? "—"}</code></td>
                       <td style={{ fontSize:10, color:"var(--muted)" }}>{meta.timestamp ? new Date(meta.timestamp).toLocaleString() : "—"}</td>
                       <td><span className={`status-pill ${meta.status==="Success"?"success":"danger"}`} style={{ fontSize:9 }}>{meta.status ?? "—"}</span></td>
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewLog(item)}
+                                deleteLabel="log entry"
+                              />
+                            </td>
                     </tr>
                   );
                 })}

@@ -5,6 +5,8 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import { useWorkflowDefinitions, useCreateWorkflowDefinition, useApprovals, useWorkflowInstances } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { RowActions } from "../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 
 const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 
@@ -25,7 +27,8 @@ const BUILTIN_RULES = [
 ];
 
 export function WorkflowCenterPage() {
-  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const { user } = useAuth();
+  const [viewWf, setViewWf] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
   const [tab, setTab] = useState<"rules"|"approvals"|"instances">("rules");
   const [defModal, setDefModal] = useState(false);
   const [error, setError] = useState("");
@@ -144,6 +147,14 @@ export function WorkflowCenterPage() {
                           </div>
                         )}
                       </td>
+<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                              <RowActions
+                                onView={() => a.id}
+                                onEdit={() => setViewWf(a)}
+                                                                deleteLabel="record"
+                                workflow item
+                              />
+                            </td>
                     </tr>
                   );})}
                 </tbody>
@@ -201,6 +212,22 @@ export function WorkflowCenterPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {viewWf && (
+        <ViewDrawer
+          title="Workflow Item"
+          item={viewWf}
+          onClose={() => setViewWf(null)}
+          fields={[
+            { key: "name", label: "Item", wide: true },
+            { key: "requestedBy", label: "Requester" },
+            { key: "type", label: "Type" },
+            { key: "submittedAt", label: "Submitted" },
+            { key: "status", label: "Status" },
+            { key: "notes", label: "Notes", wide: true },
+          ]}
+        />
       )}
     </>
   );

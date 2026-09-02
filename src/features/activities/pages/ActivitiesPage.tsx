@@ -185,6 +185,21 @@ export function ActivitiesPage() {
           </div>
         </div>
       )}
+
+      {viewActivity && (
+        <ViewDrawer
+          title="Activity"
+          item={viewActivity}
+          onClose={() => setViewActivity(null)}
+          fields={[
+            { key: "name", label: "Activity", wide: true },
+            { key: "activityType", label: "Type" },
+            { key: "venue", label: "Venue" },
+            { key: "startDate", label: "Start" },
+            { key: "endDate", label: "End" },
+          ]}
+        />
+      )}
     </>
   );
 }

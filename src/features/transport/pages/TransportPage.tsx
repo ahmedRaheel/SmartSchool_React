@@ -188,6 +188,20 @@ export function TransportPage() {
           </div>
         </div>
       )}
+
+      {viewVehicle && (
+        <ViewDrawer
+          title="Vehicle"
+          item={viewVehicle}
+          onClose={() => setViewVehicle(null)}
+          fields={[
+            { key: "name", label: "Registration #", wide: true },
+            { key: "vehicleType", label: "Type" },
+            { key: "seatingCapacity", label: "Capacity" },
+            { key: "status", label: "Status" },
+          ]}
+        />
+      )}
     </>
   );
 }

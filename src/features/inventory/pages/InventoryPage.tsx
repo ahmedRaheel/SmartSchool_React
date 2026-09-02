@@ -200,6 +200,21 @@ export function InventoryPage() {
           </div>
         </div>
       )}
+
+      {viewItem && (
+        <ViewDrawer
+          title="Inventory item"
+          item={viewItem}
+          onClose={() => setViewItem(null)}
+          fields={[
+            { key: "name", label: "Item name", wide: true },
+            { key: "category", label: "Category" },
+            { key: "quantity", label: "Quantity" },
+            { key: "unitPrice", label: "Unit price" },
+            { key: "supplier", label: "Supplier" },
+          ]}
+        />
+      )}
     </>
   );
 }

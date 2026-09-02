@@ -7,6 +7,7 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import { useEmployees, usePayrollRuns, useCreatePayrollRun, useSalaryStructures, usePayslips } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { EditModal }  from "../../../components/ui/EditModal";
 
 const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const pkr = (n?: number) => n !== undefined ? `PKR ${Number(n).toLocaleString()}` : "—";
@@ -17,6 +18,7 @@ const SALARY_MAP: Record<string,number> = {
 
 export function PayrollPage() {
   const { user } = useAuth();
+  const [editRun, setEditRun] = useState<any|null>(null);
   const [viewRun, setViewRun] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
   const [tab, setTab] = useState<"register"|"runs"|"payslips">("register");
   const [search, setSearch] = useState("");
@@ -85,7 +87,8 @@ export function PayrollPage() {
           </div>
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Employee</th><th>Number</th><th>Role</th><th>Type</th><th>Est. salary (PKR)</th><th>Status</th></tr></thead>
+              <thead><tr><th>Employee</th><th>Number</th><th>Role</th><th>Type</th><th>Est. salary (PKR)</th><th>Status</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
               <tbody>
                 {filtered.length===0
                   ? <tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--muted)"}}>No active staff. Add employees in the HR module.</td></tr>
@@ -102,6 +105,15 @@ export function PayrollPage() {
                       <td style={{fontSize:11}}>{e.employmentTypeCode}</td>
                       <td><b>{pkr(SALARY_MAP[e.staffType]??20000)}</b></td>
                       <td><span className={`status-pill ${e.status==="ACTIVE"?"success":"gray"}`}>{e.status}</span></td>
+<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                              <RowActions
+                                onView={() => run.id}
+                                onEdit={() => setViewRun(run)}
+                                onDelete={() => { setEditRun(run) }}
+                                deleteLabel="setLocalRuns && setLocalRuns((p:any)=>p.filter((x:any)=>x.id!==run.id))"
+                                payroll run
+                              />
+                            </td>
                     </tr>
                   ))}
               </tbody>
@@ -118,7 +130,8 @@ export function PayrollPage() {
           <div className="surface-head"><h3>Payroll run history</h3></div>
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Run</th><th>Period</th><th>Employees</th><th>Total (PKR)</th><th>Status</th><th>Run at</th></tr></thead>
+              <thead><tr><th>Run</th><th>Period</th><th>Employees</th><th>Total (PKR)</th><th>Status</th><th>Run at</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
               <tbody>
                 {runs.length===0
                   ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No payroll runs yet. Click "Run payroll" to begin.</td></tr>
@@ -150,7 +163,8 @@ export function PayrollPage() {
           ) : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Employee</th><th>Period</th><th>Amount (PKR)</th></tr></thead>
+                <thead><tr><th>Employee</th><th>Period</th><th>Amount (PKR)</th>
+                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
                 <tbody>{slips.map((s:any)=>{ const m=parseMeta(s.metadataJson); return <tr key={s.id}><td><b>{s.name}</b></td><td>{m.period??"—"}</td><td><b>{pkr(m.amount)}</b></td></tr>;})}</tbody>
               </table>
             </div>
@@ -195,7 +209,6 @@ export function PayrollPage() {
           </div>
         </div>
       )}
-    </>
 
       {viewRun && (
         <ViewDrawer title="Payroll run" item={viewRun} onClose={() => setViewRun(null)}
@@ -208,5 +221,6 @@ export function PayrollPage() {
             { key: "status",    label: "Status" },
           ]} />
       )}
+    </>
   );
 }

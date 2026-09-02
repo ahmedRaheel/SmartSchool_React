@@ -252,6 +252,22 @@ export function LibraryPage() {
           </div>
         </div>
       )}
+
+      {viewBook && (
+        <ViewDrawer
+          title="Book"
+          item={viewBook}
+          onClose={() => setViewBook(null)}
+          fields={[
+            { key: "name", label: "Title", wide: true },
+            { key: "isbn", label: "ISBN" },
+            { key: "author", label: "Author" },
+            { key: "publisher", label: "Publisher" },
+            { key: "copies", label: "Total copies" },
+            { key: "available", label: "Available" },
+          ]}
+        />
+      )}
     </>
   );
 }

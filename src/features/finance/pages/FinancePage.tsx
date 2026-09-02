@@ -165,15 +165,17 @@ export function FinancePage() {
                         <td><span className={`status-pill ${STATUS_PILL[meta.status??"PENDING"]??"warning"}`}>{meta.status??"PENDING"}</span></td>
                         <td>
                           {meta.status !== "PAID" && meta.status !== "CANCELLED" && (
-                            <RowActions
+                            <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                              <RowActions
                                 onView={() => setViewInv(inv)}
                                 onEdit={() => setEditInv(inv)}
                                 onDelete={() => setLocalInvoices && setLocalInvoices((p:any)=>p.filter((x:any)=>x.id!==inv.id))}
                                 deleteLabel="invoice"
                               />
-                            <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>
-                              💳 Pay now
-                            </button>
+                              <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>
+                                💳 Pay now
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -364,6 +366,40 @@ export function FinancePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {viewInv && (
+        <ViewDrawer
+          title="Invoice"
+          item={viewInv}
+          onClose={() => setViewInv(null)}
+          onEdit={() => { setEditInv(viewInv!); setViewInv(null); }}
+          fields={[
+            { key: "invoiceNumber", label: "Invoice #" },
+            { key: "studentName", label: "Student" },
+            { key: "amount", label: "Amount" },
+            { key: "dueDate", label: "Due date" },
+            { key: "status", label: "Status" },
+            { key: "description", label: "Description", wide: true },
+          ]}
+        />
+      )}
+      {editInv && (
+        <EditModal
+          title="Invoice"
+          item={editInv}
+          onClose={() => setEditInv(null)}
+          onSave={async data => {
+            /* update local state; real app calls API */
+            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editInv!.id ? { ...x, ...data } : x));
+            setEditInv(null);
+          }}
+          fields={[
+            { key: "amount", label: "Amount", type: "number", required: true },
+            { key: "dueDate", label: "Due date", type: "date" },
+            { key: "description", label: "Description", type: "textarea", wide: true },
+          ]}
+        />
       )}
     </>
   );
