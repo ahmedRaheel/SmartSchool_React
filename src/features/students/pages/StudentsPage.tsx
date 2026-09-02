@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import { Plus, Search, X, GraduationCap, Users, CheckCircle2, AlertCircle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -12,7 +16,11 @@ import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
 export function StudentsPage() {
   const { user } = useAuth();
+  const [viewStudent, setViewStudent] = useState<any|null>(null);
+  const [editStudent, setEditStudent] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"list"|"new">("list");
   const [step, setStep] = useState<1|2|3>(1);
   const [search, setSearch] = useState("");
@@ -142,6 +150,13 @@ export function StudentsPage() {
                           <td>
                             <div className="row-actions">
                               {s.status !== "ACTIVE" && (
+                                <RowActions
+                                  onView={() => setViewStudent(s)}
+                                  onEdit={() => setEditStudent(s)}
+                                  onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== s.id))}
+                                  deleteLabel="student"
+                                  extra={[]}
+                                />
                                 <button className="table-action approve" title="Approve student"
                                   onClick={e => { e.stopPropagation(); setStudents(p => p.map((x:any) => x.id===s.id ? {...x,status:"ACTIVE"}:x)); }}>
                                   ✓ Approve
@@ -167,7 +182,7 @@ export function StudentsPage() {
                 </table>
               </div>
             )}
-            <div className="table-footer"><span>{filtered.length} students shown</span></div>
+            <Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={setPageSize} />
           </div>
         </>
       )}

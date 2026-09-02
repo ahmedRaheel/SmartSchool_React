@@ -1,3 +1,4 @@
+import { PkPhoneInput, PkEmailInput, PkCnicInput, PkAddressBlock, PkCitySelect, PkProvinceSelect } from "../../../components/ui/PakistanFields";
 /**
  * AdmissionsPage — Full two-phase admission flow:
  *
@@ -14,6 +15,10 @@
  * Gender policy enforced: Boys-only branch rejects female applicants
  */
 import { useState, useRef, useMemo } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import {
   AlertTriangle, Bot, CheckCircle2, ChevronDown, ChevronRight,
   ClipboardCheck, FileText, GraduationCap, Plus, Search, Users, X,
@@ -81,8 +86,12 @@ const WORKFLOW_RULES = [
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function AdmissionsPage() {
   const { user } = useAuth();
+  const [viewApp, setViewApp] = useState<any|null>(null);
+  const [editApp, setEditApp] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
 
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [phase, setPhase]        = useState<Phase>("inquiries");
   const [search, setSearch]      = useState("");
   const [selected, setSelected]  = useState<any | null>(null);
@@ -326,7 +335,14 @@ export function AdmissionsPage() {
                           : <span style={{color:"#EF4444",fontSize:11,fontWeight:700}}>✗ Missing</span>}
                       </td>
                       <td><span className={`status-pill ${sm.pill}`}>{sm.label}</span></td>
-                      <td><div className="row-actions"><button className="table-action" style={{fontSize:10}}>View →</button></div></td>
+                      <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewApp(app)}
+                                onEdit={() => setEditApp(app)}
+                                onDelete={() => setApps(p => p.filter((x:any) => x.Id !== app.Id))}
+                                deleteLabel="application"
+                              />
+                            </td>
                     </tr>
                   );
                 })}
@@ -628,7 +644,7 @@ export function AdmissionsPage() {
                     {["Father","Mother","Guardian","Grandfather","Grandmother","Other"].map(r=><option key={r}>{r}</option>)}
                   </select>
                 </label>
-                <label className="human-field"><span>Guardian CNIC</span><input value={appForm.guardianCnic} onChange={afsf("guardianCnic")} placeholder="35202-0000000-0"/></label>
+                <PkCnicInput label="Guardian CNIC" value={appForm.guardianCnic} onChange={(v) => setAppForm(p=>({...p,guardianCnic:v}))} />
                 <label className="human-field"><span>Guardian email *</span><input type="email" value={appForm.guardianEmail} onChange={afsf("guardianEmail")}/></label>
                 <label className="human-field"><span>Guardian phone</span><input value={appForm.guardianPhone} onChange={afsf("guardianPhone")}/></label>
               </div>

@@ -1,4 +1,8 @@
 import { useState, useMemo } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import { Package, Plus, X, Search, ShoppingCart, AlertTriangle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -13,7 +17,11 @@ const UNITS = ["Piece","Box","Pack","Ream","Set","Dozen","Kg","Litre","Metre"];
 const PO_STATUS: Record<string,string> = { DRAFT:"gray", PENDING:"info", APPROVED:"warning", RECEIVED:"success", CANCELLED:"danger" };
 
 export function InventoryPage() {
-  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const { user } = useAuth();
+  const [viewItem, setViewItem] = useState<any|null>(null);
+  const [editItem, setEditItem] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"items"|"orders">("items");
   const [search, setSearch] = useState("");
   const [itemModal, setItemModal] = useState(false);
@@ -87,7 +95,8 @@ export function InventoryPage() {
           {isLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Item</th><th>Code</th><th>Category</th><th>Unit</th><th>Qty on hand</th><th>Reorder at</th><th>Unit cost</th><th>Status</th></tr></thead>
+                <thead><tr><th>Item</th><th>Code</th><th>Category</th><th>Unit</th><th>Qty on hand</th><th>Reorder at</th><th>Unit cost</th><th>Status</th><th style={{ textAlign:"right" }}>Actions</th>
+                  </tr></thead>
                 <tbody>
                   {filtered.length===0 ? <tr><td colSpan={8} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No items in inventory.</td></tr>
                   : filtered.map((it:any) => { const m=parseMeta(it.metadataJson); const low=(m.quantity??0)<=(m.reorderLevel??5); return (
@@ -100,13 +109,21 @@ export function InventoryPage() {
                       <td style={{fontSize:11,color:"var(--muted)"}}>{m.reorderLevel??5}</td>
                       <td style={{fontSize:11}}>{pkr(m.unitCost)}</td>
                       <td>{low?<span className="status-pill danger">Low stock</span>:<span className="status-pill success">OK</span>}</td>
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewItem(it)}
+                                onEdit={() => setEditItem(it)}
+                                onDelete={() => { setLocalItems((p:any)=>p.filter((x:any)=>x.id!==it.id)) }}
+                                deleteLabel="item"
+                              />
+                            </td>
                     </tr>
                   );})}
                 </tbody>
               </table>
             </div>
           )}
-          <div className="table-footer"><span>{filtered.length} items · {lowStock} low stock</span></div>
+          <Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={setPageSize} />
         </div>
       )}
 

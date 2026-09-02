@@ -3,6 +3,10 @@
  * Tabs: Invoices (with pay now) · Fee Types · Fee Structure · Payments · Reports
  */
 import { useState, useMemo } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import { Plus, Search, X, Wallet, CreditCard, TrendingUp, FileText, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -21,7 +25,11 @@ const STATUS_PILL: Record<string,string> = { PAID:"success", PENDING:"warning", 
 const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
 
 export function FinancePage() {
-  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const { user } = useAuth();
+  const [viewInv, setViewInv] = useState<any|null>(null);
+  const [editInv, setEditInv] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"invoices"|"feetype"|"structure"|"payments">("invoices");
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -157,6 +165,12 @@ export function FinancePage() {
                         <td><span className={`status-pill ${STATUS_PILL[meta.status??"PENDING"]??"warning"}`}>{meta.status??"PENDING"}</span></td>
                         <td>
                           {meta.status !== "PAID" && meta.status !== "CANCELLED" && (
+                            <RowActions
+                                onView={() => setViewInv(inv)}
+                                onEdit={() => setEditInv(inv)}
+                                onDelete={() => setLocalInvoices && setLocalInvoices((p:any)=>p.filter((x:any)=>x.id!==inv.id))}
+                                deleteLabel="invoice"
+                              />
                             <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>
                               💳 Pay now
                             </button>
@@ -169,7 +183,7 @@ export function FinancePage() {
               </table>
             </div>
           )}
-          <div className="table-footer"><span>{filtered.length} invoices</span></div>
+          <Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={setPageSize} />
         </div>
       )}
 

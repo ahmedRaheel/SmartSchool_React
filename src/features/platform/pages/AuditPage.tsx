@@ -1,3 +1,6 @@
+import { RowActions } from "../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { Pagination } from "../../../components/ui/Pagination";
 import { useState } from "react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +22,7 @@ function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); 
 
 export function AuditPage() {
   const { user } = useAuth();
+  const [viewLog, setViewLog] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey:["audit-logs",tid], queryFn: () => A.getAuditLogs(tid) });
@@ -61,6 +65,22 @@ export function AuditPage() {
         )}
         <div className="table-footer"><span>{filtered.length} audit entries</span></div>
       </div>
+
+      {viewLog && (
+        <ViewDrawer
+          title="Audit log"
+          item={viewLog}
+          onClose={() => setViewLog(null)}
+          fields={[
+            { key: "code",      label: "Code" },
+            { key: "name",      label: "Action" },
+            { key: "actorName", label: "Actor" },
+            { key: "entityType",label: "Entity type" },
+            { key: "entityId",  label: "Entity ID", wide: true },
+            { key: "createdAt", label: "Timestamp", wide: true },
+          ]}
+        />
+      )}
     </>
   );
 }

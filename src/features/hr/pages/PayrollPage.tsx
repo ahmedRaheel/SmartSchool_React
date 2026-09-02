@@ -1,3 +1,5 @@
+import { RowActions } from "../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { useState, useMemo } from "react";
 import { DollarSign, Plus, Search, X, CheckCircle2, FileText, Briefcase } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
@@ -14,7 +16,8 @@ const SALARY_MAP: Record<string,number> = {
 };
 
 export function PayrollPage() {
-  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const { user } = useAuth();
+  const [viewRun, setViewRun] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
   const [tab, setTab] = useState<"register"|"runs"|"payslips">("register");
   const [search, setSearch] = useState("");
   const [runModal, setRunModal] = useState(false);
@@ -193,5 +196,17 @@ export function PayrollPage() {
         </div>
       )}
     </>
+
+      {viewRun && (
+        <ViewDrawer title="Payroll run" item={viewRun} onClose={() => setViewRun(null)}
+          fields={[
+            { key: "name",      label: "Run name", wide: true },
+            { key: "month",     label: "Month" },
+            { key: "year",      label: "Year" },
+            { key: "totalGross",label: "Gross total" },
+            { key: "totalNet",  label: "Net total" },
+            { key: "status",    label: "Status" },
+          ]} />
+      )}
   );
 }

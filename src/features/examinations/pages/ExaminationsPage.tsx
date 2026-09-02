@@ -7,6 +7,7 @@
  * ─ Grade scale configuration
  */
 import { useState, useMemo, useRef } from "react";
+import { Pagination } from "../../../components/ui/Pagination";
 import {
   ClipboardCheck, Plus, Search, X, BookOpen, CheckCircle2,
   AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy,
@@ -276,6 +277,8 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
 export function ExaminationsPage() {
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"exams" | "grades" | "results">("exams");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -441,7 +444,7 @@ export function ExaminationsPage() {
               </table>
             </div>
           )}
-          <div className="table-footer"><span>{filtered.length} exams</span></div>
+          <Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={setPageSize} />
         </div>
       )}
 

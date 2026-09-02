@@ -1,4 +1,9 @@
+import { PkPhoneInput, PkEmailInput, PkCnicInput, PkAddressBlock } from "../../../components/ui/PakistanFields";
 import React, { useEffect, useState } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import { Plus, Search, X, CheckCircle2, XCircle, Clock, CalendarOff, MessageSquare } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -17,8 +22,12 @@ const EMPLOYMENT_TYPES = ["PERMANENT","CONTRACT","PART_TIME"];
 
 export function HrPage() {
   const { user } = useAuth();
+  const [viewEmp, setViewEmp] = useState<any|null>(null);
+  const [editEmp, setEditEmp] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
   const perms = usePermissions();
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"list"|"leaves"|"new">("list");
   const [search, setSearch] = useState("");
   const [step, setStep] = useState<1|2|3>(1);
@@ -45,6 +54,7 @@ export function HrPage() {
   const createEmployee = useCreateEmployee();
 
   const employees = localEmp;
+  const pagedEmployees = employees.slice((page-1)*pageSize, page*pageSize);
   const campuses  = (campusesData as any)?.items ?? (campusesData as any) ?? [];
   const depts     = (deptsData as any)?.items ?? (deptsData as any) ?? [];
 
@@ -276,6 +286,14 @@ export function HrPage() {
                                 )}
                               </td>
                             )}
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewEmp(emp)}
+                                onEdit={() => setEditEmp(emp)}
+                                onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== emp.id))}
+                                deleteLabel="staff member"
+                              />
+                            </td>
                           </tr>
                         );
                       })
@@ -400,7 +418,7 @@ export function HrPage() {
                 </table>
               </div>
             )}
-            <div className="table-footer"><span>{filtered.length} staff members</span></div>
+            <Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={setPageSize} />
           </div>
         </>
       )}
@@ -466,12 +484,12 @@ export function HrPage() {
                     </select>
                   </label>
                   <label className="human-field"><span>Qualification</span><input value={form.qualification} onChange={sf("qualification")} placeholder="e.g. MSc Mathematics"/></label>
-                  <label className="human-field"><span>Email</span><input type="email" value={form.email} onChange={sf("email")}/></label>
-                  <label className="human-field"><span>Phone</span><input value={form.phone} onChange={sf("phone")}/></label>
+                  <PkEmailInput label="Email" value={form.email} onChange={(v) => sf("email")({target:{value:v}} as any)} />
+                  <PkPhoneInput label="Phone" value={form.phone} onChange={(v) => sf("phone")({target:{value:v}} as any)} />
                   <label className="human-field"><span>Hire date *</span><input type="date" value={form.hireDate} onChange={sf("hireDate")}/></label>
                   <label className="human-field field-wide"><span>Address</span><input value={form.address} onChange={sf("address")}/></label>
                   <label className="human-field"><span>Emergency contact name</span><input value={form.emergencyContactName} onChange={sf("emergencyContactName")}/></label>
-                  <label className="human-field"><span>Emergency contact phone</span><input value={form.emergencyContactPhone} onChange={sf("emergencyContactPhone")}/></label>
+                  <PkPhoneInput label="Emergency contact phone" value={form.emergencyContactPhone} onChange={(v) => sf("emergencyContactPhone")({target:{value:v}} as any)} />
                 </div>
                 {error && <div style={{ color:"var(--danger)", fontSize:12 }}>{error}</div>}
               </div>

@@ -1,3 +1,8 @@
+import { PkPhoneInput, PkEmailInput, PkCitySelect, PkProvinceSelect } from "../../../components/ui/PakistanFields";
+import { Pagination } from "../../../components/ui/Pagination";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
 import React, { useState } from "react";
 import { Building2, Plus, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
@@ -181,7 +186,7 @@ export function TenantManagementPage() {
                   <div className="human-form-grid">
                     <label className="human-field"><span>First name *</span><input value={form.adminFirstName} onChange={sf("adminFirstName")}/></label>
                     <label className="human-field"><span>Last name *</span><input value={form.adminLastName} onChange={sf("adminLastName")}/></label>
-                    <label className="human-field"><span>Admin email *</span><input type="email" value={form.adminEmail} onChange={sf("adminEmail")}/></label>
+                    <PkEmailInput label="Admin email *" value={form.adminEmail} onChange={(v) => sf("adminEmail")({target:{value:v}} as any)} required />
                     <label className="human-field"><span>Phone</span><input value={form.adminPhoneNumber} onChange={sf("adminPhoneNumber")}/></label>
                   </div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Contact info</div>

@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import { Plus, X, Star, Trophy, Users } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -12,7 +16,11 @@ const AWD_TYPES = ["ACADEMIC","SPORTS","CULTURAL","ATTENDANCE","LEADERSHIP","COM
 const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning", COMPLETED:"success", CANCELLED:"danger" };
 
 export function ActivitiesPage() {
-  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const { user } = useAuth();
+  const [viewActivity, setViewActivity] = useState<any|null>(null);
+  const [editActivity, setEditActivity] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab]  = useState<"activities"|"awards">("activities");
   const [aModal, setAModal] = useState(false);
   const [wModal, setWModal] = useState(false);
@@ -78,7 +86,8 @@ export function ActivitiesPage() {
           {isLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Activity</th><th>Type</th><th>Date</th><th>Venue</th><th>Capacity</th><th>Status</th></tr></thead>
+                <thead><tr><th>Activity</th><th>Type</th><th>Date</th><th>Venue</th><th>Capacity</th><th>Status</th><th style={{ textAlign:"right" }}>Actions</th>
+                  </tr></thead>
                 <tbody>
                   {activities.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No activities yet.</td></tr>
                   : activities.map((a:any) => { const m=parseMeta(a.metadataJson); return (
@@ -89,6 +98,14 @@ export function ActivitiesPage() {
                       <td style={{fontSize:11}}>{m.venue??"—"}</td>
                       <td style={{fontSize:11}}>{m.maxParticipants??"Open"}</td>
                       <td><span className={`status-pill ${STATUS_PILL[m.status??"UPCOMING"]??"info"}`}>{m.status??"UPCOMING"}</span></td>
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewActivity(a)}
+                                onEdit={() => setEditActivity(a)}
+                                onDelete={() => { setLocalActivities((p:any)=>p.filter((x:any)=>x.id!==a.id)) }}
+                                deleteLabel="activity"
+                              />
+                            </td>
                     </tr>
                   );})}
                 </tbody>

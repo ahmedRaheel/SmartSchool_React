@@ -1,4 +1,8 @@
 import { useState, useMemo } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import { BookOpen, Plus, Search, X, RotateCcw, Clock, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -10,7 +14,11 @@ const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } cat
 const CATS = ["Textbook","Literature","History","Science","Technology","Reference","Fiction","Islamic Studies","Urdu","Mathematics"];
 
 export function LibraryPage() {
-  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
+  const { user } = useAuth();
+  const [viewBook, setViewBook] = useState<any|null>(null);
+  const [editBook, setEditBook] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"books"|"loans"|"issue">("books");
   const [search, setSearch] = useState("");
   const [bookModal, setBookModal] = useState(false);
@@ -100,7 +108,8 @@ export function LibraryPage() {
           {isLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Title</th><th>Author</th><th>ISBN</th><th>Category</th><th>Copies</th><th>Available</th></tr></thead>
+                <thead><tr><th>Title</th><th>Author</th><th>ISBN</th><th>Category</th><th>Copies</th><th>Available</th><th style={{ textAlign:"right" }}>Actions</th>
+                  </tr></thead>
                 <tbody>
                   {filtered.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No books found.</td></tr>
                   : filtered.map((b:any) => {
@@ -117,6 +126,14 @@ export function LibraryPage() {
                             {m.availableCopies??m.totalCopies??1}
                           </span>
                         </td>
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewBook(b)}
+                                onEdit={() => setEditBook(b)}
+                                onDelete={() => { setLocalBooks((p:any)=>p.filter((x:any)=>x.id!==b.id)) }}
+                                deleteLabel="book"
+                              />
+                            </td>
                       </tr>
                     );
                   })}
@@ -124,7 +141,7 @@ export function LibraryPage() {
               </table>
             </div>
           )}
-          <div className="table-footer"><span>{filtered.length} titles</span></div>
+          <Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={setPageSize} />
         </div>
       )}
 

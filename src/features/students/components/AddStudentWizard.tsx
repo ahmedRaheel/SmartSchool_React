@@ -1,3 +1,4 @@
+import React from "react";
 import { ChangeEvent, FormEvent, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Upload, X } from "lucide-react";
 import { CreateStudentRequest, studentsApi } from "../api/studentsApi";
@@ -69,7 +70,7 @@ function createInitialForm(tenantId: string): StudentFormState {
     guardianCnic: "",
     guardianPhone: "",
     guardianEmail: "",
-    address: "",
+    address: "", city: "", province: "", country: "Pakistan",
   };
 }
 
@@ -377,7 +378,7 @@ function GuardianStep({
         onChange={(value) => onChange("guardianEmail", value)}
       />
       <TextField
-        label="Residential address"
+        label="Street address"
         value={form.address}
         onChange={(value) => onChange("address", value)}
       />

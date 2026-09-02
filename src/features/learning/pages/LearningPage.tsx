@@ -4,6 +4,7 @@
  * Student view: view assigned work, submit with file + comment, see grade
  */
 import React, { useState, useMemo, useRef } from "react";
+import { Pagination } from "../../../components/ui/Pagination";
 import {
   Plus, X, Upload, CheckCircle2, Clock, FileText,
   AlertCircle, Send, Eye, BookOpen, Edit3, Star,
@@ -356,6 +357,8 @@ export function LearningPage() {
   const isTeacher = user?.role?.toLowerCase().includes("teacher");
   const isStudent = !isTeacher;
 
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab]           = useState<"assignments" | "lessons">("assignments");
   const [search, setSearch]     = useState("");
   const [aModal, setAModal]     = useState(false);
@@ -563,7 +566,7 @@ export function LearningPage() {
               </table>
             </div>
           )}
-          <div className="table-footer"><span>{filtered.length} assignments</span></div>
+          <Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={setPageSize} />
         </div>
       )}
 

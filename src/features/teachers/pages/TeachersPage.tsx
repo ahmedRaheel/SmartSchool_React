@@ -1,3 +1,5 @@
+import { RowActions } from "../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { env } from "../../../config/env";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -128,6 +130,7 @@ type Tab = "classes" | "timetable" | "students";
 
 export function TeachersPage() {
   const { user } = useAuth();
+  const [viewSt, setViewSt] = useState<any|null>(null);
   const nav = useNavigate();
   const eid = user?.employeeId ?? "";
 
@@ -523,5 +526,17 @@ export function TeachersPage() {
         </div>
       )}
     </>
+
+      {viewSt && (
+        <ViewDrawer title="Student" item={viewSt} onClose={() => setViewSt(null)}
+          fields={[
+            { key: "name",       label: "Name", wide: true },
+            { key: "regNo",      label: "Reg #" },
+            { key: "section",    label: "Class" },
+            { key: "attendance", label: "Attendance %" },
+            { key: "avgGrade",   label: "Avg grade" },
+            { key: "pendingAssignments", label: "Pending work" },
+          ]} />
+      )}
   );
 }

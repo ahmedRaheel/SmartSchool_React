@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
 import { Plus, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -12,7 +16,11 @@ function parseMeta(j?: string|null) { try { return JSON.parse(j ?? "{}"); } catc
 
 export function TransportPage() {
   const { user } = useAuth();
+  const [viewVehicle, setViewVehicle] = useState<any|null>(null);
+  const [editVehicle, setEditVehicle] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [tab, setTab]  = useState<"vehicles"|"routes">("vehicles");
   const [driverModal, setDriverModal] = useState<string|null>(null); // driverId for doc upload
   const [addVehicle, setAddVehicle] = useState(false);
@@ -69,7 +77,8 @@ export function TransportPage() {
           {vLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
             <div className="table-wrap">
               <table className="premium-table">
-                <thead><tr><th>Vehicle</th><th>Reg #</th><th>Make / Model</th><th>Capacity</th><th>Driver</th><th>Route</th><th>Status</th><th>Driver docs</th></tr></thead>
+                <thead><tr><th>Vehicle</th><th>Reg #</th><th>Make / Model</th><th>Capacity</th><th>Driver</th><th>Route</th><th>Status</th><th>Driver docs</th><th style={{ textAlign:"right" }}>Actions</th>
+                  </tr></thead>
                 <tbody>
                   {vehicles.map((v: any) => {
                     const meta = parseMeta(v.metadataJson);
@@ -90,6 +99,14 @@ export function TransportPage() {
                             </button>
                           )}
                         </td>
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewVehicle(v)}
+                                onEdit={() => setEditVehicle(v)}
+                                onDelete={() => { setLocalVehicles((p:any)=>p.filter((x:any)=>x.id!==v.id)) }}
+                                deleteLabel="vehicle"
+                              />
+                            </td>
                       </tr>
                     );
                   })}
