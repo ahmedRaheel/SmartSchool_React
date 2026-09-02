@@ -1,147 +1,206 @@
-import { useState, useMemo } from "react";
-import { Bus, Map, Plus, Search, Users, X } from "lucide-react";
+import { useState } from "react";
+import { EditModal } from "../../../components/ui/EditModal";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { RowActions } from "../../../components/ui/RowActions";
+import { Pagination } from "../../../components/ui/Pagination";
+import { Plus, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
+import { DocumentUploader } from "../../../components/ui/DocumentUploader";
 import { useVehicles, useRoutes, useCreateVehicle, useCreateRoute } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { Bus, Route, Users, AlertTriangle } from "lucide-react";
 
-function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
-type View = "vehicles"|"routes";
+function parseMeta(j?: string|null) { try { return JSON.parse(j ?? "{}"); } catch { return {}; } }
 
 export function TransportPage() {
-  const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
-  const [view, setView] = useState<View>("vehicles");
-  const [q, setQ] = useState("");
-  const [vehicleModal, setVM] = useState(false);
-  const [routeModal, setRM] = useState(false);
+  const { user } = useAuth();
+  const [viewVehicle, setViewVehicle] = useState<any|null>(null);
+  const [editVehicle, setEditVehicle] = useState<any|null>(null);
+  const tid = effectiveTenantId(user) ?? "";
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [tab, setTab]  = useState<"vehicles"|"routes">("vehicles");
+  const [driverModal, setDriverModal] = useState<string|null>(null); // driverId for doc upload
+  const [addVehicle, setAddVehicle] = useState(false);
+  const [form, setForm] = useState({ regNo:"", make:"", model:"", capacity:"45", type:"BUS" });
   const [error, setError] = useState("");
-  const [vForm, setVForm] = useState({ name:"", registrationNumber:"", make:"", model:"", capacity:"45", vehicleType:"BUS" });
-  const [rForm, setRForm] = useState({ name:"", startPoint:"", endPoint:"", stops:"5" });
 
-  const { data: vData, isLoading: vLoad } = useVehicles();
-  const { data: rData, isLoading: rLoad } = useRoutes();
+  const { data: vehiclesData, isLoading: vLoading } = useVehicles();
+  const { data: routesData, isLoading: rLoading }   = useRoutes();
   const createVehicle = useCreateVehicle();
   const createRoute   = useCreateRoute();
 
-  const vehicles = (vData as any)?.items ?? (vData as any) ?? [];
-  const routes   = (rData as any)?.items ?? (rData as any) ?? [];
+  const vehicles = (vehiclesData as any)?.items ?? (vehiclesData as any) ?? [];
+  const routes   = (routesData as any)?.items   ?? (routesData as any) ?? [];
 
-  const filteredV = useMemo(() => vehicles.filter((v:any) => `${v.name} ${v.code} ${parseMeta(v.metadataJson).registrationNumber}`.toLowerCase().includes(q.toLowerCase())), [vehicles, q]);
-  const filteredR = useMemo(() => routes.filter((r:any) => `${r.name} ${r.code}`.toLowerCase().includes(q.toLowerCase())), [routes, q]);
-
-  function vsf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setVForm(p=>({...p,[k]:e.target.value})); }
-  function rsf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setRForm(p=>({...p,[k]:e.target.value})); }
+  function sf(k: string) {
+    return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
+      setForm(p => ({ ...p, [k]: e.target.value }));
+  }
 
   async function saveVehicle() {
-    if (!vForm.name||!vForm.registrationNumber) { setError("Name and registration required"); return; }
-    try {
-      await createVehicle.mutateAsync({ tenantId:tid, name:vForm.name, metadataJson:JSON.stringify({ ...vForm, capacity:Number(vForm.capacity), status:"ACTIVE" }) });
-      setVM(false); setVForm({ name:"", registrationNumber:"", make:"", model:"", capacity:"45", vehicleType:"BUS" }); setError("");
-    } catch(e:any) { setError(e?.message??"Failed"); }
+    if (!form.regNo) { setError("Registration number required"); return; }
+    await createVehicle.mutateAsync({
+      tenantId: tid, name: `${form.make} ${form.model} (${form.regNo})`,
+      metadataJson: JSON.stringify({ regNo:form.regNo, make:form.make, model:form.model, capacity:Number(form.capacity), type:form.type, status:"ACTIVE" }),
+    });
+    setAddVehicle(false); setForm({ regNo:"", make:"", model:"", capacity:"45", type:"BUS" }); setError("");
   }
 
-  async function saveRoute() {
-    if (!rForm.name||!rForm.startPoint||!rForm.endPoint) { setError("Name, start point and end point required"); return; }
-    try {
-      await createRoute.mutateAsync({ tenantId:tid, name:rForm.name, metadataJson:JSON.stringify({ ...rForm, stops:Number(rForm.stops), studentCount:0, isActive:true }) });
-      setRM(false); setRForm({ name:"", startPoint:"", endPoint:"", stops:"5" }); setError("");
-    } catch(e:any) { setError(e?.message??"Failed"); }
-  }
+  const active = vehicles.filter((v: any) => parseMeta(v.metadataJson).status === "ACTIVE").length;
+  const maintenance = vehicles.filter((v: any) => parseMeta(v.metadataJson).status === "MAINTENANCE").length;
 
   return (
     <>
-      <PageHeader title="Transport" subtitle="School bus fleet and route management"
+      <PageHeader title="Transport" subtitle="Fleet, routes and driver document compliance"
         action={<div className="page-actions">
-          {view==="vehicles" && <button className="primary" onClick={()=>{setVM(true);setError("");}}><Plus size={14}/> Add vehicle</button>}
-          {view==="routes"   && <button className="primary" onClick={()=>{setRM(true);setError("");}}><Plus size={14}/> Add route</button>}
-        </div>}/>
+          {tab === "vehicles" && <button className="primary" onClick={() => setAddVehicle(true)}><Plus size={14}/> Add vehicle</button>}
+        </div>}
+      />
       <section className="metric-grid" style={{ marginBottom:20 }}>
-        <StatCard label="Vehicles" value={String(vehicles.length)} note="" color="#2563EB" bg="#EFF6FF"><Bus size={20}/></StatCard>
-        <StatCard label="Routes"   value={String(routes.length)}   note="" color="#0F2241" bg="#EEF2FF"><Map size={20}/></StatCard>
-        <StatCard label="Students" value={String(routes.reduce((a:number,r:any)=>a+(parseMeta(r.metadataJson).studentCount??0),0))} note="On transport" color="#10B981" bg="#ECFDF5"><Users size={20}/></StatCard>
-        <StatCard label="Active"   value={String(vehicles.filter((v:any)=>parseMeta(v.metadataJson).status==="ACTIVE").length)} note="" color="#8B5CF6" bg="#F5F3FF"><Bus size={20}/></StatCard>
+        <StatCard label="Total vehicles" value={String(vehicles.length)} note="" color="#2563EB" bg="#EFF6FF"><Bus size={20}/></StatCard>
+        <StatCard label="Active"         value={String(active)}          note="" color="#10B981" bg="#ECFDF5"><Bus size={20}/></StatCard>
+        <StatCard label="In maintenance" value={String(maintenance)}     note="" color="#D97706" bg="#FFFBEB"><AlertTriangle size={20}/></StatCard>
+        <StatCard label="Routes"         value={String(routes.length)}   note="" color="#8B5CF6" bg="#F5F3FF"><Route size={20}/></StatCard>
       </section>
 
       <div className="section-tabs" style={{ marginBottom:14 }}>
-        <button className={view==="vehicles"?"active":""} onClick={()=>{setView("vehicles");setQ("");}}>🚌 Vehicles ({vehicles.length})</button>
-        <button className={view==="routes"?"active":""}   onClick={()=>{setView("routes");setQ("");}}>🗺️ Routes ({routes.length})</button>
+        <button className={tab==="vehicles"?"active":""} onClick={()=>setTab("vehicles")}>🚌 Fleet ({vehicles.length})</button>
+        <button className={tab==="routes"?"active":""} onClick={()=>setTab("routes")}>🗺 Routes ({routes.length})</button>
       </div>
 
-      <div className="surface">
-        <div className="surface-head">
-          <label className="search-box" style={{ maxWidth:280 }}><Search size={14}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder={`Search ${view}…`}/></label>
+      {tab === "vehicles" && (
+        <div className="surface">
+          <div className="surface-head"><h3>Fleet management</h3><p>Drivers must have valid licence + police clearance + medical certificate on file</p></div>
+          {vLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
+            <div className="table-wrap">
+              <table className="premium-table">
+                <thead><tr><th>Vehicle</th><th>Reg #</th><th>Make / Model</th><th>Capacity</th><th>Driver</th><th>Route</th><th>Status</th><th>Driver docs</th><th style={{ textAlign:"right" }}>Actions</th>
+                  </tr></thead>
+                <tbody>
+                  {vehicles.map((v: any) => {
+                    const meta = parseMeta(v.metadataJson);
+                    const isActive = meta.status === "ACTIVE";
+                    return (
+                      <tr key={v.id}>
+                        <td><b style={{fontSize:12}}>{v.name}</b></td>
+                        <td><code style={{fontSize:11}}>{meta.regNo ?? "—"}</code></td>
+                        <td style={{fontSize:11}}>{meta.make} {meta.model}</td>
+                        <td>{meta.capacity ?? "—"}</td>
+                        <td style={{fontSize:11}}>{meta.driver || "—"}</td>
+                        <td style={{fontSize:11}}>{meta.route || "—"}</td>
+                        <td><span className={`status-pill ${isActive?"success":"warning"}`}>{meta.status ?? "ACTIVE"}</span></td>
+                        <td>
+                          {meta.driver && (
+                            <button className="table-action" style={{fontSize:10}} onClick={() => setDriverModal(v.id)}>
+                              📋 View docs
+                            </button>
+                          )}
+                        </td>
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewVehicle(v)}
+                                onEdit={() => setEditVehicle(v)}
+                                onDelete={() => { setLocalVehicles((p:any)=>p.filter((x:any)=>x.id!==v.id)) }}
+                                deleteLabel="vehicle"
+                              />
+                            </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        {view === "vehicles" && (vLoad ? <div style={{ padding:48, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
-          <div className="table-wrap">
-            <table className="premium-table">
-              <thead><tr><th>Vehicle</th><th>Reg #</th><th>Type</th><th>Make/Model</th><th>Capacity</th><th>Status</th></tr></thead>
-              <tbody>
-                {filteredV.length===0 ? <tr><td colSpan={6} style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>No vehicles yet.</td></tr>
-                : filteredV.map((v:any)=>{
-                  const meta=parseMeta(v.metadataJson);
-                  return <tr key={v.id}><td><b>{v.name}</b></td><td><code style={{fontSize:11}}>{meta.registrationNumber??v.code}</code></td><td>{meta.vehicleType??"-"}</td><td>{meta.make} {meta.model}</td><td>{meta.capacity??0}</td><td><span className={`status-pill ${meta.status==="ACTIVE"?"success":meta.status==="MAINTENANCE"?"warning":"gray"}`}>{meta.status??"ACTIVE"}</span></td></tr>;
-                })}
-              </tbody>
-            </table>
-          </div>
-        ))}
-        {view === "routes" && (rLoad ? <div style={{ padding:48, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
-          <div className="table-wrap">
-            <table className="premium-table">
-              <thead><tr><th>Route</th><th>Code</th><th>Start point</th><th>End point</th><th>Stops</th><th>Students</th><th>Status</th></tr></thead>
-              <tbody>
-                {filteredR.length===0 ? <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>No routes yet.</td></tr>
-                : filteredR.map((r:any)=>{
-                  const meta=parseMeta(r.metadataJson);
-                  return <tr key={r.id}><td><b>{r.name}</b></td><td><code style={{fontSize:11}}>{r.code}</code></td><td>{meta.startPoint??"-"}</td><td>{meta.endPoint??"-"}</td><td>{meta.stops??0}</td><td>{meta.studentCount??0}</td><td><span className={`status-pill ${meta.isActive?"success":"gray"}`}>{meta.isActive?"Active":"Inactive"}</span></td></tr>;
-                })}
-              </tbody>
-            </table>
-          </div>
-        ))}
-      </div>
+      )}
 
-      {vehicleModal && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setVM(false)}}>
-          <div className="modal-card" style={{ width:"min(480px,96vw)" }}>
-            <div className="modal-head"><h2>Add vehicle</h2><button className="icon-button" onClick={()=>setVM(false)}><X size={18}/></button></div>
+      {tab === "routes" && (
+        <div className="surface">
+          <div className="surface-head"><h3>Routes</h3></div>
+          {rLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
+            <div className="table-wrap">
+              <table className="premium-table">
+                <thead><tr><th>Route</th><th>Code</th><th>From</th><th>To</th><th>Stops</th><th>Students</th><th>Status</th></tr></thead>
+                <tbody>
+                  {routes.map((r: any) => {
+                    const meta = parseMeta(r.metadataJson);
+                    return (
+                      <tr key={r.id}>
+                        <td><b>{r.name}</b></td>
+                        <td><code style={{fontSize:11}}>{r.code}</code></td>
+                        <td>{meta.from ?? "—"}</td>
+                        <td>{meta.to ?? "—"}</td>
+                        <td>{meta.stops ?? "—"}</td>
+                        <td>{meta.students ?? "—"}</td>
+                        <td><span className={`status-pill ${meta.isActive?"success":"gray"}`}>{meta.isActive?"Active":"Inactive"}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Driver document compliance modal */}
+      {driverModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setDriverModal(null)}}>
+          <div className="modal-card" style={{width:"min(560px,96vw)"}}>
+            <div className="modal-head"><h2>Driver documents</h2><button className="icon-button" onClick={()=>setDriverModal(null)}><X size={18}/></button></div>
+            <div style={{padding:"16px 20px"}}>
+              <DocumentUploader
+                actorType="DRIVER"
+                entityId={driverModal}
+                tenantId={tid}
+                title="Required driver documents"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add vehicle modal */}
+      {addVehicle && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setAddVehicle(false)}}>
+          <div className="modal-card" style={{width:"min(460px,96vw)"}}>
+            <div className="modal-head"><h2>Add vehicle</h2><button className="icon-button" onClick={()=>setAddVehicle(false)}><X size={18}/></button></div>
             <div className="human-form"><div className="human-form-grid">
-              <label className="human-field"><span>Vehicle name *</span><input value={vForm.name} onChange={vsf("name")} placeholder="e.g. Bus 01"/></label>
-              <label className="human-field"><span>Registration # *</span><input value={vForm.registrationNumber} onChange={vsf("registrationNumber")} placeholder="e.g. LSQ-441"/></label>
-              <label className="human-field"><span>Type</span><select value={vForm.vehicleType} onChange={vsf("vehicleType")}><option value="BUS">Bus</option><option value="VAN">Van</option><option value="MINIBUS">Minibus</option></select></label>
-              <label className="human-field"><span>Capacity</span><input type="number" value={vForm.capacity} onChange={vsf("capacity")}/></label>
-              <label className="human-field"><span>Make</span><input value={vForm.make} onChange={vsf("make")} placeholder="e.g. Hino"/></label>
-              <label className="human-field"><span>Model</span><input value={vForm.model} onChange={vsf("model")} placeholder="e.g. 2022"/></label>
+              <label className="human-field field-wide"><span>Registration number *</span><input value={form.regNo} onChange={sf("regNo")} placeholder="e.g. LSQ-441"/></label>
+              <label className="human-field"><span>Make</span><input value={form.make} onChange={sf("make")} placeholder="e.g. Hino"/></label>
+              <label className="human-field"><span>Model / Year</span><input value={form.model} onChange={sf("model")} placeholder="e.g. 2023"/></label>
+              <label className="human-field"><span>Capacity</span><input type="number" value={form.capacity} onChange={sf("capacity")}/></label>
+              <label className="human-field"><span>Type</span>
+                <select value={form.type} onChange={sf("type")}>
+                  <option>BUS</option><option>VAN</option><option>MINI_BUS</option>
+                </select>
+              </label>
             </div>
             {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
-            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
-              <button className="secondary" onClick={()=>setVM(false)}>Cancel</button>
+            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
+              <button className="secondary" onClick={()=>setAddVehicle(false)}>Cancel</button>
               <button className="primary" onClick={saveVehicle} disabled={createVehicle.isPending}>{createVehicle.isPending?"Adding…":"Add vehicle"}</button>
             </div>
           </div>
         </div>
       )}
 
-      {routeModal && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setRM(false)}}>
-          <div className="modal-card" style={{ width:"min(480px,96vw)" }}>
-            <div className="modal-head"><h2>Add route</h2><button className="icon-button" onClick={()=>setRM(false)}><X size={18}/></button></div>
-            <div className="human-form"><div className="human-form-grid">
-              <label className="human-field field-wide"><span>Route name *</span><input value={rForm.name} onChange={rsf("name")} placeholder="e.g. Route A — North City"/></label>
-              <label className="human-field"><span>Start point *</span><input value={rForm.startPoint} onChange={rsf("startPoint")} placeholder="e.g. Gulshan Chowk"/></label>
-              <label className="human-field"><span>End point *</span><input value={rForm.endPoint} onChange={rsf("endPoint")} placeholder="e.g. School Gate"/></label>
-              <label className="human-field"><span>Stops</span><input type="number" value={rForm.stops} onChange={rsf("stops")}/></label>
-            </div>
-            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
-            </div>
-            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
-              <button className="secondary" onClick={()=>setRM(false)}>Cancel</button>
-              <button className="primary" onClick={saveRoute} disabled={createRoute.isPending}>{createRoute.isPending?"Adding…":"Add route"}</button>
-            </div>
-          </div>
-        </div>
+      {viewVehicle && (
+        <ViewDrawer
+          title="Vehicle"
+          item={viewVehicle}
+          onClose={() => setViewVehicle(null)}
+          fields={[
+            { key: "name", label: "Registration #", wide: true },
+            { key: "vehicleType", label: "Type" },
+            { key: "seatingCapacity", label: "Capacity" },
+            { key: "status", label: "Status" },
+          ]}
+        />
       )}
     </>
   );

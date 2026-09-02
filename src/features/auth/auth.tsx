@@ -191,11 +191,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const unauthorized = () => setUser(null);
-    window.addEventListener("smartschool:unauthorized", unauthorized);
-    return () =>
-      window.removeEventListener("smartschool:unauthorized", unauthorized);
+    // ApiClient fires this when a 401 is received OR the token is proactively
+    // detected as expired before a request. Storage is already wiped by that
+    // point — we just need to sync React state.
+    const onSessionEnded = () => {
+      setUser(null);
+      // ApiClient already called window.location.replace("/login…")
+      // but if for any reason we're still here, redirect now.
+      if (!window.location.pathname.startsWith("/login")) {
+        const returnTo = encodeURIComponent(window.location.pathname);
+        window.location.replace(`/login?returnTo=${returnTo}`);
+      }
+    };
+    window.addEventListener("smartschool:session-ended", onSessionEnded);
+    // Keep backward-compat with the old event name
+    window.addEventListener("smartschool:unauthorized",  onSessionEnded);
+    return () => {
+      window.removeEventListener("smartschool:session-ended", onSessionEnded);
+      window.removeEventListener("smartschool:unauthorized",  onSessionEnded);
+    };
   }, []);
+
+  // ── Proactive expiry timer ──────────────────────────────────────────────────
+  // Checks every 60 s whether the stored token has passed its `exp` claim.
+  // Fires even when no API call is in flight (e.g. idle user on a dashboard).
+  useEffect(() => {
+    if (!user) return; // already logged out
+
+    function checkExpiry() {
+      const token = localStorage.getItem("access_token");
+      if (!token || token.startsWith("mock_")) return; // mock tokens never expire
+
+      try {
+        const part = token.split(".")[1];
+        if (!part) return;
+        const { exp } = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
+        if (typeof exp === "number" && exp * 1000 < Date.now()) {
+          // Session expired while tab was idle
+          clearAuthenticationState();
+          setUser(null);
+          const returnTo = encodeURIComponent(window.location.pathname);
+          window.location.replace(`/login?returnTo=${returnTo}&reason=expired`);
+        }
+      } catch { /* ignore malformed tokens */ }
+    }
+
+    checkExpiry(); // immediate check on mount / user change
+    const id = window.setInterval(checkExpiry, 60_000); // repeat every minute
+    return () => window.clearInterval(id);
+  }, [user?.id]); // re-register only when the logged-in user changes
 
   function persistSession(token: string, sessionUser: SessionUser): void {
     localStorage.setItem("access_token", token);
@@ -226,6 +270,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "student@alnoor.edu.pk":        { role:"Student",      roles:["Student"],     name:"Ahmed Hassan",    accountType:"Student",     school:"Al-Noor Academy", studentId:"22222222-2222-2222-2222-222222222222" },
         "parent@alnoor.edu.pk":         { role:"Parent",       roles:["Parent"],      name:"Ali Hassan",      accountType:"Guardian",    school:"Al-Noor Academy", businessEntityId:"44444444-4444-4444-4444-444444444444" },
         "driver@alnoor.edu.pk":         { role:"Driver",       roles:["Driver"],      name:"Arif Khan",       accountType:"Employee",    school:"Al-Noor Academy", driverId:"55555555-5555-5555-5555-555555555555" },
+        "accountant@alnoor.edu.pk":     { role:"Accountant",   roles:["Accountant"],  name:"Zulfiqar Ahmed",  accountType:"Employee",    school:"Al-Noor Academy", employeeId:"66666666-6666-6666-6666-666666666666" },
+        "hrmanager@alnoor.edu.pk":      { role:"HRManager",    roles:["HRManager"],   name:"Nadia Pervez",    accountType:"Employee",    school:"Al-Noor Academy", employeeId:"77777777-7777-7777-7777-777777777777" },
+        "examiner@alnoor.edu.pk":       { role:"Examiner",     roles:["Examiner"],    name:"Dr. Tariq Malik", accountType:"Employee",    school:"Al-Noor Academy", examinerId:"88888888-8888-8888-8888-888888888888" },
       };
       const mock = MOCK_ROLES[email] ?? { role:"Admin", roles:["Admin"], name:email.split("@")[0], accountType:"Admin", school:"School" };
       const mockUser: SessionUser = {
@@ -250,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const body = new URLSearchParams({
       grant_type: "password",
       client_id: "smartschool-login-api",
+      client_secret: "development-login-api-secret-change-me",
       username: email,
       password: credentials.password,
       scope: "openid profile email smartschool.api offline_access",

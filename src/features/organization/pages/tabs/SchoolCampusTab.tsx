@@ -1,158 +1,245 @@
 import { useState } from "react";
-import { Building2, Plus, Trash2, X } from "lucide-react";
+import { Building2, GitBranch, Plus, Trash2, X } from "lucide-react";
 import {
-  useSchools, useCreateSchool, useCampuses, useCreateCampus,
+  useSchools, useCreateSchool, useUpdateSchool,
+  useCampuses, useCreateCampus, useUpdateCampus,
   useDepartments, useCreateDepartment, useDeleteDepartment,
-  useBranchGenderTypes, useEducationLevels,
+  useBranchGenderTypes, useEducationLevels, useAcademicSystems,
 } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
-import type { CreateSchoolRequest, CreateCampusRequest, CreateDepartmentRequest } from "../../../../core/api/backendContracts";
+
+const BRANCH_TYPES = [
+  { value:"MIXED",  label:"Co-Educational",   icon:"⚥", color:"#6366F1" },
+  { value:"MALE",   label:"Boys Only",          icon:"♂", color:"#2563EB" },
+  { value:"FEMALE", label:"Girls Only",          icon:"♀", color:"#DB2777" },
+];
+
+function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
 
 export function SchoolCampusTab() {
   const { user } = useAuth();
-  const tid = effectiveTenantId(user);
+  const tid = effectiveTenantId(user) ?? "";
 
-  const { data: schools, isLoading: sLoad } = useSchools();
-  const { data: campuses, isLoading: cLoad } = useCampuses();
-  const { data: departments, isLoading: dLoad } = useDepartments();
+  const { data: schoolsData } = useSchools();
+  const { data: campusesData } = useCampuses();
+  const { data: deptsData } = useDepartments();
   const { data: genderTypes } = useBranchGenderTypes();
-  const { data: eduLevels } = useEducationLevels();
+  const { data: educLevels } = useEducationLevels();
+  const { data: acSystems } = useAcademicSystems();
+  const createSchool   = useCreateSchool();
+  const createCampus   = useCreateCampus();
+  const createDept     = useCreateDepartment();
+  const deleteDept     = useDeleteDepartment();
 
-  const createSchool  = useCreateSchool();
-  const createCampus  = useCreateCampus();
-  const createDept    = useCreateDepartment();
-  const deleteDept    = useDeleteDepartment();
+  const schools   = (schoolsData   as any)?.items ?? (schoolsData   as any) ?? [];
+  const campuses  = (campusesData  as any)?.items ?? (campusesData  as any) ?? [];
+  const depts     = (deptsData     as any)?.items ?? (deptsData     as any) ?? [];
+  const gTypes    = Array.isArray(genderTypes)  ? genderTypes  : [];
+  const eLevels   = Array.isArray(educLevels)   ? educLevels   : [];
+  const acSys     = (acSystems as any)?.items ?? (acSystems as any) ?? [];
 
-  // Modal state
-  const [modal, setModal] = useState<"school"|"campus"|"dept"|null>(null);
+  const [view, setView] = useState<"schools"|"campuses"|"departments">("schools");
+  const [schoolModal,  setSchoolModal]  = useState(false);
+  const [campusModal,  setCampusModal]  = useState(false);
+  const [deptModal,    setDeptModal]    = useState(false);
   const [error, setError] = useState("");
 
-  // Forms
-  const [schoolForm, setSchoolForm] = useState<Partial<CreateSchoolRequest>>({});
-  const [campusForm, setCampusForm] = useState<Partial<CreateCampusRequest>>({ branchType:"MIXED", educationLevelIds:[] });
-  const [deptForm,   setDeptForm]   = useState<Partial<CreateDepartmentRequest>>({});
+  const [sForm, setSForm] = useState({ name:"", registrationNumber:"", email:"", phone:"", website:"", address:"", city:"", province:"", country:"Pakistan" });
+  const [cForm, setCForm] = useState({ schoolId:"", name:"", branchType:"MIXED", branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[] as string[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" });
+  const [dForm, setDForm] = useState({ campusId:"", name:"", telephone:"", email:"" });
 
-  const schoolItems  = (schools as any)?.items  ?? (schools as any) ?? [];
-  const campusItems  = (campuses as any)?.items ?? (campuses as any) ?? [];
-  const deptItems    = (departments as any)?.items ?? (departments as any) ?? [];
-  const gTypes = genderTypes ?? [];
-  const eLevels = eduLevels ?? [];
+  function ssf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setSForm(p=>({...p,[k]:e.target.value})); }
+  function csf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setCForm(p=>({...p,[k]:e.target.value})); }
+  function dsf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setDForm(p=>({...p,[k]:e.target.value})); }
+
+  function toggleEdLevel(id:string) {
+    setCForm(p => ({
+      ...p,
+      educationLevelIds: p.educationLevelIds.includes(id)
+        ? p.educationLevelIds.filter(x=>x!==id)
+        : [...p.educationLevelIds, id]
+    }));
+  }
 
   async function saveSchool() {
-    if (!schoolForm.name) { setError("School name required"); return; }
-    try { await createSchool.mutateAsync({ tenantId: tid, ...schoolForm }); setModal(null); setSchoolForm({}); setError(""); }
-    catch (e: any) { setError(e?.message ?? "Failed"); }
+    if (!sForm.name) { setError("School name required"); return; }
+    try {
+      await createSchool.mutateAsync({ tenantId:tid, ...sForm, registrationNumber:sForm.registrationNumber||undefined, email:sForm.email||undefined, phone:sForm.phone||undefined });
+      setSchoolModal(false); setSForm({ name:"", registrationNumber:"", email:"", phone:"", website:"", address:"", city:"", province:"", country:"Pakistan" }); setError("");
+    } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
   async function saveCampus() {
-    if (!campusForm.name || !campusForm.schoolId || !campusForm.branchGenderTypeId || !campusForm.educationLevelIds?.length) {
-      setError("School, campus name, gender type and at least one education level required"); return;
-    }
-    try { await createCampus.mutateAsync({ tenantId: tid, ...campusForm } as any); setModal(null); setCampusForm({ branchType:"MIXED", educationLevelIds:[] }); setError(""); }
-    catch (e: any) { setError(e?.message ?? "Failed"); }
+    if (!cForm.name || !cForm.schoolId || !cForm.branchGenderTypeId) { setError("Name, school and gender type required"); return; }
+    try {
+      await createCampus.mutateAsync({
+        tenantId:tid, schoolId:cForm.schoolId, name:cForm.name,
+        branchType:cForm.branchType, branchGenderTypeId:cForm.branchGenderTypeId,
+        academicSystemId:cForm.academicSystemId||undefined,
+        educationLevelIds:cForm.educationLevelIds.length>0?cForm.educationLevelIds:undefined,
+        address:cForm.address||undefined, city:cForm.city||undefined,
+        province:cForm.province||undefined, country:cForm.country||undefined,
+        phone:cForm.phone||undefined, email:cForm.email||undefined,
+      });
+      setCampusModal(false); setCForm({ schoolId:"", name:"", branchType:"MIXED", branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" }); setError("");
+    } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
   async function saveDept() {
-    if (!deptForm.name || !deptForm.campusId) { setError("Campus and department name required"); return; }
-    try { await createDept.mutateAsync({ tenantId: tid, ...deptForm } as any); setModal(null); setDeptForm({}); setError(""); }
-    catch (e: any) { setError(e?.message ?? "Failed"); }
+    if (!dForm.name || !dForm.campusId) { setError("Name and campus required"); return; }
+    try {
+      await createDept.mutateAsync({ tenantId:tid, campusId:dForm.campusId, name:dForm.name, telephone:dForm.telephone||undefined, email:dForm.email||undefined });
+      setDeptModal(false); setDForm({ campusId:"", name:"", telephone:"", email:"" }); setError("");
+    } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
-  function sf(k: keyof CreateSchoolRequest) { return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setSchoolForm(p => ({ ...p, [k]: e.target.value })); }
-  function cf(k: keyof CreateCampusRequest) { return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setCampusForm(p => ({ ...p, [k]: e.target.value })); }
-  function df(k: keyof CreateDepartmentRequest) { return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setDeptForm(p => ({ ...p, [k]: e.target.value })); }
+  const BT_BADGE: Record<string,{bg:string;color:string;label:string}> = {
+    MIXED:  { bg:"#EEF2FF", color:"#6366F1", label:"Co-Ed"      },
+    MALE:   { bg:"#EFF6FF", color:"#2563EB", label:"Boys Only"   },
+    FEMALE: { bg:"#FDF2F8", color:"#DB2777", label:"Girls Only"  },
+  };
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-      {/* Schools */}
-      <div className="surface">
-        <div className="surface-head">
-          <div><h3>Schools</h3><p>Registered school entities under your tenant</p></div>
-          <button className="primary" onClick={() => { setModal("school"); setError(""); setSchoolForm({}); }}><Plus size={14}/> Add school</button>
-        </div>
-        {sLoad ? <div style={{ padding:20, color:"var(--muted)", fontSize:12 }}>Loading…</div> : (
-          <div className="table-wrap">
-            <table className="premium-table">
-              <thead><tr><th>Name</th><th>Code</th><th>City</th><th>Email</th><th>Phone</th></tr></thead>
-              <tbody>
-                {schoolItems.length === 0 ? <tr><td colSpan={5} style={{ textAlign:"center", padding:20, color:"var(--muted)" }}>No schools yet. Add your first school above.</td></tr>
-                : schoolItems.map((s: any) => (
-                  <tr key={s.id}><td><b>{s.name}</b></td><td><code style={{fontSize:11}}>{s.code}</code></td><td>{s.city ?? "—"}</td><td>{s.email ?? "—"}</td><td>{s.phone ?? "—"}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+    <>
+      <div className="section-tabs" style={{ marginBottom:14 }}>
+        <button className={view==="schools"?"active":""} onClick={()=>setView("schools")}>🏫 Schools ({schools.length})</button>
+        <button className={view==="campuses"?"active":""} onClick={()=>setView("campuses")}>🏛️ Campuses / Branches ({campuses.length})</button>
+        <button className={view==="departments"?"active":""} onClick={()=>setView("departments")}>👥 Departments ({depts.length})</button>
       </div>
 
-      {/* Campuses */}
-      <div className="surface">
-        <div className="surface-head">
-          <div><h3>Campuses / Branches</h3><p>Physical locations under your schools</p></div>
-          <button className="primary" onClick={() => { setModal("campus"); setError(""); setCampusForm({ branchType:"MIXED", educationLevelIds:[] }); }}><Plus size={14}/> Add campus</button>
-        </div>
-        {cLoad ? <div style={{ padding:20, color:"var(--muted)", fontSize:12 }}>Loading…</div> : (
+      {view === "schools" && (
+        <div className="surface">
+          <div className="surface-head">
+            <div><h3>Schools</h3><p>Top-level school entities — each can have multiple branches</p></div>
+            <button className="primary" onClick={()=>{setSchoolModal(true);setError("");}}><Plus size={14}/> Add school</button>
+          </div>
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Campus</th><th>Code</th><th>Type</th><th>City</th><th>Email</th></tr></thead>
+              <thead><tr><th>Name</th><th>Code</th><th>Reg #</th><th>City</th><th>Email</th><th>Phone</th></tr></thead>
               <tbody>
-                {campusItems.length === 0 ? <tr><td colSpan={5} style={{ textAlign:"center", padding:20, color:"var(--muted)" }}>No campuses yet.</td></tr>
-                : campusItems.map((c: any) => (
-                  <tr key={c.id}><td><b>{c.name}</b></td><td><code style={{fontSize:11}}>{c.code}</code></td><td>{c.branchType}</td><td>{c.city ?? "—"}</td><td>{c.email ?? "—"}</td></tr>
+                {schools.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No schools yet.</td></tr>
+                : schools.map((s:any)=>(
+                  <tr key={s.id}><td><b>{s.name}</b></td><td><code style={{fontSize:11}}>{s.code}</code></td><td>{s.registrationNumber??"-"}</td><td>{s.city??"-"}</td><td>{s.email??"-"}</td><td>{s.phone??"-"}</td></tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Departments */}
-      <div className="surface">
-        <div className="surface-head">
-          <div><h3>Departments</h3><p>Academic and administrative departments per campus</p></div>
-          <button className="primary" onClick={() => { setModal("dept"); setError(""); setDeptForm({}); }}><Plus size={14}/> Add department</button>
-        </div>
-        {dLoad ? <div style={{ padding:20, color:"var(--muted)", fontSize:12 }}>Loading…</div> : (
+      {view === "campuses" && (
+        <div className="surface">
+          <div className="surface-head">
+            <div>
+              <h3>Campuses / Branches</h3>
+              <p>Each branch can be Boys Only, Girls Only or Co-Educational; assigned to an academic system</p>
+            </div>
+            <button className="primary" onClick={()=>{setCampusModal(true);setError("");}}><Plus size={14}/> Add campus</button>
+          </div>
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Department</th><th>Code</th><th>Email</th><th>Phone</th><th/></tr></thead>
+              <thead><tr><th>Branch name</th><th>Code</th><th>Gender policy</th><th>Academic system</th><th>City</th><th>Email</th></tr></thead>
               <tbody>
-                {deptItems.length === 0 ? <tr><td colSpan={5} style={{ textAlign:"center", padding:20, color:"var(--muted)" }}>No departments yet.</td></tr>
-                : deptItems.map((d: any) => (
-                  <tr key={d.id}>
-                    <td><b>{d.name}</b></td><td><code style={{fontSize:11}}>{d.code}</code></td>
-                    <td>{JSON.parse(d.metadataJson ?? "{}").email ?? "—"}</td>
-                    <td>{JSON.parse(d.metadataJson ?? "{}").telephone ?? "—"}</td>
-                    <td><button className="table-action danger-button" style={{fontSize:10}} onClick={() => deleteDept.mutate(d.id)}><Trash2 size={11}/></button></td>
-                  </tr>
-                ))}
+                {campuses.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No campuses yet.</td></tr>
+                : campuses.map((c:any)=>{
+                  const bt = BT_BADGE[c.branchType] ?? BT_BADGE["MIXED"];
+                  const acName = acSys.find((a:any)=>a.id===c.academicSystemId)?.name ?? c.academicSystemId ?? "—";
+                  return (
+                    <tr key={c.id}>
+                      <td>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <Building2 size={14} style={{color:bt.color,flexShrink:0}}/>
+                          <b>{c.name}</b>
+                        </div>
+                      </td>
+                      <td><code style={{fontSize:11}}>{c.code}</code></td>
+                      <td>
+                        <span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:bt.bg,color:bt.color}}>
+                          {bt.label}
+                        </span>
+                      </td>
+                      <td style={{fontSize:11}}>{acName}</td>
+                      <td>{c.city??"-"}</td>
+                      <td>{c.email??"-"}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+          {/* Info cards showing branch types */}
+          <div style={{padding:"0 20px 20px",display:"flex",gap:12,flexWrap:"wrap",marginTop:8}}>
+            {BRANCH_TYPES.map(bt=>(
+              <div key={bt.value} style={{padding:"10px 16px",borderRadius:10,border:`1.5px solid ${bt.color}30`,background:`${bt.color}10`,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:20}}>{bt.icon}</span>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,color:bt.color}}>{bt.label}</div>
+                  <div style={{fontSize:10,color:"var(--muted)"}}>
+                    {campuses.filter((c:any)=>c.branchType===bt.value).length} branch(es)
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {view === "departments" && (
+        <div className="surface">
+          <div className="surface-head">
+            <div><h3>Departments</h3><p>Academic and administrative departments per campus</p></div>
+            <button className="primary" onClick={()=>{setDeptModal(true);setError("");}}><Plus size={14}/> Add department</button>
+          </div>
+          <div className="table-wrap">
+            <table className="premium-table">
+              <thead><tr><th>Department</th><th>Code</th><th>Campus</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead>
+              <tbody>
+                {depts.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No departments yet.</td></tr>
+                : depts.map((d:any)=>{
+                  const campus = campuses.find((c:any)=>c.id===d.campusId);
+                  return (
+                    <tr key={d.id}>
+                      <td><b>{d.name}</b></td>
+                      <td><code style={{fontSize:11}}>{d.code}</code></td>
+                      <td style={{fontSize:11}}>{campus?.name??d.campusId??"-"}</td>
+                      <td>{d.email??"-"}</td>
+                      <td>{d.telephone??"-"}</td>
+                      <td>
+                        <button className="table-action" style={{fontSize:10,color:"var(--danger)"}}
+                          onClick={()=>deleteDept.mutate(d.id)}>
+                          <Trash2 size={12}/>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Add School Modal */}
-      {modal === "school" && (
-        <div className="modal-backdrop" onClick={e => { if (e.target===e.currentTarget) setModal(null); }}>
-          <div className="modal-card" style={{ width:"min(640px,96vw)", maxHeight:"90vh", overflowY:"auto" }}>
-            <div className="modal-head"><h2>Add school</h2><button className="icon-button" onClick={() => setModal(null)}><X size={18}/></button></div>
+      {schoolModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setSchoolModal(false)}}>
+          <div className="modal-card" style={{width:"min(580px,96vw)",maxHeight:"90vh",overflowY:"auto"}}>
+            <div className="modal-head"><h2>Add school</h2><button className="icon-button" onClick={()=>setSchoolModal(false)}><X size={18}/></button></div>
             <div className="human-form"><div className="human-form-grid">
-              <label className="human-field field-wide"><span>School name *</span><input value={schoolForm.name ?? ""} onChange={sf("name")} placeholder="e.g. Al-Noor Academy"/></label>
-              <label className="human-field"><span>Registration no.</span><input value={schoolForm.registrationNumber ?? ""} onChange={sf("registrationNumber")}/></label>
-              <label className="human-field"><span>Email</span><input type="email" value={schoolForm.email ?? ""} onChange={sf("email")}/></label>
-              <label className="human-field"><span>Phone</span><input value={schoolForm.phone ?? ""} onChange={sf("phone")}/></label>
-              <label className="human-field"><span>Website</span><input value={schoolForm.website ?? ""} onChange={sf("website")}/></label>
-              <label className="human-field"><span>City</span><input value={schoolForm.city ?? ""} onChange={sf("city")}/></label>
-              <label className="human-field"><span>Province</span><input value={schoolForm.province ?? ""} onChange={sf("province")}/></label>
-              <label className="human-field"><span>Country</span><input value={schoolForm.country ?? ""} onChange={sf("country")}/></label>
-              <label className="human-field field-wide"><span>Address</span><input value={schoolForm.address ?? ""} onChange={sf("address")}/></label>
+              <label className="human-field field-wide"><span>School name *</span><input value={sForm.name} onChange={ssf("name")} placeholder="e.g. Al-Noor Academy"/></label>
+              <label className="human-field"><span>Registration #</span><input value={sForm.registrationNumber} onChange={ssf("registrationNumber")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={sForm.email} onChange={ssf("email")}/></label>
+              <label className="human-field"><span>Phone</span><input value={sForm.phone} onChange={ssf("phone")}/></label>
+              <label className="human-field"><span>Website</span><input value={sForm.website} onChange={ssf("website")}/></label>
+              <label className="human-field"><span>City</span><input value={sForm.city} onChange={ssf("city")}/></label>
+              <label className="human-field"><span>Province</span><input value={sForm.province} onChange={ssf("province")}/></label>
+              <label className="human-field"><span>Country</span><input value={sForm.country} onChange={ssf("country")}/></label>
+              <label className="human-field field-wide"><span>Address</span><input value={sForm.address} onChange={ssf("address")}/></label>
             </div>
-            {error && <div style={{ color:"var(--danger)", fontSize:12 }}>{error}</div>}
+            {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
-            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setModal(null)}>Cancel</button>
+            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
+              <button className="secondary" onClick={()=>setSchoolModal(false)}>Cancel</button>
               <button className="primary" onClick={saveSchool} disabled={createSchool.isPending}>{createSchool.isPending?"Saving…":"Save school"}</button>
             </div>
           </div>
@@ -160,46 +247,76 @@ export function SchoolCampusTab() {
       )}
 
       {/* Add Campus Modal */}
-      {modal === "campus" && (
-        <div className="modal-backdrop" onClick={e => { if (e.target===e.currentTarget) setModal(null); }}>
-          <div className="modal-card" style={{ width:"min(680px,96vw)", maxHeight:"90vh", overflowY:"auto" }}>
-            <div className="modal-head"><h2>Add campus / branch</h2><button className="icon-button" onClick={() => setModal(null)}><X size={18}/></button></div>
+      {campusModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setCampusModal(false)}}>
+          <div className="modal-card" style={{width:"min(640px,96vw)",maxHeight:"90vh",overflowY:"auto"}}>
+            <div className="modal-head" style={{position:"sticky",top:0,background:"var(--surface)",zIndex:1}}>
+              <h2>Add campus / branch</h2>
+              <button className="icon-button" onClick={()=>setCampusModal(false)}><X size={18}/></button>
+            </div>
             <div className="human-form"><div className="human-form-grid">
               <label className="human-field field-wide"><span>School *</span>
-                <select value={campusForm.schoolId ?? ""} onChange={cf("schoolId" as any)}>
+                <select value={cForm.schoolId} onChange={csf("schoolId")}>
                   <option value="">— Select school —</option>
-                  {schoolItems.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {schools.map((s:any)=><option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </label>
-              <label className="human-field field-wide"><span>Campus name *</span><input value={campusForm.name ?? ""} onChange={cf("name")} placeholder="e.g. Main Campus"/></label>
-              <label className="human-field"><span>Branch type *</span>
-                <select value={campusForm.branchType} onChange={cf("branchType")}>
-                  <option value="MIXED">Mixed (Boys & Girls)</option>
-                  <option value="MALE">Boys Only</option>
-                  <option value="FEMALE">Girls Only</option>
-                </select>
-              </label>
+              <label className="human-field field-wide"><span>Branch name *</span><input value={cForm.name} onChange={csf("name")} placeholder="e.g. Main Campus (Boys)"/></label>
+
+              {/* Branch type selector */}
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:8}}>Gender policy *</div>
+                <div style={{display:"flex",gap:8}}>
+                  {BRANCH_TYPES.map(bt=>(
+                    <button key={bt.value} type="button" onClick={()=>setCForm(p=>({...p,branchType:bt.value}))}
+                      style={{flex:1,padding:"12px 8px",border:`2px solid ${cForm.branchType===bt.value?bt.color:"var(--line)"}`,borderRadius:10,background:cForm.branchType===bt.value?`${bt.color}15`:"var(--surface)",cursor:"pointer",transition:"all .15s"}}>
+                      <div style={{fontSize:24,marginBottom:4}}>{bt.icon}</div>
+                      <div style={{fontSize:11,fontWeight:700,color:cForm.branchType===bt.value?bt.color:"var(--text)"}}>{bt.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="human-field"><span>Gender type *</span>
-                <select value={campusForm.branchGenderTypeId ?? ""} onChange={cf("branchGenderTypeId" as any)}>
+                <select value={cForm.branchGenderTypeId} onChange={csf("branchGenderTypeId")}>
                   <option value="">— Select —</option>
-                  {gTypes.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  {gTypes.map((g:any)=><option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
               </label>
-              <label className="human-field field-wide"><span>Education levels * (hold Ctrl to multi-select)</span>
-                <select multiple size={4} value={campusForm.educationLevelIds}
-                  onChange={e => setCampusForm(p => ({ ...p, educationLevelIds: Array.from(e.target.selectedOptions, o => o.value) }))}>
-                  {eLevels.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+
+              <label className="human-field"><span>Academic system</span>
+                <select value={cForm.academicSystemId} onChange={csf("academicSystemId")}>
+                  <option value="">— Select —</option>
+                  {acSys.map((a:any)=><option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </label>
-              <label className="human-field"><span>City</span><input value={campusForm.city ?? ""} onChange={cf("city")}/></label>
-              <label className="human-field"><span>Province</span><input value={campusForm.province ?? ""} onChange={cf("province")}/></label>
-              <label className="human-field"><span>Phone</span><input value={campusForm.phone ?? ""} onChange={cf("phone")}/></label>
-              <label className="human-field"><span>Email</span><input type="email" value={campusForm.email ?? ""} onChange={cf("email")}/></label>
+
+              {/* Education levels multi-select */}
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:8}}>Education levels offered</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {eLevels.map((el:any)=>{
+                    const active = cForm.educationLevelIds.includes(el.id);
+                    return (
+                      <button key={el.id} type="button" onClick={()=>toggleEdLevel(el.id)}
+                        style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${active?"#6366F1":"var(--line)"}`,background:active?"#EEF2FF":"var(--surface)",color:active?"#6366F1":"var(--text)",fontSize:11,fontWeight:active?700:400,cursor:"pointer"}}>
+                        {el.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <label className="human-field"><span>Email</span><input type="email" value={cForm.email} onChange={csf("email")}/></label>
+              <label className="human-field"><span>Phone</span><input value={cForm.phone} onChange={csf("phone")}/></label>
+              <label className="human-field"><span>City</span><input value={cForm.city} onChange={csf("city")}/></label>
+              <label className="human-field"><span>Province</span><input value={cForm.province} onChange={csf("province")}/></label>
+              <label className="human-field field-wide"><span>Address</span><input value={cForm.address} onChange={csf("address")}/></label>
             </div>
-            {error && <div style={{ color:"var(--danger)", fontSize:12 }}>{error}</div>}
+            {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
-            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setModal(null)}>Cancel</button>
+            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
+              <button className="secondary" onClick={()=>setCampusModal(false)}>Cancel</button>
               <button className="primary" onClick={saveCampus} disabled={createCampus.isPending}>{createCampus.isPending?"Saving…":"Save campus"}</button>
             </div>
           </div>
@@ -207,30 +324,30 @@ export function SchoolCampusTab() {
       )}
 
       {/* Add Department Modal */}
-      {modal === "dept" && (
-        <div className="modal-backdrop" onClick={e => { if (e.target===e.currentTarget) setModal(null); }}>
-          <div className="modal-card" style={{ width:"min(500px,96vw)" }}>
-            <div className="modal-head"><h2>Add department</h2><button className="icon-button" onClick={() => setModal(null)}><X size={18}/></button></div>
+      {deptModal && (
+        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setDeptModal(false)}}>
+          <div className="modal-card" style={{width:"min(480px,96vw)"}}>
+            <div className="modal-head"><h2>Add department</h2><button className="icon-button" onClick={()=>setDeptModal(false)}><X size={18}/></button></div>
             <div className="human-form"><div className="human-form-grid">
               <label className="human-field field-wide"><span>Campus *</span>
-                <select value={deptForm.campusId ?? ""} onChange={df("campusId" as any)}>
+                <select value={dForm.campusId} onChange={dsf("campusId")}>
                   <option value="">— Select campus —</option>
-                  {campusItems.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {campuses.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
-              <label className="human-field field-wide"><span>Department name *</span><input value={deptForm.name ?? ""} onChange={df("name")} placeholder="e.g. Mathematics"/></label>
-              <label className="human-field"><span>Email</span><input type="email" value={(deptForm as any).email ?? ""} onChange={df("email" as any)}/></label>
-              <label className="human-field"><span>Telephone</span><input value={(deptForm as any).telephone ?? ""} onChange={df("telephone" as any)}/></label>
+              <label className="human-field field-wide"><span>Department name *</span><input value={dForm.name} onChange={dsf("name")} placeholder="e.g. Mathematics"/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={dForm.email} onChange={dsf("email")}/></label>
+              <label className="human-field"><span>Phone</span><input value={dForm.telephone} onChange={dsf("telephone")}/></label>
             </div>
-            {error && <div style={{ color:"var(--danger)", fontSize:12 }}>{error}</div>}
+            {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
-            <div className="modal-actions" style={{ padding:"12px 20px", borderTop:"1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setModal(null)}>Cancel</button>
+            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
+              <button className="secondary" onClick={()=>setDeptModal(false)}>Cancel</button>
               <button className="primary" onClick={saveDept} disabled={createDept.isPending}>{createDept.isPending?"Saving…":"Save"}</button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

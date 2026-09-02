@@ -3,14 +3,17 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 
 const DEMO_ROLES = [
-  { role: "SuperAdmin", email: "superadmin@smartschool.local", label: "Super Admin",   icon: "🌐", color: "#6366F1", bg: "#EEF2FF" },
-  { role: "Tenant",     email: "owner@alnoor.edu.pk",          label: "School Owner",  icon: "🏫", color: "#0F2241", bg: "#E8EDF5" },
-  { role: "Principal",  email: "principal@alnoor.edu.pk",      label: "Principal",     icon: "👔", color: "#0369A1", bg: "#E0F2FE" },
-  { role: "Admin",      email: "admin@alnoor.edu.pk",          label: "Admin Officer", icon: "🗂️", color: "#059669", bg: "#ECFDF5" },
-  { role: "Teacher",    email: "teacher@alnoor.edu.pk",        label: "Teacher",       icon: "👩‍🏫", color: "#7C3AED", bg: "#F5F3FF" },
-  { role: "Student",    email: "student@alnoor.edu.pk",        label: "Student",       icon: "🎓", color: "#2563EB", bg: "#EFF6FF" },
-  { role: "Parent",     email: "parent@alnoor.edu.pk",         label: "Parent",        icon: "👨‍👩‍👧", color: "#D97706", bg: "#FFFBEB" },
-  { role: "Driver",     email: "driver@alnoor.edu.pk",         label: "Driver",        icon: "🚌", color: "#DC2626", bg: "#FFF0F1" },
+  { role: "SuperAdmin",  email: "superadmin@smartschool.local",  label: "Super Admin",   icon: "🌐", color: "#6366F1", bg: "#EEF2FF" },
+  { role: "Tenant",      email: "owner@alnoor.edu.pk",           label: "School Owner",  icon: "🏫", color: "#0F2241", bg: "#E8EDF5" },
+  { role: "Principal",   email: "principal@alnoor.edu.pk",       label: "Principal",     icon: "👔", color: "#0369A1", bg: "#E0F2FE" },
+  { role: "Admin",       email: "admin@alnoor.edu.pk",           label: "Admin Officer", icon: "🗂️", color: "#059669", bg: "#ECFDF5" },
+  { role: "Teacher",     email: "teacher@alnoor.edu.pk",         label: "Teacher",       icon: "👩‍🏫", color: "#7C3AED", bg: "#F5F3FF" },
+  { role: "Student",     email: "student@alnoor.edu.pk",         label: "Student",       icon: "🎓", color: "#2563EB", bg: "#EFF6FF" },
+  { role: "Parent",      email: "parent@alnoor.edu.pk",          label: "Parent",        icon: "👨‍👩‍👧", color: "#D97706", bg: "#FFFBEB" },
+  { role: "Driver",      email: "driver@alnoor.edu.pk",          label: "Driver",        icon: "🚌", color: "#DC2626", bg: "#FFF0F1" },
+  { role: "Accountant",  email: "accountant@alnoor.edu.pk",      label: "Accountant",    icon: "💰", color: "#0891B2", bg: "#E0F7FA" },
+  { role: "HRManager",   email: "hrmanager@alnoor.edu.pk",       label: "HR Manager",    icon: "👥", color: "#65A30D", bg: "#F0FDF4" },
+  { role: "Examiner",    email: "examiner@alnoor.edu.pk",        label: "Examiner",      icon: "📋", color: "#C2410C", bg: "#FFF7ED" },
 ];
 
 const FEATURES = [
@@ -37,7 +40,15 @@ export function LoginPage() {
   const [loading, setLoading]   = useState(false);
   const [activeRole, setActiveRole] = useState("SuperAdmin");
 
-  if (user) return <Navigate to="/" replace />;
+  // Parse query params for returnTo and reason
+  const searchParams = new URLSearchParams(location.search);
+  const returnTo = searchParams.get("returnTo");
+  const reason   = searchParams.get("reason"); // "expired" | null
+
+  if (user) {
+    const dest = returnTo ? decodeURIComponent(returnTo) : "/";
+    return <Navigate to={dest} replace />;
+  }
 
   function pickRole(r: typeof DEMO_ROLES[0]) {
     setActiveRole(r.role);
@@ -52,8 +63,9 @@ export function LoginPage() {
     const result = await login({ email, password });
     setLoading(false);
     if (!result.success) { setError(result.message ?? "Unable to sign in."); return; }
-    const from = (location.state as { from?: string } | null)?.from ?? "/";
-    navigate(from, { replace: true });
+    // Redirect to where the user was, or home
+    const dest = returnTo ? decodeURIComponent(returnTo) : (location.state as any)?.from ?? "/";
+    navigate(dest, { replace: true });
   }
 
   return (
@@ -126,6 +138,26 @@ export function LoginPage() {
       {/* ── RIGHT PANEL ───────────────────────────────────────────────────── */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"48px 40px", background:"#FAFBFC", overflowY:"auto" }}>
         <div style={{ width:"100%", maxWidth:440 }}>
+
+          {/* Session-ended banners */}
+          {reason === "expired" && (
+            <div style={{ padding:"12px 16px", background:"#FFFBEB", border:"1.5px solid #FDE68A", borderRadius:12, marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+              <span style={{ fontSize:18, flexShrink:0 }}>⏱</span>
+              <div>
+                <b style={{ fontSize:12, color:"#92400E", display:"block" }}>Your session has expired</b>
+                <span style={{ fontSize:12, color:"#78350F" }}>For your security, you were signed out after being inactive. Please sign in again to continue.</span>
+              </div>
+            </div>
+          )}
+          {!reason && returnTo && (
+            <div style={{ padding:"12px 16px", background:"#EFF6FF", border:"1.5px solid #BFDBFE", borderRadius:12, marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+              <span style={{ fontSize:18, flexShrink:0 }}>🔒</span>
+              <div>
+                <b style={{ fontSize:12, color:"#1E40AF", display:"block" }}>Sign in required</b>
+                <span style={{ fontSize:12, color:"#1D4ED8" }}>Please sign in to access that page. You'll be redirected automatically.</span>
+              </div>
+            </div>
+          )}
 
           {/* Header */}
           <div style={{ marginBottom:32 }}>

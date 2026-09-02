@@ -1,7 +1,11 @@
+import { RowActions } from "../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { Pagination } from "../../../components/ui/Pagination";
 import { useState } from "react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { useQuery } from "@tanstack/react-query";
 import * as A from "../../../core/api/apiAdapter";
+import { env } from "../../../config/env";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -18,11 +22,12 @@ function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); 
 
 export function AuditPage() {
   const { user } = useAuth();
+  const [viewLog, setViewLog] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey:["audit-logs",tid], queryFn: () => A.getAuditLogs(tid) });
   const rawItems = (data as any)?.items ?? (data as any) ?? [];
-  const items    = rawItems.length === 0 ? MOCK_AUDIT_LOGS : rawItems;
+  const items    = rawItems.length === 0 && env.useMocks ? MOCK_AUDIT_LOGS : rawItems;
   const filtered = items.filter((l:any) => `${l.name} ${l.code}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -38,7 +43,7 @@ export function AuditPage() {
         {isLoading ? <div style={{ padding:48, textAlign:"center", color:"var(--muted)" }}>Loading…</div> : (
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Ref</th><th>Action</th><th>Actor</th><th>Entity</th><th>IP</th><th>Time</th><th>Status</th></tr></thead>
+              <thead><tr><th>Ref</th><th>Action</th><th>Actor</th><th>Entity</th><th>IP</th><th>Time</th><th>Status</th><th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
               <tbody>
                 {filtered.map((l:any) => {
                   const meta = parseMeta(l.metadataJson);
@@ -51,6 +56,12 @@ export function AuditPage() {
                       <td><code style={{ fontSize:10 }}>{meta.ipAddress ?? "—"}</code></td>
                       <td style={{ fontSize:10, color:"var(--muted)" }}>{meta.timestamp ? new Date(meta.timestamp).toLocaleString() : "—"}</td>
                       <td><span className={`status-pill ${meta.status==="Success"?"success":"danger"}`} style={{ fontSize:9 }}>{meta.status ?? "—"}</span></td>
+                            <td style={{ textAlign: "right" }}>
+                              <RowActions
+                                onView={() => setViewLog(item)}
+                                deleteLabel="log entry"
+                              />
+                            </td>
                     </tr>
                   );
                 })}
@@ -60,6 +71,22 @@ export function AuditPage() {
         )}
         <div className="table-footer"><span>{filtered.length} audit entries</span></div>
       </div>
+
+      {viewLog && (
+        <ViewDrawer
+          title="Audit log"
+          item={viewLog}
+          onClose={() => setViewLog(null)}
+          fields={[
+            { key: "code",      label: "Code" },
+            { key: "name",      label: "Action" },
+            { key: "actorName", label: "Actor" },
+            { key: "entityType",label: "Entity type" },
+            { key: "entityId",  label: "Entity ID", wide: true },
+            { key: "createdAt", label: "Timestamp", wide: true },
+          ]}
+        />
+      )}
     </>
   );
 }
