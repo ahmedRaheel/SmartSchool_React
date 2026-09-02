@@ -20,7 +20,7 @@ export function TenantManagementPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<any>(null);
   const [form, setForm] = useState({
-    name:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"",
+    organizationName:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"",
     contactName:"", contactEmail:"", contactPhone:"", contactAddress:"",
   });
 
@@ -42,7 +42,7 @@ export function TenantManagementPage() {
   function sf(k:string){ return (e:React.ChangeEvent<HTMLInputElement>)=>setForm(p=>({...p,[k]:e.target.value})); }
 
   async function save() {
-    if (!form.name||!form.adminEmail||!form.adminFirstName||!form.contactName||!form.contactEmail||!form.contactPhone||!form.contactAddress) {
+    if (!form.organizationName||!form.adminEmail||!form.adminFirstName||!form.contactName||!form.contactEmail||!form.contactPhone||!form.contactAddress) {
       setError("All required fields must be filled"); return;
     }
     try {
@@ -85,7 +85,7 @@ export function TenantManagementPage() {
                   const plan=PLANS[meta.plan??"Starter"]??PLANS["Starter"];
                   return (
                     <tr key={t.id}>
-                      <td><b>{t.name}</b><div style={{fontSize:10,color:"var(--muted)"}}>{meta.adminEmail}</div></td>
+                      <td><b>{t.organizationName}</b><div style={{fontSize:10,color:"var(--muted)"}}>{meta.adminEmail}</div></td>
                       <td><code style={{fontSize:11}}>{t.code}</code></td>
                       <td>{meta.city??"-"}</td>
                       <td><span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:plan.bg,color:plan.color}}>{meta.plan??"Starter"}</span></td>
@@ -168,14 +168,14 @@ export function TenantManagementPage() {
                     </>
                   )}
                 </div>
-                <button className="primary" onClick={()=>{ setOpen(false); setSuccess(null); setForm({ name:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"", contactName:"", contactEmail:"", contactPhone:"", contactAddress:"" }); }}>Close</button>
+                <button className="primary" onClick={()=>{ setOpen(false); setSuccess(null); setForm({ organizationName:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"", contactName:"", contactEmail:"", contactPhone:"", contactAddress:"" }); }}>Close</button>
               </div>
             ) : (
               <>
                 <div className="human-form">
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>School info</div>
                   <div className="human-form-grid">
-                    <label className="human-field field-wide"><span>School name *</span><input value={form.name} onChange={sf("name")} placeholder="e.g. Al-Noor Academy"/></label>
+                    <label className="human-field field-wide"><span>School name *</span><input value={form.organizationName} onChange={sf("organizationName")} placeholder="e.g. Al-Noor Academy"/></label>
                   </div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Admin account</div>
                   <div className="human-form-grid">

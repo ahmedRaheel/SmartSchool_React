@@ -91,7 +91,26 @@ api.interceptors.request.use((config) => {
 
 // ── Response interceptor ───────────────────────────────────────────────────────
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // SmartSchool backend uses Result<T>. Unwrap it once globally so every
+    // screen receives the same contract in mock and real-API modes.
+    const payload = res.data as any;
+    if (payload && typeof payload === "object" && "isSuccess" in payload && "value" in payload) {
+      if (payload.isSuccess === false) {
+        const message = payload?.error?.message ?? "The request could not be completed.";
+        window.dispatchEvent(new CustomEvent("smartschool:api-error", { detail: { message, error: payload?.error } }));
+        return Promise.reject(new Error(message));
+      }
+      res.data = payload.value;
+    }
+
+    const method = String(res.config.method ?? "get").toLowerCase();
+    if (["post", "put", "patch", "delete"].includes(method)) {
+      const message = method === "delete" ? "Deleted successfully." : "Saved successfully.";
+      window.dispatchEvent(new CustomEvent("smartschool:api-success", { detail: { message } }));
+    }
+    return res;
+  },
   (err) => {
     const status = err.response?.status;
 
@@ -101,7 +120,19 @@ api.interceptors.response.use(
       return new Promise(() => {}); // swallow — page is being replaced
     }
 
-    // All other errors propagate so React Query / pages can handle them
+    // Surface validation/business/server errors globally. Do not convert a
+    // failed request into an empty collection; empty-state UI is only for a
+    // successful API response containing zero rows.
+    const payload = err.response?.data;
+    const validation = payload?.error?.errors ?? payload?.errors;
+    let message = payload?.error?.message ?? payload?.title ?? err.message ?? "The request could not be completed.";
+    if (validation && typeof validation === "object") {
+      const details = Object.entries(validation)
+        .flatMap(([field, messages]) => (Array.isArray(messages) ? messages : [messages]).map(x => `${field}: ${String(x)}`))
+        .join(" • ");
+      if (details) message = details;
+    }
+    window.dispatchEvent(new CustomEvent("smartschool:api-error", { detail: { message, error: payload?.error ?? payload } }));
     return Promise.reject(err);
   }
 );

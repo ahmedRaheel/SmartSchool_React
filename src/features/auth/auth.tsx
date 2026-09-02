@@ -297,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const body = new URLSearchParams({
       grant_type: "password",
       client_id: "smartschool-login-api",
+      client_secret: "development-login-api-secret-change-me",
       username: email,
       password: credentials.password,
       scope: "openid profile email smartschool.api offline_access",
