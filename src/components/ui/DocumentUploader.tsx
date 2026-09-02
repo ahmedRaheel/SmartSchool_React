@@ -143,7 +143,7 @@ export function DocumentUploader({
       [docType]: [...(p[docType]??[]), { documentType:docType, fileName:file.name, documentNumber:"", uploading:true }]
     }));
 
-    if (isMock || !entityId) {
+    if (isMock) {
       // Simulate upload in mock mode
       await new Promise(r => setTimeout(r, 800));
       const fakeNum = `DOC-${Date.now()}-${Math.random().toString(36).slice(2,8).toUpperCase()}`;

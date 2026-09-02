@@ -14,6 +14,7 @@ import {
   useAssignments, useCreateAssignment, useLessons,
   useCreateLesson, useClassSections, useSubjects,
 } from "../../../core/api/queries";
+import { env } from "../../../config/env";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
@@ -167,8 +168,23 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
 
 // ─── Teacher: Grade Submissions Drawer ───────────────────────────────────────
 function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => void }) {
-  const [subs, setSubs]   = useState(MOCK_SUBMISSIONS.map(s => ({ ...s })));
+  const [subs, setSubs]   = useState(env.useMocks ? MOCK_SUBMISSIONS.map(s => ({ ...s })) : []);
   const [selected, setSel] = useState<typeof MOCK_SUBMISSIONS[0] | null>(null);
+
+  useEffect(() => {
+    if (env.useMocks || !assignment?.id) return;
+    A.getSubmissions(assignment.id, "").then((res: any) => {
+      const items = res?.items ?? res ?? [];
+      setSubs(items.map((s: any) => ({
+        id: s.id, studentId: s.studentId ?? "",
+        studentName: s.studentName ?? s.name ?? "",
+        submittedAt: s.submittedAt ?? s.createdAt,
+        fileName: s.fileName ?? null, comment: s.comment ?? "",
+        grade: s.grade ?? "", feedback: s.feedback ?? "",
+        status: s.status ?? "SUBMITTED",
+      })));
+    }).catch(() => {});
+  }, [assignment?.id]);
   const [grade, setGrade]  = useState("");
   const [feedback, setFb]  = useState("");
   const [saving, setSaving] = useState(false);

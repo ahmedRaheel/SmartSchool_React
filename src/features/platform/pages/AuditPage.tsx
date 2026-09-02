@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { useQuery } from "@tanstack/react-query";
 import * as A from "../../../core/api/apiAdapter";
+import { env } from "../../../config/env";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -22,7 +23,7 @@ export function AuditPage() {
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey:["audit-logs",tid], queryFn: () => A.getAuditLogs(tid) });
   const rawItems = (data as any)?.items ?? (data as any) ?? [];
-  const items    = rawItems.length === 0 ? MOCK_AUDIT_LOGS : rawItems;
+  const items    = rawItems.length === 0 && env.useMocks ? MOCK_AUDIT_LOGS : rawItems;
   const filtered = items.filter((l:any) => `${l.name} ${l.code}`.toLowerCase().includes(q.toLowerCase()));
 
   return (

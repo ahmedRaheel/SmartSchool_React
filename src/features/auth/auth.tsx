@@ -72,8 +72,7 @@ type JwtClaims = Record<string, unknown> & {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const identityUrl = (path: string) =>
-  import.meta.env.DEV ? `/identity${path}` : `${env.identityBaseUrl}${path}`;
+const identityUrl = (path: string) =>`${env.identityBaseUrl}${path}`;
 const SESSION_KEY = "smartschool.session";
 const ORIGINAL_TOKEN_KEY = "smartschool.original_access_token";
 const ORIGINAL_SESSION_KEY = "smartschool.original_session";
@@ -297,6 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const body = new URLSearchParams({
       grant_type: "password",
       client_id: "smartschool-login-api",
+      client_secret: "development-login-api-secret-change-me",
       username: email,
       password: credentials.password,
       scope: "openid profile email smartschool.api offline_access",
