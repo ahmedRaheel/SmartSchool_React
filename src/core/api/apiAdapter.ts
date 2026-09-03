@@ -332,3 +332,9 @@ export const submitQuizAttempt = (body: object) => M ? ms({ id:uid(), score:0, p
 export const sendChatbotMessage = (bot: string, body: { message: string; conversationId?: string; tenantId: string; contextId?: string }) =>
   M ? ms({ answer: MOCK_AI_RESPONSE.answer, conversationId: uid(), citations: MOCK_AI_RESPONSE.citations }, 900) :
   api.post(`/api/chatbots/${bot}/ask`, body).then(r=>r.data);
+
+// ── Tenant settings ───────────────────────────────────────────────────────────
+export const getTenantSettings = (tenantId: string) =>
+  M ? ms(null) : api.get("/api/organization/settings", { params: { tenantId } }).then(r => r.data);
+export const saveTenantSettings = (body: object) =>
+  M ? ms(body) : api.put("/api/organization/settings", body).then(r => r.data);

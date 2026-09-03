@@ -36,7 +36,7 @@ export interface Campus {
   schoolId: string;
   code: string;
   name: string;
-  branchType: "HEAD_OFFICE" | "REGIONAL_HEAD_OFFICE" | "REGIONAL_BRANCH";
+  branchType: 1 | 2 | 3;
   branchGenderTypeId: string;
   academicSystemId?: string;
   address?: string;

@@ -15,10 +15,10 @@ import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
 const BRANCH_TYPES = [
-  { value:"MIXED",  label:"Co-Educational",   icon:"⚥", color:"#6366F1" },
-  { value:"MALE",   label:"Boys Only",          icon:"♂", color:"#2563EB" },
-  { value:"FEMALE", label:"Girls Only",          icon:"♀", color:"#DB2777" },
-];
+  { value: 1, label: "Head Office" },
+  { value: 2, label: "Regional Head Office" },
+  { value: 3, label: "Regional Branch" },
+] as const;
 
 function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
 
@@ -59,7 +59,7 @@ export function SchoolCampusTab() {
   const [page,       setPage]       = useState(1);
   const [pageSize,   setPageSize]   = useState(10);
   const [sForm, setSForm] = useState({ name:"", registrationNumber:"", email:"", phone:"", website:"", address:"", city:"", province:"", country:"Pakistan" });
-  const [cForm, setCForm] = useState({ schoolId:"", name:"", branchType:"MIXED", branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[] as string[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" });
+  const [cForm, setCForm] = useState({ schoolId:"", name:"", branchType:1, branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[] as string[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" });
   const [dForm, setDForm] = useState({ campusId:"", name:"", telephone:"", email:"" });
 
   function ssf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setSForm(p=>({...p,[k]:e.target.value})); }
@@ -95,7 +95,7 @@ export function SchoolCampusTab() {
         province:cForm.province||undefined, country:cForm.country||undefined,
         phone:cForm.phone||undefined, email:cForm.email||undefined,
       });
-      setCampusModal(false); setCForm({ schoolId:"", name:"", branchType:"MIXED", branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" }); setError("");
+      setCampusModal(false); setCForm({ schoolId:"", name:"", branchType:1, branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" }); setError("");
     } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
@@ -107,10 +107,10 @@ export function SchoolCampusTab() {
     } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
-  const BT_BADGE: Record<string,{bg:string;color:string;label:string}> = {
-    MIXED:  { bg:"#EEF2FF", color:"#6366F1", label:"Co-Ed"      },
-    MALE:   { bg:"#EFF6FF", color:"#2563EB", label:"Boys Only"   },
-    FEMALE: { bg:"#FDF2F8", color:"#DB2777", label:"Girls Only"  },
+  const BT_BADGE: Record<number,{bg:string;color:string;label:string}> = {
+    1: { bg: "#EEF2FF", color: "#6366F1", label: "Head Office" },
+    2: { bg: "#EFF6FF", color: "#2563EB", label: "Regional Head Office" },
+    3: { bg: "#F0FDF4", color: "#059669", label: "Regional Branch" },
   };
 
   return (
@@ -156,7 +156,7 @@ export function SchoolCampusTab() {
               <tbody>
                 {campuses.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No campuses yet.</td></tr>
                 : campuses.map((c:any)=>{
-                  const bt = BT_BADGE[c.branchType] ?? BT_BADGE["MIXED"];
+                  const bt = BT_BADGE[Number(c.branchType)] ?? BT_BADGE[3];
                   const acName = acSys.find((a:any)=>a.id===c.academicSystemId)?.name ?? c.academicSystemId ?? "—";
                   return (
                     <tr key={c.id}>
@@ -189,7 +189,7 @@ export function SchoolCampusTab() {
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:bt.color}}>{bt.label}</div>
                   <div style={{fontSize:10,color:"var(--muted)"}}>
-                    {campuses.filter((c:any)=>c.branchType===bt.value).length} branch(es)
+                    {campuses.filter((c:any)=>Number(c.branchType)===bt.value).length} branch(es)
                   </div>
                 </div>
               </div>
@@ -278,21 +278,13 @@ export function SchoolCampusTab() {
               </label>
               <label className="human-field field-wide"><span>Branch name *</span><input value={cForm.name} onChange={csf("name")} placeholder="e.g. Main Campus (Boys)"/></label>
 
-              {/* Branch type selector */}
-              <div style={{gridColumn:"1/-1"}}>
-                <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:8}}>Gender policy *</div>
-                <div style={{display:"flex",gap:8}}>
-                  {BRANCH_TYPES.map(bt=>(
-                    <button key={bt.value} type="button" onClick={()=>setCForm(p=>({...p,branchType:bt.value}))}
-                      style={{flex:1,padding:"12px 8px",border:`2px solid ${cForm.branchType===bt.value?bt.color:"var(--line)"}`,borderRadius:10,background:cForm.branchType===bt.value?`${bt.color}15`:"var(--surface)",cursor:"pointer",transition:"all .15s"}}>
-                      <div style={{fontSize:24,marginBottom:4}}>{bt.icon}</div>
-                      <div style={{fontSize:11,fontWeight:700,color:cForm.branchType===bt.value?bt.color:"var(--text)"}}>{bt.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <label className="human-field"><span>Branch type *</span>
+                <select value={cForm.branchType} onChange={e=>setCForm(p=>({...p,branchType:Number(e.target.value)}))}>
+                  {BRANCH_TYPES.map(bt=><option key={bt.value} value={bt.value}>{bt.label}</option>)}
+                </select>
+              </label>
 
-              <label className="human-field"><span>Gender type *</span>
+              <label className="human-field"><span>Gender policy *</span>
                 <select value={cForm.branchGenderTypeId} onChange={csf("branchGenderTypeId")}>
                   <option value="">— Select —</option>
                   {gTypes.map((g:any)=><option key={g.id} value={g.id}>{g.name}</option>)}

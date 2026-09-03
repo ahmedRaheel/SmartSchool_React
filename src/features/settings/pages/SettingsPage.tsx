@@ -3,12 +3,13 @@
  * NOT configuration data (that lives in Setup). This is about enabling/
  * disabling features and setting school-wide preferences.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, RefreshCw } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { env } from "../../../config/env";
+import * as A from "../../../core/api/apiAdapter";
 
 // ── Feature toggle types ───────────────────────────────────────────────────────
 interface Toggle {
@@ -134,6 +135,37 @@ export function SettingsPage() {
   });
   const [saved, setSaved]   = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(!env.useMocks);
+
+  useEffect(() => {
+    if (env.useMocks || !tid) return;
+    let active = true;
+    setLoading(true);
+    A.getTenantSettings(tid)
+      .then((response: any) => {
+        if (!active) return;
+        const x = response?.value ?? response;
+        if (!x) return;
+        setSelects({
+          "acad.startMonth": String(x.academicYearStartMonth ?? 4),
+          "lang.default": x.defaultLanguage ?? "en",
+          "date.format": x.dateFormat ?? "DD/MM/YYYY",
+          "tz": x.timeZone ?? "Asia/Karachi",
+          "week.start": String(x.weekStart ?? 1),
+          "finance.warnDays": String(x.feeWarningDays ?? 5),
+        });
+        setToggles({
+          "ai.ragAssistant": x.aiRagAssistant, "ai.tutor": x.aiTutor, "ai.quiz": x.aiQuiz, "ai.predictions": x.aiPredictions, "ai.agent": x.aiAgent, "ai.parentChatbot": x.aiParentChatbot,
+          "comm.internalChat": x.internalChat, "comm.notifications": x.notifications, "comm.broadcast": x.broadcast, "comm.parentPortal": x.parentPortal,
+          "learn.assignments": x.assignments, "learn.leaveApply": x.studentLeaveApply, "learn.library": x.library,
+          "finance.onlinePay": x.onlinePayment, "finance.feeReminders": x.feeReminders, "finance.receipts": x.digitalReceipts,
+          "hr.selfLeave": x.staffSelfLeave, "hr.biometric": x.biometricAttendance, "attend.qrCode": x.qrAttendance,
+          "sec.twoFactor": x.twoFactor, "sec.sessionTimeout": x.sessionTimeout, "sec.ipRestrict": x.ipRestriction,
+        });
+      })
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [tid]);
 
   const groups = [...new Set(TOGGLES.map(t => t.group))];
 
@@ -144,8 +176,21 @@ export function SettingsPage() {
       Object.entries(toggles).forEach(([k,v]) => { data[k] = v; });
       Object.entries(selects).forEach(([k,v]) => { data[`select_${k}`] = v; });
       if (!env.useMocks) {
-        // In real mode, POST to API
-        // await A.saveSchoolSettings({ tenantId: tid, settings: data });
+        await A.saveTenantSettings({
+          tenantId: tid,
+          academicYearStartMonth: Number(selects["acad.startMonth"]),
+          defaultLanguage: selects["lang.default"],
+          dateFormat: selects["date.format"],
+          timeZone: selects["tz"],
+          weekStart: Number(selects["week.start"]),
+          feeWarningDays: Number(selects["finance.warnDays"]),
+          aiRagAssistant: toggles["ai.ragAssistant"], aiTutor: toggles["ai.tutor"], aiQuiz: toggles["ai.quiz"], aiPredictions: toggles["ai.predictions"], aiAgent: toggles["ai.agent"], aiParentChatbot: toggles["ai.parentChatbot"],
+          internalChat: toggles["comm.internalChat"], notifications: toggles["comm.notifications"], broadcast: toggles["comm.broadcast"], parentPortal: toggles["comm.parentPortal"],
+          assignments: toggles["learn.assignments"], studentLeaveApply: toggles["learn.leaveApply"], library: toggles["learn.library"],
+          onlinePayment: toggles["finance.onlinePay"], feeReminders: toggles["finance.feeReminders"], digitalReceipts: toggles["finance.receipts"],
+          staffSelfLeave: toggles["hr.selfLeave"], biometricAttendance: toggles["hr.biometric"], qrAttendance: toggles["attend.qrCode"],
+          twoFactor: toggles["sec.twoFactor"], sessionTimeout: toggles["sec.sessionTimeout"], ipRestriction: toggles["sec.ipRestrict"],
+        });
       }
       localStorage.setItem(storageKey, JSON.stringify(data));
       setSaved(true);
@@ -160,7 +205,7 @@ export function SettingsPage() {
         title="School Settings"
         subtitle="Enable or disable features, and configure school-wide preferences"
         action={
-          <button className="primary" onClick={save} disabled={saving} style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <button className="primary" onClick={save} disabled={saving || loading} style={{ display:"flex", alignItems:"center", gap:6 }}>
             {saving ? <RefreshCw size={14} style={{animation:"spin 1s linear infinite"}}/> : <Save size={14}/>}
             {saving ? "Saving…" : saved ? "✓ Saved" : "Save settings"}
           </button>
