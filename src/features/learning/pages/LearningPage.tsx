@@ -3,7 +3,7 @@
  * Teacher view: create, view submissions, grade inline
  * Student view: view assigned work, submit with file + comment, see grade
  */
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
   Plus, X, Upload, CheckCircle2, Clock, FileText,
@@ -40,8 +40,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
   const meta = parseMeta(assignment.metadataJson);
   const [localAsgns, setLocalAsgns] = useState<any[]>([]);
   const { user } = useAuth();
-  const [editAsgn, setEditAsgn] = useState<any|null>(null);
-  const [viewAsgn, setViewAsgn] = useState<any|null>(null);
+
   const tid = effectiveTenantId(user) ?? "";
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile]       = useState<File | null>(null);
@@ -51,7 +50,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
   const [error, setError]     = useState("");
 
   const due = meta.dueDate ? new Date(meta.dueDate + "T" + (meta.dueTime ?? "23:59")) : null;
-  const isLate = due && new Date() > due;
+  const isLate = due ? due && new Date() > due : false;
 
   async function submit() {
     if (!file && !comment.trim()) { setError("Attach a file or write a comment before submitting."); return; }
@@ -233,7 +232,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
         {/* Progress bar */}
         <div style={{ padding: "12px 20px", background: "var(--surface-2)", borderBottom: "1px solid var(--line)", display: "flex", gap: 16, alignItems: "center" }}>
           {[["Submitted", counts.submitted, "info"], ["Late", counts.late, "warning"], ["Graded", counts.graded, "success"], ["Missing", counts.missing, "danger"]].map(([l, v, t]) => (
-            <div key={String(l)} style={{ display: "flex", align: "center", gap: 6 }}>
+            <div key={String(l)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span className={`status-pill ${t}`} style={{ fontSize: 10 }}>{v} {l}</span>
             </div>
           ))}
@@ -372,6 +371,8 @@ export function LearningPage() {
   const [submitModal, setSubmit] = useState<any | null>(null);
   const [gradeDrawer, setGrade] = useState<any | null>(null);
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
+  const [editAsgn, setEditAsgn] = useState<any|null>(null);
+  const [viewAsgn, setViewAsgn] = useState<any|null>(null);
   const [error, setError]       = useState("");
 
   const { data, isLoading } = useAssignments();
@@ -730,7 +731,7 @@ export function LearningPage() {
           onClose={() => setEditAsgn(null)}
           onSave={async data => {
             /* update local state; real app calls API */
-            setLocalAsgns((p:any) => p.map((x:any) => x.id === editAsgn!.id ? { ...x, ...data } : x));
+            setViewAsgn((p:any) => p.map((x:any) => x.id === editAsgn!.id ? { ...x, ...data } : x));
             setEditAsgn(null);
           }}
           fields={[

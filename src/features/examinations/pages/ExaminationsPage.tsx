@@ -6,6 +6,7 @@
  * ─ Publish results with one click → status changes to PUBLISHED
  * ─ Grade scale configuration
  */
+import { env } from "../../../config/env";
 import { useState, useMemo, useRef } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
@@ -68,10 +69,11 @@ function computeGrade(pct: number, scale: GradeScaleEntry[]): { grade: string; g
 // ─ Marks Entry Grid ─────────────────────────────────────────────────────────
 function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScaleEntry[]; onClose: () => void }) {
   const meta = parseMeta(exam.metadataJson);
-  const [localExams, setLocalExams] = useState<any[]>([]);
+  
   const { user } = useAuth();
-  const [editExam, setEditExam] = useState<any|null>(null);
-  const [viewExam, setViewExam] = useState<any|null>(null);
+const [editExam, setEditExam] = useState<any | null>(null);
+const [viewExam, setViewExam] = useState<any | null>(null);
+ 
   const tid = effectiveTenantId(user) ?? "";
 
   const totalMarks = meta.marks ?? 100;
@@ -298,6 +300,8 @@ export function ExaminationsPage() {
   const [open, setOpen] = useState(false);
   const [gsOpen, setGsOpen] = useState(false);
   const [markEntry, setMarkEntry] = useState<any | null>(null);
+  const [editExam, setEditExam] = useState<any | null>(null);
+  const [viewExam, setViewExam] = useState<any | null>(null);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -622,7 +626,7 @@ export function ExaminationsPage() {
           onClose={() => setEditExam(null)}
           onSave={async data => {
             /* update local state; real app calls API */
-            setLocalExams((p:any) => p.map((x:any) => x.id === editExam!.id ? { ...x, ...data } : x));
+            setViewExam((p:any) => p.map((x:any) => x.id === editExam!.id ? { ...x, ...data } : x));
             setEditExam(null);
           }}
           fields={[
