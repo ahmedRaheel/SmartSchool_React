@@ -154,7 +154,7 @@ export function StudentsPage() {
                                   <RowActions
                                     onView={() => setViewStudent(s)}
                                     onEdit={() => setEditStudent(s)}
-                                    onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== s.id))}
+                                    onDelete={() => setStudents((p: any[]) => p.filter((x: any) => x.id !== s.id))}
                                     deleteLabel="student"
                                     extra={[]}
                                   />

@@ -17,6 +17,7 @@ const UNITS = ["Piece","Box","Pack","Ream","Set","Dozen","Kg","Litre","Metre"];
 const PO_STATUS: Record<string,string> = { DRAFT:"gray", PENDING:"info", APPROVED:"warning", RECEIVED:"success", CANCELLED:"danger" };
 
 export function InventoryPage() {
+  const [localItems, setLocalItems] = useState<any[]>([]);
   const { user } = useAuth();
   const [viewItem, setViewItem] = useState<any|null>(null);
   const [editItem, setEditItem] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";

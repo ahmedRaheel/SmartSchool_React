@@ -1,4 +1,4 @@
-import { PkPhoneInput, PkEmailInput, PkCnicInput, PkAddressBlock, PkCitySelect, PkProvinceSelect } from "../../../components/ui/PakistanFields";
+import { PkPhoneInput, PkMobileInput, PkEmailInput, PkWebsiteInput, PkCnicInput, PkAddressBlock, PkCitySelect, PkProvinceSelect } from "../../../components/ui/PakistanFields";
 /**
  * AdmissionsPage — Full two-phase admission flow:
  *
@@ -607,8 +607,8 @@ export function AdmissionsPage() {
                     <option value="Female">Female</option>
                   </select>
                 </label>
-                <label className="human-field"><span>Student email</span><input type="email" value={appForm.email} onChange={afsf("email")}/></label>
-                <label className="human-field"><span>Phone</span><input value={appForm.phone} onChange={afsf("phone")}/></label>
+                <label className="human-field"><span>Student email</span><input type="email" value={appForm.email} onChange={afsf("email")} placeholder="student@email.com"/></label>
+                <label className="human-field"><span>Phone</span><input value={appForm.phone} onChange={afsf("phone")} placeholder="0300-1234567"/></label>
               </div>
 
               <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,marginTop:8}}>Enrollment target</div>
@@ -645,7 +645,7 @@ export function AdmissionsPage() {
                   </select>
                 </label>
                 <PkCnicInput label="Guardian CNIC" value={appForm.guardianCnic} onChange={(v) => setAppForm(p=>({...p,guardianCnic:v}))} />
-                <label className="human-field"><span>Guardian email *</span><input type="email" value={appForm.guardianEmail} onChange={afsf("guardianEmail")}/></label>
+                <label className="human-field"><span>Guardian email *</span><input type="email" value={appForm.guardianEmail} onChange={afsf("guardianEmail")} placeholder="student@email.com"/></label>
                 <label className="human-field"><span>Guardian phone</span><input value={appForm.guardianPhone} onChange={afsf("guardianPhone")}/></label>
               </div>
 
@@ -722,7 +722,7 @@ export function AdmissionsPage() {
           onClose={() => setEditApp(null)}
           onSave={async data => {
             /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.Id === editApp!.Id ? { ...x, ...data } : x));
+            setApps((p:any) => p.map((x:any) => x.Id === editApp!.Id ? { ...x, ...data } : x));
             setEditApp(null);
           }}
           fields={[

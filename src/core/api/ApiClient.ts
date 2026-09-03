@@ -8,6 +8,14 @@
 import axios from "axios";
 import { env } from "../../config/env";
 
+/** Interface implemented by both the real HttpApiClient and MockApiClient. */
+export interface ApiClient {
+  get<T>(url: string, config?: object): Promise<T>;
+  post<A, B>(url: string, body: A, config?: object): Promise<B>;
+  put<A, B>(url: string, body: A, config?: object): Promise<B>;
+  delete<T>(url: string): Promise<T>;
+}
+
 export const api = axios.create({
   baseURL: env.apiBaseUrl,
   headers: { "Content-Type": "application/json" },

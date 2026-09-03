@@ -16,6 +16,7 @@ function parseMeta(j?: string|null) { try { return JSON.parse(j ?? "{}"); } catc
 
 export function TransportPage() {
   const { user } = useAuth();
+  const [localVehicles, setLocalVehicles] = useState<any[]>([]);
   const [viewVehicle, setViewVehicle] = useState<any|null>(null);
   const [editVehicle, setEditVehicle] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";

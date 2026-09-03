@@ -1,3 +1,7 @@
+import { RowActions } from "../../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
+import { EditModal  } from "../../../../components/ui/EditModal";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { useSubjects, useCreateSubject, useCampuses } from "../../../../core/api/queries";
@@ -10,6 +14,10 @@ export function SubjectsTab() {
   const { data: subjects, isLoading } = useSubjects();
   const { data: campuses } = useCampuses();
   const create = useCreateSubject();
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [viewItem, setViewItem] = useState<any|null>(null);
+  const [editItem, setEditItem] = useState<any|null>(null);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name:"", branchId:"" });
   const [error, setError] = useState("");
@@ -35,14 +43,29 @@ export function SubjectsTab() {
         {isLoading ? <div style={{padding:20,color:"var(--muted)"}}>Loading…</div> : (
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Subject</th><th>Code</th></tr></thead>
+              <thead><tr><th>Subject</th><th>Code</th><th>Campus</th><th style={{textAlign:"right"}}>Actions</th></tr></thead>
               <tbody>
                 {items.length===0 ? <tr><td colSpan={2} style={{textAlign:"center",padding:24,color:"var(--muted)"}}>No subjects yet.</td></tr>
-                : items.map((s:any)=><tr key={s.id}><td><b>{s.name}</b></td><td><code style={{fontSize:11}}>{s.code}</code></td></tr>)}
+                : items.map((s:any)=>(
+                  <tr key={s.id}>
+                    <td><b>{s.name}</b></td>
+                    <td><code style={{fontSize:11}}>{s.code}</code></td>
+                    <td style={{fontSize:11,color:"var(--muted)"}}>{s.campusName ?? "—"}</td>
+                    <td style={{textAlign:"right"}}>
+                      <RowActions
+                        onView={() => setViewItem(s)}
+                        onEdit={() => setEditItem(s)}
+                        onDelete={() => {}}
+                        deleteLabel="subject"
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         )}
+        <Pagination page={page} pageSize={pageSize} total={items.length} onPage={setPage} onPageSize={ps=>{setPageSize(ps);setPage(1);}} label="subjects"/>
       </div>
       {modal && (
         <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setModal(false)}}>
@@ -65,6 +88,23 @@ export function SubjectsTab() {
             </div>
           </div>
         </div>
+      )}
+      {viewItem && (
+        <ViewDrawer title="Subject" item={viewItem} onClose={() => setViewItem(null)}
+          onEdit={() => { setEditItem(viewItem); setViewItem(null); }}
+          fields={[
+            {key:"name", label:"Subject name", wide:true},
+            {key:"code", label:"Code"},
+          ]}
+        />
+      )}
+      {editItem && (
+        <EditModal title="Subject" item={editItem} onClose={() => setEditItem(null)}
+          onSave={async data => { setEditItem(null); }}
+          fields={[
+            {key:"name", label:"Subject name", required:true, wide:true},
+          ]}
+        />
       )}
     </>
   );

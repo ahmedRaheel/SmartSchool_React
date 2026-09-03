@@ -12,6 +12,9 @@ export interface EmployeeSummary {
   phone?: string | null;
   alternatePhone?: string | null;
   address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  country?: string | null;
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
   hireDate: string;
@@ -44,6 +47,9 @@ export interface CreateEmployeeRequest {
   phone?: string | null;
   alternatePhone?: string | null;
   address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  country?: string | null;
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
   hireDate: string;

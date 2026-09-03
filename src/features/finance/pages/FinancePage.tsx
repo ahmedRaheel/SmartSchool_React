@@ -25,6 +25,7 @@ const STATUS_PILL: Record<string,string> = { PAID:"success", PENDING:"warning", 
 const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
 
 export function FinancePage() {
+  const [localInvoices, setLocalInvoices] = useState<any[]>([]);
   const { user } = useAuth();
   const [viewInv, setViewInv] = useState<any|null>(null);
   const [editInv, setEditInv] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
@@ -169,7 +170,7 @@ export function FinancePage() {
                               <RowActions
                                 onView={() => setViewInv(inv)}
                                 onEdit={() => setEditInv(inv)}
-                                onDelete={() => setLocalInvoices && setLocalInvoices((p:any)=>p.filter((x:any)=>x.id!==inv.id))}
+                                onDelete={() => setLocalInvoices((p:any)=>p.filter((x:any)=>x.id!==inv.id))}
                                 deleteLabel="invoice"
                               />
                               <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>
@@ -391,7 +392,7 @@ export function FinancePage() {
           onClose={() => setEditInv(null)}
           onSave={async data => {
             /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editInv!.id ? { ...x, ...data } : x));
+            setLocalInvoices((p:any) => p.map((x:any) => x.id === editInv!.id ? { ...x, ...data } : x));
             setEditInv(null);
           }}
           fields={[

@@ -38,6 +38,7 @@ const MOCK_SUBMISSIONS = [
 // ─── Student Submit Modal ─────────────────────────────────────────────────────
 function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose: () => void; onDone: () => void }) {
   const meta = parseMeta(assignment.metadataJson);
+  const [localAsgns, setLocalAsgns] = useState<any[]>([]);
   const { user } = useAuth();
   const [editAsgn, setEditAsgn] = useState<any|null>(null);
   const [viewAsgn, setViewAsgn] = useState<any|null>(null);
@@ -292,8 +293,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                                 onView={() => a.id}
                                 onEdit={() => setViewAsgn(a)}
                                 onDelete={() => { setEditAsgn(a) }}
-                                deleteLabel="setLocalItems && setLocalItems((p:any)=>p.filter((x:any)=>x.id!==a.id))"
-                                assignment
+                                deleteLabel="record"
                               />
                             </td>
                   </tr>
@@ -738,7 +738,7 @@ export function LearningPage() {
           onClose={() => setEditAsgn(null)}
           onSave={async data => {
             /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editAsgn!.id ? { ...x, ...data } : x));
+            setLocalAsgns((p:any) => p.map((x:any) => x.id === editAsgn!.id ? { ...x, ...data } : x));
             setEditAsgn(null);
           }}
           fields={[

@@ -110,7 +110,7 @@ export function PayrollPage() {
                                 onView={() => run.id}
                                 onEdit={() => setViewRun(run)}
                                 onDelete={() => { setEditRun(run) }}
-                                deleteLabel="setLocalRuns && setLocalRuns((p:any)=>p.filter((x:any)=>x.id!==run.id))"
+                                deleteLabel="record"
                                 payroll run
                               />
                             </td>

@@ -1,4 +1,9 @@
+import { RowActions } from "../../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
+import { EditModal  } from "../../../../components/ui/EditModal";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
+import { PkPhoneInput, PkEmailInput, PkWebsiteInput, PkAddressBlock } from "../../../../components/ui/PakistanFields";
 import { Building2, GitBranch, Plus, Trash2, X } from "lucide-react";
 import {
   useSchools, useCreateSchool, useUpdateSchool,
@@ -45,6 +50,14 @@ export function SchoolCampusTab() {
   const [deptModal,    setDeptModal]    = useState(false);
   const [error, setError] = useState("");
 
+  const [viewSchool, setViewSchool] = useState<any|null>(null);
+  const [editSchool, setEditSchool] = useState<any|null>(null);
+  const [viewCampus, setViewCampus] = useState<any|null>(null);
+  const [editCampus, setEditCampus] = useState<any|null>(null);
+  const [viewDept,   setViewDept]   = useState<any|null>(null);
+  const [editDept,   setEditDept]   = useState<any|null>(null);
+  const [page,       setPage]       = useState(1);
+  const [pageSize,   setPageSize]   = useState(10);
   const [sForm, setSForm] = useState({ name:"", registrationNumber:"", email:"", phone:"", website:"", address:"", city:"", province:"", country:"Pakistan" });
   const [cForm, setCForm] = useState({ schoolId:"", name:"", branchType:"MIXED", branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[] as string[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" });
   const [dForm, setDForm] = useState({ campusId:"", name:"", telephone:"", email:"" });
@@ -205,12 +218,14 @@ export function SchoolCampusTab() {
                       <td style={{fontSize:11}}>{campus?.name??d.campusId??"-"}</td>
                       <td>{d.email??"-"}</td>
                       <td>{d.telephone??"-"}</td>
-                      <td>
-                        <button className="table-action" style={{fontSize:10,color:"var(--danger)"}}
-                          onClick={()=>deleteDept.mutate(d.id)}>
-                          <Trash2 size={12}/>
-                        </button>
-                      </td>
+                      <td style={{textAlign:"right"}}>
+                    <RowActions
+                      onView={() => setViewDept(d)}
+                      onEdit={() => setEditDept(d)}
+                      onDelete={() => deleteDept.mutate(d.id)}
+                      deleteLabel="department"
+                    />
+                  </td>
                     </tr>
                   );
                 })}
@@ -228,9 +243,9 @@ export function SchoolCampusTab() {
             <div className="human-form"><div className="human-form-grid">
               <label className="human-field field-wide"><span>School name *</span><input value={sForm.name} onChange={ssf("name")} placeholder="e.g. Al-Noor Academy"/></label>
               <label className="human-field"><span>Registration #</span><input value={sForm.registrationNumber} onChange={ssf("registrationNumber")}/></label>
-              <label className="human-field"><span>Email</span><input type="email" value={sForm.email} onChange={ssf("email")}/></label>
-              <label className="human-field"><span>Phone</span><input value={sForm.phone} onChange={ssf("phone")}/></label>
-              <label className="human-field"><span>Website</span><input value={sForm.website} onChange={ssf("website")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={sForm.email} onChange={ssf("email")} placeholder="info@school.edu.pk"/></label>
+              <label className="human-field"><span>Phone</span><input value={sForm.phone} onChange={ssf("phone")} placeholder="021-12345678"/></label>
+              <label className="human-field"><span>Website</span><input value={sForm.website} onChange={ssf("website")} placeholder="https://www.school.edu.pk"/></label>
               <label className="human-field"><span>City</span><input value={sForm.city} onChange={ssf("city")}/></label>
               <label className="human-field"><span>Province</span><input value={sForm.province} onChange={ssf("province")}/></label>
               <label className="human-field"><span>Country</span><input value={sForm.country} onChange={ssf("country")}/></label>
@@ -307,8 +322,8 @@ export function SchoolCampusTab() {
                 </div>
               </div>
 
-              <label className="human-field"><span>Email</span><input type="email" value={cForm.email} onChange={csf("email")}/></label>
-              <label className="human-field"><span>Phone</span><input value={cForm.phone} onChange={csf("phone")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={cForm.email} onChange={csf("email")} placeholder="campus@school.edu.pk"/></label>
+              <label className="human-field"><span>Phone</span><input value={cForm.phone} onChange={csf("phone")} placeholder="042-12345678"/></label>
               <label className="human-field"><span>City</span><input value={cForm.city} onChange={csf("city")}/></label>
               <label className="human-field"><span>Province</span><input value={cForm.province} onChange={csf("province")}/></label>
               <label className="human-field field-wide"><span>Address</span><input value={cForm.address} onChange={csf("address")}/></label>
@@ -336,8 +351,8 @@ export function SchoolCampusTab() {
                 </select>
               </label>
               <label className="human-field field-wide"><span>Department name *</span><input value={dForm.name} onChange={dsf("name")} placeholder="e.g. Mathematics"/></label>
-              <label className="human-field"><span>Email</span><input type="email" value={dForm.email} onChange={dsf("email")}/></label>
-              <label className="human-field"><span>Phone</span><input value={dForm.telephone} onChange={dsf("telephone")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={dForm.email} onChange={dsf("email")} placeholder="dept@school.edu.pk"/></label>
+              <label className="human-field"><span>Phone</span><input value={dForm.telephone} onChange={dsf("telephone")} placeholder="042-12345678"/></label>
             </div>
             {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
@@ -347,6 +362,71 @@ export function SchoolCampusTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {viewSchool && (
+        <ViewDrawer title="School" item={viewSchool} onClose={() => setViewSchool(null)}
+          onEdit={() => { setEditSchool(viewSchool); setViewSchool(null); }}
+          fields={[
+            {key:"name",               label:"School name",    wide:true},
+            {key:"registrationNumber", label:"Reg #"},
+            {key:"city",               label:"City"},
+            {key:"province",           label:"Province"},
+            {key:"country",            label:"Country"},
+            {key:"phone",              label:"Phone"},
+            {key:"email",              label:"Email",          wide:true},
+          ]} />
+      )}
+      {editSchool && (
+        <EditModal title="School" item={editSchool} onClose={() => setEditSchool(null)}
+          onSave={async data => { setEditSchool(null); }}
+          fields={[
+            {key:"name",     label:"School name",required:true, wide:true},
+            {key:"city",     label:"City",        type:"pk-city"},
+            {key:"province", label:"Province",    type:"pk-province"},
+            {key:"phone",    label:"Phone",       type:"pk-phone"},
+            {key:"email",    label:"Email",       type:"pk-email", wide:true},
+          ]} />
+      )}
+      {viewCampus && (
+        <ViewDrawer title="Campus" item={viewCampus} onClose={() => setViewCampus(null)}
+          onEdit={() => { setEditCampus(viewCampus); setViewCampus(null); }}
+          fields={[
+            {key:"name",        label:"Campus name", wide:true},
+            {key:"branchType",  label:"Type"},
+            {key:"city",        label:"City"},
+            {key:"phone",       label:"Phone"},
+            {key:"status",      label:"Status"},
+          ]} />
+      )}
+      {editCampus && (
+        <EditModal title="Campus" item={editCampus} onClose={() => setEditCampus(null)}
+          onSave={async data => { setEditCampus(null); }}
+          fields={[
+            {key:"name",  label:"Campus name", required:true, wide:true},
+            {key:"city",  label:"City",         type:"pk-city"},
+            {key:"phone", label:"Phone",        type:"pk-phone"},
+            {key:"email", label:"Email",        type:"pk-email"},
+          ]} />
+      )}
+      {viewDept && (
+        <ViewDrawer title="Department" item={viewDept} onClose={() => setViewDept(null)}
+          onEdit={() => { setEditDept(viewDept); setViewDept(null); }}
+          fields={[
+            {key:"name",      label:"Name",  wide:true},
+            {key:"code",      label:"Code"},
+            {key:"email",     label:"Email"},
+            {key:"telephone", label:"Phone"},
+          ]} />
+      )}
+      {editDept && (
+        <EditModal title="Department" item={editDept} onClose={() => setEditDept(null)}
+          onSave={async data => { setEditDept(null); }}
+          fields={[
+            {key:"name",      label:"Name",  required:true, wide:true},
+            {key:"email",     label:"Email", type:"pk-email"},
+            {key:"telephone", label:"Phone", type:"pk-phone"},
+          ]} />
       )}
     </>
   );

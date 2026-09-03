@@ -19,6 +19,9 @@ interface StudentFormState extends CreateStudentRequest {
   guardianPhone: string;
   guardianEmail: string;
   address: string;
+  city: string;
+  province: string;
+  country: string;
 }
 
 interface TextFieldProps {

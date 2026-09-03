@@ -3,14 +3,14 @@
  * Renders a form from a field definition and calls onSave with the updated data.
  */
 import { useState } from "react";
-import { PkPhoneInput, PkEmailInput, PkCnicInput, PkCitySelect, PkProvinceSelect, PkCountrySelect } from "./PakistanFields";
+import { PkPhoneInput, PkMobileInput, PkEmailInput, PkWebsiteInput, PkCnicInput, PkCitySelect, PkProvinceSelect, PkCountrySelect } from "./PakistanFields";
 import { X, Save } from "lucide-react";
 
 export interface EditField {
   key:      string;
   label:    string;
   type?:    "text" | "email" | "number" | "date" | "select" | "textarea" | "tel"
-            | "pk-phone" | "pk-email" | "pk-cnic" | "pk-city" | "pk-province" | "pk-country";
+            | "pk-phone" | "pk-mobile" | "pk-email" | "pk-website" | "pk-cnic" | "pk-city" | "pk-province" | "pk-country";
   options?: { value: string; label: string }[];
   placeholder?: string;
   required?: boolean;

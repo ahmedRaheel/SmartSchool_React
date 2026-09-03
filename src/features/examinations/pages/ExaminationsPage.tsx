@@ -68,6 +68,7 @@ function computeGrade(pct: number, scale: GradeScaleEntry[]): { grade: string; g
 // ─ Marks Entry Grid ─────────────────────────────────────────────────────────
 function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScaleEntry[]; onClose: () => void }) {
   const meta = parseMeta(exam.metadataJson);
+  const [localExams, setLocalExams] = useState<any[]>([]);
   const { user } = useAuth();
   const [editExam, setEditExam] = useState<any|null>(null);
   const [viewExam, setViewExam] = useState<any|null>(null);
@@ -260,8 +261,7 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
                                 onView={() => e.id}
                                 onEdit={() => setViewExam(e)}
                                 onDelete={() => { setEditExam(e) }}
-                                deleteLabel="setLocalItems && setLocalItems((p:any)=>p.filter((x:any)=>x.id!==e.id))"
-                                exam
+                                deleteLabel="record"
                               />
                             </td>
                 </tr>
@@ -622,7 +622,7 @@ export function ExaminationsPage() {
           onClose={() => setEditExam(null)}
           onSave={async data => {
             /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editExam!.id ? { ...x, ...data } : x));
+            setLocalExams((p:any) => p.map((x:any) => x.id === editExam!.id ? { ...x, ...data } : x));
             setEditExam(null);
           }}
           fields={[

@@ -383,10 +383,9 @@ export function TeachersPage() {
                         <td><span className={`status-pill ${s.status === "ACTIVE" ? "success" : "warning"}`}>{s.status}</span></td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => s.studentId}
+                                onView={() => s.id}
                                 onEdit={() => setViewSt(s)}
                                                                 deleteLabel="record"
-                                student
                               />
                             </td>
                       </tr>
