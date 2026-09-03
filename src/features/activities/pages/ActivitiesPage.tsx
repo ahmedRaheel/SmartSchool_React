@@ -17,6 +17,7 @@ const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning",
 
 export function ActivitiesPage() {
   const { user } = useAuth();
+  const [localActivities, setLocalActivities] = useState<any[]>([]);
   const [viewActivity, setViewActivity] = useState<any|null>(null);
   const [editActivity, setEditActivity] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);

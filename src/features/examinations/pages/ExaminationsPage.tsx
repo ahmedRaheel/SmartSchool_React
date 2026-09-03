@@ -258,9 +258,9 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
                   </td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => e.id}
-                                onEdit={() => setViewExam(e)}
-                                onDelete={() => { setEditExam(e) }}
+                                onView={() => row.studentId}
+                                onEdit={() => setViewExam(row)}
+                                onDelete={() => { setEditExam(row) }}
                                 deleteLabel="record"
                               />
                             </td>

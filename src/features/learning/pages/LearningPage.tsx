@@ -288,14 +288,6 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                         </button>
                       )}
                     </td>
-<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                              <RowActions
-                                onView={() => a.id}
-                                onEdit={() => setViewAsgn(a)}
-                                onDelete={() => { setEditAsgn(a) }}
-                                deleteLabel="record"
-                              />
-                            </td>
                   </tr>
                 ))}
               </tbody>

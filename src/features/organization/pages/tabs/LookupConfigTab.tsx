@@ -37,7 +37,7 @@ export function LookupConfigTab() {
           <div style={{ fontSize:10, color:"var(--muted)", padding:"6px 8px 4px", fontWeight:700, textTransform:"uppercase", letterSpacing:.8 }}>Lookup types</div>
           {tLoad ? <div style={{ padding:10, color:"var(--muted)", fontSize:12 }}>Loading…</div> :
             typeList.map((t: string) => (
-            <button
+           <button
   key={t}
   onClick={() => setSelected(t)}
   style={{

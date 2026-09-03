@@ -288,9 +288,9 @@ export function HrPage() {
                             )}
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewEmp(emp)}
-                                onEdit={() => setEditEmp(emp)}
-                                onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== emp.id))}
+                                onView={() => setViewEmp(viewEmp)}
+                                onEdit={() => setEditEmp(viewEmp)}
+                                onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== viewEmp.id))}
                                 deleteLabel="staff member"
                               />
                             </td>

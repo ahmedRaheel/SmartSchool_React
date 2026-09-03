@@ -16,7 +16,9 @@ const CATS = ["Textbook","Literature","History","Science","Technology","Referenc
 export function LibraryPage() {
   const { user } = useAuth();
   const [viewBook, setViewBook] = useState<any|null>(null);
-  const [editBook, setEditBook] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const [editBook, setEditBook] = useState<any|null>(null);
+  const [localDeletedIds, setLocalDeletedIds] = useState<string[]>([]);
+  const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"books"|"loans"|"issue">("books");
@@ -32,7 +34,7 @@ export function LibraryPage() {
   const createBook = useCreateBook();
   const createLoan = useCreateLoan();
 
-  const books    = (data as any)?.items      ?? (data as any) ?? [];
+  const books    = ((data as any)?.items ?? (data as any) ?? []).filter((b:any) => !localDeletedIds.includes(b.id));
   const loans    = (loansData as any)?.items ?? (loansData as any) ?? [];
   const students = (studData as any)?.items  ?? (studData as any) ?? [];
 
@@ -130,7 +132,7 @@ export function LibraryPage() {
                               <RowActions
                                 onView={() => setViewBook(b)}
                                 onEdit={() => setEditBook(b)}
-                                onDelete={() => { setLocalBooks((p:any)=>p.filter((x:any)=>x.id!==b.id)) }}
+                                onDelete={() => setLocalDeletedIds(p => [...p, b.id])}
                                 deleteLabel="book"
                               />
                             </td>
