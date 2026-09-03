@@ -107,9 +107,9 @@ export function PayrollPage() {
                       <td><span className={`status-pill ${e.status==="ACTIVE"?"success":"gray"}`}>{e.status}</span></td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => e.id}
-                                onEdit={() => setViewRun(e)}
-                                onDelete={() => { setEditRun(e) }}
+                                onView={() => setViewRun(run)}
+                                onEdit={() => setEditRun(run)}
+                                onDelete={() => { setEditRun(run) }}
                                 deleteLabel="record"
                                 
                               />

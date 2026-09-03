@@ -160,7 +160,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
 
             <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
               <button className="secondary" onClick={onClose}>Cancel</button>
-              <button className="primary" onClick={submit} disabled={submitting || (isLate && !meta.allowLate)}
+              <button className="primary" onClick={submit} disabled={!!(submitting || (isLate && !meta.allowLate))}
                 style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Send size={13} /> {submitting ? "Submitting…" : "Submit assignment"}
               </button>

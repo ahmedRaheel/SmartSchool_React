@@ -207,7 +207,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
 
   function editItem(item: SetupItem): void {
     setSelectedItem(item);
-    setForm({ name: item.name, parentId: item.parentId ?? "", startDate: item.startDate?.slice(0, 10) ?? "", endDate: item.endDate?.slice(0, 10) ?? "", isCurrent: item.isCurrent ?? false });
+    setForm(p => ({ ...p, name: item.name, parentId: item.parentId ?? "", startDate: item.startDate?.slice(0, 10) ?? "", endDate: item.endDate?.slice(0, 10) ?? "", isCurrent: item.isCurrent ?? false }));
     setModalOpen(true);
   }
 
