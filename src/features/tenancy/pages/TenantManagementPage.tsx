@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { Building2, Plus, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useTenants, useCreateTenant, useImpersonate } from "../../../core/api/queries";
+import { useTenants, useCreateTenant, useImpersonate , useUpdateTenant, useDeleteTenant, useTenantById} from "../../../core/api/queries";
 import { useNavigate } from "react-router-dom";
 
 function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
@@ -126,9 +126,9 @@ export function TenantManagementPage() {
                       </td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => setViewTenant(t)}
-                                onEdit={() => setEditTenant(t)}
-                                onDelete={() => setLocalTenants(p => p.filter((x:any) => x.id !== t.id))}
+                                onView={() => setViewTenantId(t.id)}
+                                onEdit={() => setEditTenantId(t.id)}
+                                onDelete={() => delTenant.mutate(t.id)}
                                 deleteLabel="school"
                               />
                             </td>
@@ -218,12 +218,12 @@ export function TenantManagementPage() {
         </div>
       )}
 
-      {viewTenant && (
+      {viewTenantId && viewTenantItem && (
         <ViewDrawer
           title="School"
-          item={viewTenant}
-          onClose={() => setViewTenant(null)}
-          onEdit={() => { setEditTenant(viewTenant!); setViewTenant(null); }}
+          item={viewTenantItem}
+          onClose={() => setViewTenantId(null)}
+          onEdit={() => { setEditTenantId(viewTenantId!); setViewTenantId(null); }}
           fields={[
             { key: "organizationName", label: "School name", wide: true },
             { key: "code", label: "Code" },
@@ -234,16 +234,12 @@ export function TenantManagementPage() {
           ]}
         />
       )}
-      {editTenant && (
+      {editTenantId && viewTenantItem && (
         <EditModal
           title="School"
-          item={editTenant}
-          onClose={() => setEditTenant(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setLocalTenants((p:any) => p.map((x:any) => x.id === editTenant!.id ? { ...x, ...data } : x));
-            setEditTenant(null);
-          }}
+          item={viewTenantItem}
+          onClose={() => setEditTenantId(null)}
+          onSave={async data => { await updTenant.mutateAsync({id: editTenantId!, body: data}); setEditTenant(null); }}
           fields={[
             { key: "organizationName", label: "School name", type: "text", required: true, wide: true },
             { key: "contactEmail", label: "Contact email", type: "pk-email", wide: true },

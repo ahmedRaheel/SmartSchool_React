@@ -17,8 +17,7 @@ import { PageHeader }  from "../../../components/ui/PageHeader";
 import { StatCard }    from "../../../components/ui/StatCard";
 import {
   useExams, useCreateExam, useGradeScales, useCreateGradeScale,
-  useExamResults, useCampuses, useStudents, useClassSections,
-} from "../../../core/api/queries";
+  useExamResults, useCampuses, useStudents, useClassSections, useUpdateExam, useDeleteExam, useExamById} from "../../../core/api/queries";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
@@ -71,6 +70,11 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
   const meta = parseMeta(exam.metadataJson);
   
   const { user } = useAuth();
+  const viewExamIdOrEdit = viewExamId ?? editExamId;
+  const { data: viewExamData, isLoading: viewExamLoading } = useExamById(viewExamIdOrEdit ?? undefined);
+  const viewExamItem: any = viewExamData ?? null;
+  const updExam = useUpdateExam();
+  const delExam = useDeleteExam();
 const [editExam, setEditExam] = useState<any | null>(null);
 const [viewExam, setViewExam] = useState<any | null>(null);
  
@@ -262,7 +266,7 @@ const [viewExam, setViewExam] = useState<any | null>(null);
                               <RowActions
                                 onView={() => row.studentId}
                                 onEdit={() => setViewExam(row)}
-                                onDelete={() => { setEditExam(row) }}
+                                onDelete={() => delExam.mutate(e.id)}
                                 deleteLabel="record"
                               />
                             </td>
@@ -601,12 +605,12 @@ export function ExaminationsPage() {
       {/* ── MARKS ENTRY MODAL ─────────────────────────────────────────────── */}
       {markEntry && <MarksEntryGrid exam={markEntry} scale={activeScale} onClose={() => setMarkEntry(null)} />}
 
-      {viewExam && (
+      {viewExamId && viewExamItem && (
         <ViewDrawer
           title="Exam"
-          item={viewExam}
-          onClose={() => setViewExam(null)}
-          onEdit={() => { setEditExam(viewExam!); setViewExam(null); }}
+          item={viewExamItem}
+          onClose={() => setViewExamId(null)}
+          onEdit={() => { setEditExamId(viewExamId!); setViewExamId(null); }}
           fields={[
             { key: "name", label: "Exam name", wide: true },
             { key: "type", label: "Type" },
@@ -619,16 +623,12 @@ export function ExaminationsPage() {
           ]}
         />
       )}
-      {editExam && (
+      {editExamId && viewExamItem && (
         <EditModal
           title="Exam"
-          item={editExam}
-          onClose={() => setEditExam(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setViewExam((p:any) => p.map((x:any) => x.id === editExam!.id ? { ...x, ...data } : x));
-            setEditExam(null);
-          }}
+          item={viewExamItem}
+          onClose={() => setEditExamId(null)}
+          onSave={async data => { await updExam.mutateAsync({id: editExamId!, body: data}); setEditExam(null); }}
           fields={[
             { key: "name", label: "Exam name", type: "text", required: true, wide: true },
             { key: "startDate", label: "Start date", type: "date" },

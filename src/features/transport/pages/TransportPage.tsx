@@ -7,7 +7,7 @@ import { Plus, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
-import { useVehicles, useRoutes, useCreateVehicle, useCreateRoute } from "../../../core/api/queries";
+import { useVehicles, useRoutes, useCreateVehicle, useCreateRoute , useUpdateVehicle, useDeleteVehicle, useVehicleById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { Bus, Route, Users, AlertTriangle } from "lucide-react";
@@ -16,9 +16,14 @@ function parseMeta(j?: string|null) { try { return JSON.parse(j ?? "{}"); } catc
 
 export function TransportPage() {
   const { user } = useAuth();
+  const viewVehicleIdOrEdit = viewVehicleId ?? editVehicleId;
+  const { data: viewVehicleData, isLoading: viewVehicleLoading } = useVehicleById(viewVehicleIdOrEdit ?? undefined);
+  const viewVehicleItem: any = viewVehicleData ?? null;
+  const updVehicle = useUpdateVehicle();
+  const delVehicle = useDeleteVehicle();
   const [localVehicles, setLocalVehicles] = useState<any[]>([]);
-  const [viewVehicle, setViewVehicle] = useState<any|null>(null);
-  const [editVehicle, setEditVehicle] = useState<any|null>(null);
+  const [viewVehicleId, setViewVehicleId] = useState<string|null>(null);
+  const [editVehicleId, setEditVehicleId] = useState<string|null>(null);
   const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -102,9 +107,9 @@ export function TransportPage() {
                         </td>
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewVehicle(v)}
-                                onEdit={() => setEditVehicle(v)}
-                                onDelete={() => { setLocalVehicles((p:any)=>p.filter((x:any)=>x.id!==v.id)) }}
+                                onView={() => setViewVehicleId(v.id)}
+                                onEdit={() => setEditVehicleId(v.id)}
+                                onDelete={() => delVehicle.mutate(v.id)}
                                 deleteLabel="vehicle"
                               />
                             </td>
@@ -190,16 +195,34 @@ export function TransportPage() {
         </div>
       )}
 
-      {viewVehicle && (
+      {viewVehicleId && viewVehicleItem && (
         <ViewDrawer
           title="Vehicle"
-          item={viewVehicle}
-          onClose={() => setViewVehicle(null)}
+          item={viewVehicleItem}
+          onClose={() => setViewVehicleId(null)}
           fields={[
             { key: "name", label: "Registration #", wide: true },
             { key: "vehicleType", label: "Type" },
             { key: "seatingCapacity", label: "Capacity" },
             { key: "status", label: "Status" },
+          ]}
+        
+          onEdit={() => { setEditVehicleId(viewVehicleId!); setViewVehicleId(null); }}/>
+      )}
+
+      {editVehicleId && viewVehicleItem && (
+        <EditModal
+          title="Vehicle"
+          item={viewVehicleItem}
+          onClose={() => setEditVehicleId(null)}
+          onSave={async data => {
+            await updVehicle.mutateAsync({id: editVehicleId!, body: data});
+            setEditVehicle(null);
+          }}
+          fields={[
+            { key:"name",            label:"Registration #", required:true },
+            { key:"vehicleType",     label:"Type", type:"select", options:[{value:"BUS",label:"Bus"},{value:"VAN",label:"Van"},{value:"MINIBUS",label:"Minibus"},{value:"CAR",label:"Car"}] },
+            { key:"seatingCapacity", label:"Seats", type:"number" },
           ]}
         />
       )}

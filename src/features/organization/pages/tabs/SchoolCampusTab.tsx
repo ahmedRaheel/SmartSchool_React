@@ -9,8 +9,7 @@ import {
   useSchools, useCreateSchool, useUpdateSchool,
   useCampuses, useCreateCampus, useUpdateCampus,
   useDepartments, useCreateDepartment, useDeleteDepartment,
-  useBranchGenderTypes, useEducationLevels, useAcademicSystems,
-} from "../../../../core/api/queries";
+  useBranchGenderTypes, useEducationLevels, useAcademicSystems, useDeleteSchool, useDeleteCampus, useSchoolById, useCampusById} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
@@ -23,7 +22,17 @@ const BRANCH_TYPES = [
 function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
 
 export function SchoolCampusTab() {
+  const updSchool = useUpdateSchool();
+  const updCampus = useUpdateCampus();
   const { user } = useAuth();
+  const viewCampusIdOrEdit = viewCampusId ?? editCampusId;
+  const { data: viewCampusData, isLoading: viewCampusLoading } = useCampusById(viewCampusIdOrEdit ?? undefined);
+  const viewCampusItem: any = viewCampusData ?? null;
+  const viewSchoolIdOrEdit = viewSchoolId ?? editSchoolId;
+  const { data: viewSchoolData, isLoading: viewSchoolLoading } = useSchoolById(viewSchoolIdOrEdit ?? undefined);
+  const viewSchoolItem: any = viewSchoolData ?? null;
+  const delCampus = useDeleteCampus();
+  const delSchool = useDeleteSchool();
   const tid = effectiveTenantId(user) ?? "";
 
   const { data: schoolsData } = useSchools();
@@ -50,10 +59,10 @@ export function SchoolCampusTab() {
   const [deptModal,    setDeptModal]    = useState(false);
   const [error, setError] = useState("");
 
-  const [viewSchool, setViewSchool] = useState<any|null>(null);
-  const [editSchool, setEditSchool] = useState<any|null>(null);
-  const [viewCampus, setViewCampus] = useState<any|null>(null);
-  const [editCampus, setEditCampus] = useState<any|null>(null);
+  const [viewSchoolId, setViewSchoolId] = useState<string|null>(null);
+  const [editSchoolId, setEditSchoolId] = useState<string|null>(null);
+  const [viewCampusId, setViewCampusId] = useState<string|null>(null);
+  const [editCampusId, setEditCampusId] = useState<string|null>(null);
   const [viewDept,   setViewDept]   = useState<any|null>(null);
   const [editDept,   setEditDept]   = useState<any|null>(null);
   const [page,       setPage]       = useState(1);
@@ -356,9 +365,9 @@ export function SchoolCampusTab() {
         </div>
       )}
 
-      {viewSchool && (
-        <ViewDrawer title="School" item={viewSchool} onClose={() => setViewSchool(null)}
-          onEdit={() => { setEditSchool(viewSchool); setViewSchool(null); }}
+      {viewSchoolId && viewSchoolItem && (
+        <ViewDrawer title="School" item={viewSchoolItem} onClose={() => setViewSchoolId(null)}
+          onEdit={() => { setEditSchoolId(viewSchoolId!); setViewSchoolId(null); }}
           fields={[
             {key:"name",               label:"School name",    wide:true},
             {key:"registrationNumber", label:"Reg #"},
@@ -369,9 +378,9 @@ export function SchoolCampusTab() {
             {key:"email",              label:"Email",          wide:true},
           ]} />
       )}
-      {editSchool && (
-        <EditModal title="School" item={editSchool} onClose={() => setEditSchool(null)}
-          onSave={async data => { setEditSchool(null); }}
+      {editSchoolId && viewSchoolItem && (
+        <EditModal title="School" item={viewSchoolItem} onClose={() => setEditSchoolId(null)}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchool(null); }}
           fields={[
             {key:"name",     label:"School name",required:true, wide:true},
             {key:"city",     label:"City",        type:"pk-city"},
@@ -380,9 +389,9 @@ export function SchoolCampusTab() {
             {key:"email",    label:"Email",       type:"pk-email", wide:true},
           ]} />
       )}
-      {viewCampus && (
-        <ViewDrawer title="Campus" item={viewCampus} onClose={() => setViewCampus(null)}
-          onEdit={() => { setEditCampus(viewCampus); setViewCampus(null); }}
+      {viewCampusId && viewCampusItem && (
+        <ViewDrawer title="Campus" item={viewCampusItem} onClose={() => setViewCampusId(null)}
+          onEdit={() => { setEditCampusId(viewCampusId!); setViewCampusId(null); }}
           fields={[
             {key:"name",        label:"Campus name", wide:true},
             {key:"branchType",  label:"Type"},
@@ -391,9 +400,9 @@ export function SchoolCampusTab() {
             {key:"status",      label:"Status"},
           ]} />
       )}
-      {editCampus && (
-        <EditModal title="Campus" item={editCampus} onClose={() => setEditCampus(null)}
-          onSave={async data => { setEditCampus(null); }}
+      {editCampusId && viewCampusItem && (
+        <EditModal title="Campus" item={viewCampusItem} onClose={() => setEditCampusId(null)}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchool(null); }}
           fields={[
             {key:"name",  label:"Campus name", required:true, wide:true},
             {key:"city",  label:"City",         type:"pk-city"},
@@ -413,7 +422,7 @@ export function SchoolCampusTab() {
       )}
       {editDept && (
         <EditModal title="Department" item={editDept} onClose={() => setEditDept(null)}
-          onSave={async data => { setEditDept(null); }}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchool(null); }}
           fields={[
             {key:"name",      label:"Name",  required:true, wide:true},
             {key:"email",     label:"Email", type:"pk-email"},

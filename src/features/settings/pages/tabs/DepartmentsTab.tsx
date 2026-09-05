@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { useDepartments, useCreateDepartment, useDeleteDepartment, useCampuses } from "../../../../core/api/queries";
+import { useDepartments, useCreateDepartment, useDeleteDepartment, useCampuses , useUpdateDepartment, useDepartmentById} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 import { RowActions } from "../../../../components/ui/RowActions";
@@ -13,6 +13,10 @@ const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } cat
 
 export function DepartmentsTab() {
   const { user } = useAuth();
+  const viewItemIdOrEdit = viewItemId ?? editItemId;
+  const { data: viewItemData, isLoading: viewItemLoading } = useDepartmentById(viewItemIdOrEdit ?? undefined);
+  const viewItemItem: any = viewItemData ?? null;
+  const updDepartment = useUpdateDepartment();
   const tid = effectiveTenantId(user);
   const { data: departments, isLoading } = useDepartments();
   const { data: campuses }               = useCampuses();
@@ -23,8 +27,8 @@ export function DepartmentsTab() {
   const campusItems: any[] = (campuses    as any)?.items ?? (campuses    as any) ?? [];
 
   const [modal,    setModal]    = useState(false);
-  const [viewItem, setViewItem] = useState<any|null>(null);
-  const [editItem, setEditItem] = useState<any|null>(null);
+  const [viewItemId, setViewItemId] = useState<string|null>(null);
+  const [editItemId, setEditItemId] = useState<string|null>(null);
   const [page,     setPage]     = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [form,     setForm]     = useState({ name:"", campusId:"", email:"", telephone:"" });
@@ -87,8 +91,8 @@ export function DepartmentsTab() {
                       <td style={{ fontSize:12 }}>{meta.telephone ?? d.telephone ?? "—"}</td>
                       <td style={{ textAlign:"right" }}>
                         <RowActions
-                          onView={() => setViewItem(d)}
-                          onEdit={() => setEditItem(d)}
+                          onView={() => setViewItemId(d.id)}
+                          onEdit={() => setEditItemId(d.id)}
                           onDelete={() => remove.mutate(d.id)}
                           deleteLabel="department"
                         />
@@ -142,10 +146,10 @@ export function DepartmentsTab() {
       )}
 
       {/* View drawer */}
-      {viewItem && (
-        <ViewDrawer title="Department" item={viewItem}
-          onClose={() => setViewItem(null)}
-          onEdit={() => { setEditItem(viewItem); setViewItem(null); }}
+      {viewItemId && viewItemItem && (
+        <ViewDrawer title="Department" item={viewItemItem}
+          onClose={() => setViewItemId(null)}
+          onEdit={() => { setEditItemId(viewItemId!); setViewItemId(null); }}
           fields={[
             { key:"name",      label:"Name",  wide:true },
             { key:"code",      label:"Code" },
@@ -156,9 +160,9 @@ export function DepartmentsTab() {
       )}
 
       {/* Edit modal */}
-      {editItem && (
-        <EditModal title="Department" item={editItem}
-          onClose={() => setEditItem(null)}
+      {editItemId && viewItemItem && (
+        <EditModal title="Department" item={viewItemItem}
+          onClose={() => setEditItemId(null)}
           onSave={async () => setEditItem(null)}
           fields={[
             { key:"name",      label:"Name",  required:true, wide:true },

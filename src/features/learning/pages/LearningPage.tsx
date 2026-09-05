@@ -13,8 +13,7 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import {
   useAssignments, useCreateAssignment, useLessons,
-  useCreateLesson, useClassSections, useSubjects,
-} from "../../../core/api/queries";
+  useCreateLesson, useClassSections, useSubjects, useUpdateAssignment, useDeleteAssignment, useAssignmentById} from "../../../core/api/queries";
 import { env } from "../../../config/env";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
@@ -40,6 +39,11 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
   const meta = parseMeta(assignment.metadataJson);
   const [localAsgns, setLocalAsgns] = useState<any[]>([]);
   const { user } = useAuth();
+  const viewAsgnIdOrEdit = viewAsgnId ?? editAsgnId;
+  const { data: viewAsgnData, isLoading: viewAsgnLoading } = useAssignmentById(viewAsgnIdOrEdit ?? undefined);
+  const viewAsgnItem: any = viewAsgnData ?? null;
+  const updAssignment = useUpdateAssignment();
+  const delAssignment = useDeleteAssignment();
 
   const tid = effectiveTenantId(user) ?? "";
   const fileRef = useRef<HTMLInputElement>(null);
@@ -371,8 +375,8 @@ export function LearningPage() {
   const [submitModal, setSubmit] = useState<any | null>(null);
   const [gradeDrawer, setGrade] = useState<any | null>(null);
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
-  const [editAsgn, setEditAsgn] = useState<any|null>(null);
-  const [viewAsgn, setViewAsgn] = useState<any|null>(null);
+  const [editAsgnId, setEditAsgnId] = useState<string|null>(null);
+  const [viewAsgnId, setViewAsgnId] = useState<string|null>(null);
   const [error, setError]       = useState("");
 
   const { data, isLoading } = useAssignments();
@@ -707,12 +711,12 @@ export function LearningPage() {
         <GradeDrawer assignment={gradeDrawer} onClose={() => setGrade(null)} />
       )}
 
-      {viewAsgn && (
+      {viewAsgnId && viewAsgnItem && (
         <ViewDrawer
           title="Assignment"
-          item={viewAsgn}
-          onClose={() => setViewAsgn(null)}
-          onEdit={() => { setEditAsgn(viewAsgn!); setViewAsgn(null); }}
+          item={viewAsgnItem}
+          onClose={() => setViewAsgnId(null)}
+          onEdit={() => { setEditAsgnId(viewAsgnId!); setViewAsgnId(null); }}
           fields={[
             { key: "name", label: "Title", wide: true },
             { key: "type", label: "Type" },
@@ -724,16 +728,12 @@ export function LearningPage() {
           ]}
         />
       )}
-      {editAsgn && (
+      {editAsgnId && viewAsgnItem && (
         <EditModal
           title="Assignment"
-          item={editAsgn}
-          onClose={() => setEditAsgn(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setViewAsgn((p:any) => p.map((x:any) => x.id === editAsgn!.id ? { ...x, ...data } : x));
-            setEditAsgn(null);
-          }}
+          item={viewAsgnItem}
+          onClose={() => setEditAsgnId(null)}
+          onSave={async data => { await updAssignment.mutateAsync({id: editAsgnId!, body: data}); setEditAsgn(null); }}
           fields={[
             { key: "name", label: "Title", type: "text", required: true, wide: true },
             { key: "dueDate", label: "Due date", type: "date" },

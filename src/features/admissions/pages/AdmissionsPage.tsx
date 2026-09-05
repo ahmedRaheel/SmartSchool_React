@@ -29,7 +29,7 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-import { useSchools, useCampuses, useAcademicYears, useClassSections } from "../../../core/api/queries";
+import { useSchools, useCampuses, useAcademicYears, useClassSections , useUpdateApplication, useDeleteApplication, useApplicationById} from "../../../core/api/queries";
 import { env } from "../../../config/env";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -86,8 +86,13 @@ const WORKFLOW_RULES = [
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function AdmissionsPage() {
   const { user } = useAuth();
-  const [viewApp, setViewApp] = useState<any|null>(null);
-  const [editApp, setEditApp] = useState<any|null>(null);
+  const viewAppIdOrEdit = viewAppId ?? editAppId;
+  const { data: viewAppData, isLoading: viewAppLoading } = useApplicationById(viewAppIdOrEdit ?? undefined);
+  const viewAppItem: any = viewAppData ?? null;
+  const updApplication = useUpdateApplication();
+  const delApplication = useDeleteApplication();
+  const [viewAppId, setViewAppId] = useState<string|null>(null);
+  const [editAppId, setEditAppId] = useState<string|null>(null);
   const tid = effectiveTenantId(user) ?? "";
 
   const [page, setPage]         = useState(1);
@@ -337,9 +342,9 @@ export function AdmissionsPage() {
                       <td><span className={`status-pill ${sm.pill}`}>{sm.label}</span></td>
                       <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewApp(app)}
-                                onEdit={() => setEditApp(app)}
-                                onDelete={() => setApps(p => p.filter((x:any) => x.Id !== app.Id))}
+                                onView={() => setViewAppId(app.Id)}
+                                onEdit={() => setEditAppId(app.Id)}
+                                onDelete={() => delApplication.mutate(app.Id)}
                                 deleteLabel="application"
                               />
                             </td>
@@ -696,12 +701,12 @@ export function AdmissionsPage() {
         </div>
       )}
 
-      {viewApp && (
+      {viewAppId && viewAppItem && (
         <ViewDrawer
           title="Application"
-          item={viewApp}
-          onClose={() => setViewApp(null)}
-          onEdit={() => { setEditApp(viewApp!); setViewApp(null); }}
+          item={viewAppItem}
+          onClose={() => setViewAppId(null)}
+          onEdit={() => { setEditAppId(viewAppId!); setViewAppId(null); }}
           fields={[
             { key: "FirstName", label: "First name" },
             { key: "LastName", label: "Last name" },
@@ -715,16 +720,12 @@ export function AdmissionsPage() {
           ]}
         />
       )}
-      {editApp && (
+      {editAppId && viewAppItem && (
         <EditModal
           title="Application"
-          item={editApp}
-          onClose={() => setEditApp(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setApps((p:any) => p.map((x:any) => x.Id === editApp!.Id ? { ...x, ...data } : x));
-            setEditApp(null);
-          }}
+          item={viewAppItem}
+          onClose={() => setEditAppId(null)}
+          onSave={async data => { await updApplication.mutateAsync({id: editAppId!, body: data}); setEditApp(null); }}
           fields={[
             { key: "FirstName", label: "First name", type: "text", required: true },
             { key: "LastName", label: "Last name", type: "text", required: true },
