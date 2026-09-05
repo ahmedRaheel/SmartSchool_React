@@ -6,7 +6,7 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { BookOpen, Plus, Search, X, RotateCcw, Clock, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useBooks, useCreateBook, useLoans, useCreateLoan, useStudents } from "../../../core/api/queries";
+import { useBooks, useCreateBook, useLoans, useCreateLoan, useStudents , useUpdateBook, useDeleteBook, useBookById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -15,8 +15,16 @@ const CATS = ["Textbook","Literature","History","Science","Technology","Referenc
 
 export function LibraryPage() {
   const { user } = useAuth();
-  const [viewBook, setViewBook] = useState<any|null>(null);
-  const [editBook, setEditBook] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const updBook = useUpdateBook();
+  const delBook = useDeleteBook();
+  const [viewBookId, setViewBookId] = useState<string|null>(null);
+  const [editBookId, setEditBookId] = useState<string|null>(null);
+  const viewBookOrEdit = viewBookId ?? editBookId;
+  const { data: viewBookData } = useBookById(viewBookOrEdit ?? undefined);
+  const viewBookItem: any = viewBookData ?? null;
+
+  const [localDeletedIds, setLocalDeletedIds] = useState<string[]>([]);
+  const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"books"|"loans"|"issue">("books");
@@ -32,7 +40,7 @@ export function LibraryPage() {
   const createBook = useCreateBook();
   const createLoan = useCreateLoan();
 
-  const books    = (data as any)?.items      ?? (data as any) ?? [];
+  const books    = ((data as any)?.items ?? (data as any) ?? []).filter((b:any) => !localDeletedIds.includes(b.id));
   const loans    = (loansData as any)?.items ?? (loansData as any) ?? [];
   const students = (studData as any)?.items  ?? (studData as any) ?? [];
 
@@ -128,9 +136,9 @@ export function LibraryPage() {
                         </td>
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewBook(b)}
-                                onEdit={() => setEditBook(b)}
-                                onDelete={() => { setLocalBooks((p:any)=>p.filter((x:any)=>x.id!==b.id)) }}
+                                onView={() => setViewBookId(b.id)}
+                                onEdit={() => setEditBookId(b.id)}
+                                onDelete={() => delBook.mutate(b.id)}
                                 deleteLabel="book"
                               />
                             </td>
@@ -253,11 +261,11 @@ export function LibraryPage() {
         </div>
       )}
 
-      {viewBook && (
+      {viewBookId && viewBookItem && (
         <ViewDrawer
           title="Book"
-          item={viewBook}
-          onClose={() => setViewBook(null)}
+          item={viewBookItem}
+          onClose={() => setViewBookId(null)}
           fields={[
             { key: "name", label: "Title", wide: true },
             { key: "isbn", label: "ISBN" },
@@ -265,6 +273,26 @@ export function LibraryPage() {
             { key: "publisher", label: "Publisher" },
             { key: "copies", label: "Total copies" },
             { key: "available", label: "Available" },
+          ]}
+        
+          onEdit={() => { setEditBookId(viewBookId!); setViewBookId(null); }}/>
+      )}
+
+      {editBookId && viewBookItem && (
+        <EditModal
+          title="Book"
+          item={viewBookItem}
+          onClose={() => setEditBookId(null)}
+          onSave={async data => {
+            await updBook.mutateAsync({id: editBookId!, body: data});
+            setEditBookId(null);
+          }}
+          fields={[
+            { key:"name",      label:"Title",     required:true, wide:true },
+            { key:"isbn",      label:"ISBN" },
+            { key:"author",    label:"Author",    required:true },
+            { key:"publisher", label:"Publisher" },
+            { key:"copies",    label:"Total copies", type:"number" },
           ]}
         />
       )}

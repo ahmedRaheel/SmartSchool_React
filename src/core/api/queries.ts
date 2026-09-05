@@ -213,3 +213,92 @@ export const useRejectLeave = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["leave-requests", tid] }),
   });
 };
+
+// ── Update / Delete mutations — wired to real API when VITE_USE_MOCKS=false ───
+
+// Students
+export const useUpdateStudent  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateStudent(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["students",tid]}) }); };
+export const useDeleteStudent  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteStudent(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["students",tid]}) }); };
+
+// HR
+export const useUpdateEmployee = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateEmployee(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["employees",tid]}) }); };
+export const useDeleteEmployee = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteEmployee(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["employees",tid]}) }); };
+
+// Payroll
+export const useUpdatePayrollRun=() => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updatePayrollRun(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["payroll-runs",tid]}) }); };
+export const useDeletePayrollRun=() => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deletePayrollRun(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["payroll-runs",tid]}) }); };
+
+// Finance
+export const useUpdateInvoice  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateInvoice(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
+export const useDeleteInvoice  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteInvoice(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["invoices",tid]}) }); };
+
+// Library
+export const useUpdateBook     = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateBook(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["books",tid]}) }); };
+export const useDeleteBook     = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteBook(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["books",tid]}) }); };
+
+// Transport
+export const useUpdateVehicle  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateVehicle(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["vehicles",tid]}) }); };
+export const useDeleteVehicle  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteVehicle(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["vehicles",tid]}) }); };
+
+// Inventory
+export const useUpdateInventoryItem=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateInventoryItem(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["inventory",tid]}) }); };
+export const useDeleteInventoryItem=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteInventoryItem(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["inventory",tid]}) }); };
+
+// Activities
+export const useUpdateActivity = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateActivity(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["activities",tid]}) }); };
+export const useDeleteActivity = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteActivity(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["activities",tid]}) }); };
+
+// Admissions
+export const useUpdateApplication=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateApplication(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["applications",tid]}) }); };
+export const useDeleteApplication=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteApplication(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["applications",tid]}) }); };
+
+// Examinations
+export const useUpdateExam     = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateExam(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["exams",tid]}) }); };
+export const useDeleteExam     = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteExam(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["exams",tid]}) }); };
+
+// Learning
+export const useUpdateAssignment=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateAssignment(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["assignments",tid]}) }); };
+export const useDeleteAssignment=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteAssignment(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["assignments",tid]}) }); };
+
+// Organization
+export const useDeleteSchool   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteSchool(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["schools",tid]}) }); };
+export const useDeleteCampus   = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteCampus(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["campuses",tid]}) }); };
+export const useUpdateDepartment=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateDepartment(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["departments",tid]}) }); };
+
+// Academic Systems
+export const useUpdateAcademicSystem=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateAcademicSystem(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-systems",tid]}) }); };
+export const useDeleteAcademicSystem=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteAcademicSystem(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-systems",tid]}) }); };
+
+// Academic Structure
+export const useUpdateAcademicYear=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateAcademicYear(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-years",tid]}) }); };
+export const useUpdateGradeLevel=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateGradeLevel(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["grade-levels",tid]}) }); };
+export const useDeleteGradeLevel=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteGradeLevel(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["grade-levels",tid]}) }); };
+export const useUpdateClassSection=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateClassSection(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["class-sections",tid]}) }); };
+export const useDeleteClassSection=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteClassSection(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["class-sections",tid]}) }); };
+
+// Subjects
+export const useUpdateSubject  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateSubject(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["subjects",tid]}) }); };
+export const useDeleteSubject  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteSubject(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["subjects",tid]}) }); };
+
+// Tenants
+export const useUpdateTenant   = () => { const qc=useQueryClient(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateTenant(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["tenants"]}) }); };
+export const useDeleteTenant   = () => { const qc=useQueryClient(); return useMutation({ mutationFn:(id:string)=>A.deleteTenant(id), onSuccess:()=>qc.invalidateQueries({queryKey:["tenants"]}) }); };
+
+// ── GetById query hooks — fetches fresh record when View or Edit is opened ─────
+// enabled only when an id is provided (i.e. drawer/modal is open)
+
+export const useStudentById      = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["student",id],       queryFn:()=>A.getStudentById(id!,tid),       enabled:!!id, staleTime:0 }); };
+export const useEmployeeById     = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["employee",id],      queryFn:()=>A.getEmployeeById(id!,tid),      enabled:!!id, staleTime:0 }); };
+export const useInvoiceById      = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["invoice",id],       queryFn:()=>A.getInvoiceById(id!,tid),       enabled:!!id, staleTime:0 }); };
+export const useBookById         = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["book",id],          queryFn:()=>A.getBookById(id!,tid),          enabled:!!id, staleTime:0 }); };
+export const useVehicleById      = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["vehicle",id],       queryFn:()=>A.getVehicleById(id!,tid),       enabled:!!id, staleTime:0 }); };
+export const useInventoryItemById= (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["inv-item",id],      queryFn:()=>A.getInventoryItemById(id!,tid), enabled:!!id, staleTime:0 }); };
+export const useActivityById     = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["activity",id],      queryFn:()=>A.getActivityById(id!,tid),      enabled:!!id, staleTime:0 }); };
+export const useApplicationById  = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["application",id],   queryFn:()=>A.getApplicationById(id!,tid),   enabled:!!id, staleTime:0 }); };
+export const useExamById         = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["exam",id],          queryFn:()=>A.getExamById(id!,tid),          enabled:!!id, staleTime:0 }); };
+export const useAssignmentById   = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["assignment",id],    queryFn:()=>A.getAssignmentById(id!,tid),    enabled:!!id, staleTime:0 }); };
+export const useSchoolById       = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["school",id],        queryFn:()=>A.getSchoolById(id!,tid),        enabled:!!id, staleTime:0 }); };
+export const useCampusById       = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["campus",id],        queryFn:()=>A.getCampusById(id!,tid),        enabled:!!id, staleTime:0 }); };
+export const useDepartmentById   = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["department",id],    queryFn:()=>A.getDepartmentById(id!,tid),    enabled:!!id, staleTime:0 }); };
+export const useTenantById       = (id?:string) => useQuery({ queryKey:["tenant",id], queryFn:()=>A.getTenantById(id!), enabled:!!id, staleTime:0 });
+export const usePayrollRunById   = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["payroll-run",id],   queryFn:()=>A.getPayrollRunById(id!,tid),    enabled:!!id, staleTime:0 }); };

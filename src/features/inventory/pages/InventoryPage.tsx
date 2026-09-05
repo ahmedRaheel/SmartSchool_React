@@ -6,7 +6,7 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { Package, Plus, X, Search, ShoppingCart, AlertTriangle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useItems, useCreateItem, usePurchaseOrders, useCreatePurchaseOrder } from "../../../core/api/queries";
+import { useItems, useCreateItem, usePurchaseOrders, useCreatePurchaseOrder , useUpdateInventoryItem, useDeleteInventoryItem, useInventoryItemById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -17,9 +17,16 @@ const UNITS = ["Piece","Box","Pack","Ream","Set","Dozen","Kg","Litre","Metre"];
 const PO_STATUS: Record<string,string> = { DRAFT:"gray", PENDING:"info", APPROVED:"warning", RECEIVED:"success", CANCELLED:"danger" };
 
 export function InventoryPage() {
+  const [localItems, setLocalItems] = useState<any[]>([]);
   const { user } = useAuth();
-  const [viewItem, setViewItem] = useState<any|null>(null);
-  const [editItem, setEditItem] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const updInventoryItem = useUpdateInventoryItem();
+  const delInventoryItem = useDeleteInventoryItem();
+  const [viewItemId, setViewItemId] = useState<string|null>(null);
+  const [editItemId, setEditItemId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const viewItemOrEdit = viewItemId ?? editItemId;
+  const { data: viewItemData } = useInventoryItemById(viewItemOrEdit ?? undefined);
+    const viewItemItem: any = viewItemData ?? null;
+
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"items"|"orders">("items");
@@ -111,9 +118,9 @@ export function InventoryPage() {
                       <td>{low?<span className="status-pill danger">Low stock</span>:<span className="status-pill success">OK</span>}</td>
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewItem(it)}
-                                onEdit={() => setEditItem(it)}
-                                onDelete={() => { setLocalItems((p:any)=>p.filter((x:any)=>x.id!==it.id)) }}
+                                onView={() => setViewItemId(it.id)}
+                                onEdit={() => setEditItemId(it.id)}
+                                onDelete={() => delInventoryItem.mutate(it.id)}
                                 deleteLabel="item"
                               />
                             </td>
@@ -201,17 +208,36 @@ export function InventoryPage() {
         </div>
       )}
 
-      {viewItem && (
+      {viewItemId && viewItemItem && (
         <ViewDrawer
           title="Inventory item"
-          item={viewItem}
-          onClose={() => setViewItem(null)}
+          item={viewItemItem}
+          onClose={() => setViewItemId(null)}
           fields={[
             { key: "name", label: "Item name", wide: true },
             { key: "category", label: "Category" },
             { key: "quantity", label: "Quantity" },
             { key: "unitPrice", label: "Unit price" },
             { key: "supplier", label: "Supplier" },
+          ]}
+        />
+      )}
+
+      {editItemId && viewItemItem && (
+        <EditModal
+          title="InventoryItem"
+          item={viewItemItem}
+          onClose={() => setEditItemId(null)}
+          onSave={async data => {
+            await updInventoryItem.mutateAsync({id: editItemId!, body: data});
+            setEditItemId(null);
+          }}
+          fields={[
+            { key:"name",         label:"Item name",   required:true, wide:true },
+            { key:"category",     label:"Category" },
+            { key:"quantity",     label:"Quantity",    type:"number" },
+            { key:"unitPrice",    label:"Unit price",  type:"number" },
+            { key:"reorderLevel", label:"Reorder at",  type:"number" },
           ]}
         />
       )}

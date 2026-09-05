@@ -6,7 +6,7 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { Plus, X, Star, Trophy, Users } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useActivities, useCreateActivity, useAwards, useCreateAward, useStudents } from "../../../core/api/queries";
+import { useActivities, useCreateActivity, useAwards, useCreateAward, useStudents , useUpdateActivity, useDeleteActivity, useActivityById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -17,8 +17,15 @@ const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning",
 
 export function ActivitiesPage() {
   const { user } = useAuth();
-  const [viewActivity, setViewActivity] = useState<any|null>(null);
-  const [editActivity, setEditActivity] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const updActivity = useUpdateActivity();
+  const delActivity = useDeleteActivity();
+  const [localActivities, setLocalActivities] = useState<any[]>([]);
+  const [viewActivityId, setViewActivityId] = useState<string|null>(null);
+  const [editActivityId, setEditActivityId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const viewActivityOrEdit = viewActivityId ?? editActivityId;
+  const { data: viewActivityData } = useActivityById(viewActivityOrEdit ?? undefined);
+    const viewActivityItem: any = viewActivityData ?? null;
+
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab]  = useState<"activities"|"awards">("activities");
@@ -100,9 +107,9 @@ export function ActivitiesPage() {
                       <td><span className={`status-pill ${STATUS_PILL[m.status??"UPCOMING"]??"info"}`}>{m.status??"UPCOMING"}</span></td>
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewActivity(a)}
-                                onEdit={() => setEditActivity(a)}
-                                onDelete={() => { setLocalActivities((p:any)=>p.filter((x:any)=>x.id!==a.id)) }}
+                                onView={() => setViewActivityId(a.id)}
+                                onEdit={() => setEditActivityId(a.id)}
+                                onDelete={() => delActivity.mutate(a.id)}
                                 deleteLabel="activity"
                               />
                             </td>
@@ -186,17 +193,37 @@ export function ActivitiesPage() {
         </div>
       )}
 
-      {viewActivity && (
+      {viewActivityId && viewActivityItem && (
         <ViewDrawer
           title="Activity"
-          item={viewActivity}
-          onClose={() => setViewActivity(null)}
+          item={viewActivityItem}
+          onClose={() => setViewActivityId(null)}
           fields={[
             { key: "name", label: "Activity", wide: true },
             { key: "activityType", label: "Type" },
             { key: "venue", label: "Venue" },
             { key: "startDate", label: "Start" },
             { key: "endDate", label: "End" },
+          ]}
+        
+          onEdit={() => { setEditActivityId(viewActivityId!); setViewActivityId(null); }}/>
+      )}
+
+      {editActivityId && viewActivityItem && (
+        <EditModal
+          title="Activity"
+          item={viewActivityItem}
+          onClose={() => setEditActivityId(null)}
+          onSave={async data => {
+            await updActivity.mutateAsync({id: editActivityId!, body: data});
+            setEditActivityId(null);
+          }}
+          fields={[
+            { key:"name",         label:"Activity name", required:true, wide:true },
+            { key:"activityType", label:"Type", type:"select", options:[{value:"SPORTS",label:"Sports"},{value:"CULTURAL",label:"Cultural"},{value:"ACADEMIC",label:"Academic"},{value:"TRIP",label:"Trip"}] },
+            { key:"venue",        label:"Venue" },
+            { key:"startDate",    label:"Start date", type:"date" },
+            { key:"endDate",      label:"End date",   type:"date" },
           ]}
         />
       )}

@@ -6,18 +6,17 @@
  * ─ Publish results with one click → status changes to PUBLISHED
  * ─ Grade scale configuration
  */
+import { env } from "../../../config/env";
 import { useState, useMemo, useRef } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
   ClipboardCheck, Plus, Search, X, BookOpen, CheckCircle2,
-  AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy,
-} from "lucide-react";
+  AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy} from "lucide-react";
 import { PageHeader }  from "../../../components/ui/PageHeader";
 import { StatCard }    from "../../../components/ui/StatCard";
 import {
   useExams, useCreateExam, useGradeScales, useCreateGradeScale,
-  useExamResults, useCampuses, useStudents, useClassSections,
-} from "../../../core/api/queries";
+  useExamResults, useCampuses, useStudents, useClassSections, useUpdateExam, useDeleteExam, useExamById} from "../../../core/api/queries";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
@@ -68,9 +67,11 @@ function computeGrade(pct: number, scale: GradeScaleEntry[]): { grade: string; g
 // ─ Marks Entry Grid ─────────────────────────────────────────────────────────
 function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScaleEntry[]; onClose: () => void }) {
   const meta = parseMeta(exam.metadataJson);
+  const [editExamId, setEditExamId] = useState<string|null>(null);
   const { user } = useAuth();
-  const [editExam, setEditExam] = useState<any|null>(null);
-  const [viewExam, setViewExam] = useState<any|null>(null);
+  const updExam = useUpdateExam();
+  const delExam = useDeleteExam();
+ 
   const tid = effectiveTenantId(user) ?? "";
 
   const totalMarks = meta.marks ?? 100;
@@ -257,11 +258,10 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
                   </td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => e.id}
-                                onEdit={() => setViewExam(e)}
-                                onDelete={() => { setEditExam(e) }}
-                                deleteLabel="setLocalItems && setLocalItems((p:any)=>p.filter((x:any)=>x.id!==e.id))"
-                                exam
+                                onView={() => row.studentId}
+                                onEdit={() => setEditExamId(row.studentId)}
+                                onDelete={() => delExam.mutate(row.studentId)}
+                                deleteLabel="record"
                               />
                             </td>
                 </tr>
@@ -298,6 +298,11 @@ export function ExaminationsPage() {
   const [open, setOpen] = useState(false);
   const [gsOpen, setGsOpen] = useState(false);
   const [markEntry, setMarkEntry] = useState<any | null>(null);
+  const [viewExamId, setViewExamId] = useState<string|null>(null);
+  const [editExamId, setEditExamId] = useState<string|null>(null);
+  const viewExamOrEdit = viewExamId ?? editExamId;
+  const { data: viewExamData } = useExamById(viewExamOrEdit ?? undefined);
+  const viewExamItem: any = viewExamData ?? null;
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -597,12 +602,12 @@ export function ExaminationsPage() {
       {/* ── MARKS ENTRY MODAL ─────────────────────────────────────────────── */}
       {markEntry && <MarksEntryGrid exam={markEntry} scale={activeScale} onClose={() => setMarkEntry(null)} />}
 
-      {viewExam && (
+      {viewExamId && viewExamItem && (
         <ViewDrawer
           title="Exam"
-          item={viewExam}
-          onClose={() => setViewExam(null)}
-          onEdit={() => { setEditExam(viewExam!); setViewExam(null); }}
+          item={viewExamItem}
+          onClose={() => setViewExamId(null)}
+          onEdit={() => { setEditExamId(viewExamId!); setViewExamId(null); }}
           fields={[
             { key: "name", label: "Exam name", wide: true },
             { key: "type", label: "Type" },
@@ -615,16 +620,12 @@ export function ExaminationsPage() {
           ]}
         />
       )}
-      {editExam && (
+      {editExamId && viewExamItem && (
         <EditModal
           title="Exam"
-          item={editExam}
-          onClose={() => setEditExam(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editExam!.id ? { ...x, ...data } : x));
-            setEditExam(null);
-          }}
+          item={viewExamItem}
+          onClose={() => setEditExamId(null)}
+          onSave={async data => { await viewExamItem.mutateAsync({id: editExamId!, body: data}); setEditExamId(null); }}
           fields={[
             { key: "name", label: "Exam name", type: "text", required: true, wide: true },
             { key: "startDate", label: "Start date", type: "date" },

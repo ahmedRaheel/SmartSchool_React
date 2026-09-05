@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { Building2, Plus, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useTenants, useCreateTenant, useImpersonate } from "../../../core/api/queries";
+import { useTenants, useCreateTenant, useImpersonate , useUpdateTenant, useDeleteTenant, useTenantById} from "../../../core/api/queries";
 import { useNavigate } from "react-router-dom";
 
 function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
@@ -24,6 +24,8 @@ export function TenantManagementPage() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<any>(null);
+  const updTenant = useUpdateTenant();
+  const delTenant = useDeleteTenant();
   const [form, setForm] = useState({
     organizationName:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"",
     contactName:"", contactEmail:"", contactPhone:"", contactAddress:"",
@@ -32,6 +34,11 @@ export function TenantManagementPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(25);
   const [localTenants, setLocalTenants] = React.useState<any[]>([]);
+  const [viewTenantId, setViewTenantId] = React.useState<string|null>(null);
+  const [editTenantId, setEditTenantId] = React.useState<string|null>(null);
+  const viewTenantOrEdit = viewTenantId ?? editTenantId;
+  const { data: viewTenantData } = useTenantById(viewTenantOrEdit ?? undefined);
+  const viewTenantItem: any = viewTenantData ?? null;
   const { data, isLoading, isFetching } = useTenants(page, pageSize);
   React.useEffect(()=>{
     const rows = (data as any)?.items;
@@ -124,11 +131,10 @@ export function TenantManagementPage() {
                       </td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => t.id}
-                                onEdit={() => setViewTenant(t)}
-                                onDelete={() => { setEditTenant(t) }}
-                                deleteLabel="setLocalTenants && setLocalTenants((p:any)=>p.filter((x:any)=>x.id!==t.id))"
-                                school
+                                onView={() => setViewTenantId(t.id)}
+                                onEdit={() => setEditTenantId(t.id)}
+                                onDelete={() => delTenant.mutate(t.id)}
+                                deleteLabel="school"
                               />
                             </td>
                     </tr>
@@ -196,13 +202,13 @@ export function TenantManagementPage() {
                     <label className="human-field"><span>First name *</span><input value={form.adminFirstName} onChange={sf("adminFirstName")}/></label>
                     <label className="human-field"><span>Last name *</span><input value={form.adminLastName} onChange={sf("adminLastName")}/></label>
                     <PkEmailInput label="Admin email *" value={form.adminEmail} onChange={(v) => sf("adminEmail")({target:{value:v}} as any)} required />
-                    <label className="human-field"><span>Phone</span><input value={form.adminPhoneNumber} onChange={sf("adminPhoneNumber")}/></label>
+                    <label className="human-field"><span>Phone</span><input value={form.adminPhoneNumber} onChange={sf("adminPhoneNumber")} placeholder="0300-1234567"/></label>
                   </div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Contact info</div>
                   <div className="human-form-grid">
                     <label className="human-field"><span>Contact name *</span><input value={form.contactName} onChange={sf("contactName")}/></label>
-                    <label className="human-field"><span>Contact email *</span><input type="email" value={form.contactEmail} onChange={sf("contactEmail")}/></label>
-                    <label className="human-field"><span>Contact phone *</span><input value={form.contactPhone} onChange={sf("contactPhone")}/></label>
+                    <label className="human-field"><span>Contact email *</span><input type="email" value={form.contactEmail} onChange={sf("contactEmail")} placeholder="admin@school.edu.pk"/></label>
+                    <label className="human-field"><span>Contact phone *</span><input value={form.contactPhone} onChange={sf("contactPhone")} placeholder="021-12345678"/></label>
                     <label className="human-field field-wide"><span>Contact address *</span><input value={form.contactAddress} onChange={sf("contactAddress")}/></label>
                   </div>
                   {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
@@ -217,12 +223,12 @@ export function TenantManagementPage() {
         </div>
       )}
 
-      {viewTenant && (
+      {viewTenantId && viewTenantItem && (
         <ViewDrawer
           title="School"
-          item={viewTenant}
-          onClose={() => setViewTenant(null)}
-          onEdit={() => { setEditTenant(viewTenant!); setViewTenant(null); }}
+          item={viewTenantItem}
+          onClose={() => setViewTenantId(null)}
+          onEdit={() => { setEditTenantId(viewTenantId!); setViewTenantId(null); }}
           fields={[
             { key: "organizationName", label: "School name", wide: true },
             { key: "code", label: "Code" },
@@ -233,16 +239,12 @@ export function TenantManagementPage() {
           ]}
         />
       )}
-      {editTenant && (
+      {editTenantId && viewTenantItem && (
         <EditModal
           title="School"
-          item={editTenant}
-          onClose={() => setEditTenant(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editTenant!.id ? { ...x, ...data } : x));
-            setEditTenant(null);
-          }}
+          item={viewTenantItem}
+          onClose={() => setEditTenantId(null)}
+          onSave={async data => { await updTenant.mutateAsync({id: editTenantId!, body: data}); setEditTenantId(null); }}
           fields={[
             { key: "organizationName", label: "School name", type: "text", required: true, wide: true },
             { key: "contactEmail", label: "Contact email", type: "pk-email", wide: true },

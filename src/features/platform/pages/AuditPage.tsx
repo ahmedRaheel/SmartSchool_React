@@ -58,7 +58,7 @@ export function AuditPage() {
                       <td><span className={`status-pill ${meta.status==="Success"?"success":"danger"}`} style={{ fontSize:9 }}>{meta.status ?? "—"}</span></td>
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewLog(item)}
+                                onView={() => setViewLog(meta)}
                                 deleteLabel="log entry"
                               />
                             </td>

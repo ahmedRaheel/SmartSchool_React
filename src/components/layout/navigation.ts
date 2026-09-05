@@ -6,8 +6,7 @@ import {
   ShieldCheck, Users, Wallet, Workflow, Building2, ChartNoAxesCombined,
   Cpu, ScrollText, Zap, Globe, CreditCard, Package, Brain, BookMarked,
   FlaskConical, MapPin, Sparkles, UserCircle, Briefcase, FileText,
-  Home, Star, Calendar,
-} from "lucide-react";
+  Home, Star, Calendar} from "lucide-react";
 
 export interface NavigationItem {
   path: string;

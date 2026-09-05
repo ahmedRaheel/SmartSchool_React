@@ -6,15 +6,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Bell, MessageSquare, Plus, Send, X, CheckCheck, Search,
-  Users, RefreshCw, Megaphone, Dot,
-} from "lucide-react";
+  Users, RefreshCw, Megaphone, Dot} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import {
   useConversations, useMessages, useSendMessage,
   useCreateConversation, useNotifications,
-  useMarkRead, useMarkAllRead, useUnreadCount,
-} from "../../../core/api/queries";
+  useMarkRead, useMarkAllRead, useUnreadCount} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 

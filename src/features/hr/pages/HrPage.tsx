@@ -10,8 +10,7 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
 import {
   useEmployees, useCreateEmployee, useCampuses, useDepartments,
-  useLeaveRequests, useApproveLeave, useRejectLeave,
-} from "../../../core/api/queries";
+  useLeaveRequests, useApproveLeave, useRejectLeave, useUpdateEmployee, useDeleteEmployee, useEmployeeById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { usePermissions } from "../../../core/rbac/usePermissions";
@@ -22,8 +21,14 @@ const EMPLOYMENT_TYPES = ["PERMANENT","CONTRACT","PART_TIME"];
 
 export function HrPage() {
   const { user } = useAuth();
-  const [viewEmp, setViewEmp] = useState<any|null>(null);
-  const [editEmp, setEditEmp] = useState<any|null>(null);
+  const updEmployee = useUpdateEmployee();
+  const delEmployee = useDeleteEmployee();
+  const [viewEmpId, setViewEmpId] = useState<string|null>(null);
+  const [editEmpId, setEditEmpId] = useState<string|null>(null);
+  const viewEmpOrEdit = viewEmpId ?? editEmpId;
+  const { data: viewEmpData } = useEmployeeById(viewEmpOrEdit ?? undefined);
+    const viewEmpItem: any = viewEmpData ?? null;
+
   const tid = effectiveTenantId(user) ?? "";
   const perms = usePermissions();
   const [page, setPage]         = useState(1);
@@ -288,9 +293,9 @@ export function HrPage() {
                             )}
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewEmp(emp)}
-                                onEdit={() => setEditEmp(emp)}
-                                onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== emp.id))}
+                                onView={() => setViewEmpId(viewEmpId!)}
+                                onEdit={() => setEditEmpId(leave.id)}
+                                onDelete={() => delEmployee.mutate(leave.id)}
                                 deleteLabel="staff member"
                               />
                             </td>
@@ -575,11 +580,11 @@ export function HrPage() {
         </div>
       )}
 
-      {viewEmp && (
+      {viewEmpId && viewEmpItem && (
         <ViewDrawer
           title="Staff member"
-          item={viewEmp}
-          onClose={() => setViewEmp(null)}
+          item={viewEmpItem}
+          onClose={() => setViewEmpId(null)}
           fields={[
             { key: "firstName", label: "First name" },
             { key: "lastName", label: "Last name" },
@@ -589,6 +594,24 @@ export function HrPage() {
             { key: "joiningDate", label: "Joined" },
             { key: "phone", label: "Phone" },
             { key: "email", label: "Email", wide: true },
+          ]}
+        />
+      )}
+
+      {editEmpId && viewEmpItem && (
+        <EditModal
+          title="Employee"
+          item={viewEmpItem}
+          onClose={() => setEditEmpId(null)}
+          onSave={async data => {
+            await updEmployee.mutateAsync({id: editEmpId!, body: data});
+            setEditEmpId(null);
+          }}
+          fields={[
+            { key:"firstName",  label:"First name",  required:true },
+            { key:"lastName",   label:"Last name",   required:true },
+            { key:"phone",      label:"Phone",       type:"pk-phone" },
+            { key:"email",      label:"Email",       type:"pk-email", wide:true },
           ]}
         />
       )}

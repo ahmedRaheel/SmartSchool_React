@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { DollarSign, Plus, Search, X, CheckCircle2, FileText, Briefcase } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useEmployees, usePayrollRuns, useCreatePayrollRun, useSalaryStructures, usePayslips } from "../../../core/api/queries";
+import { useEmployees, usePayrollRuns, useCreatePayrollRun, useSalaryStructures, usePayslips , useUpdatePayrollRun, useDeletePayrollRun, usePayrollRunById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { EditModal }  from "../../../components/ui/EditModal";
@@ -18,8 +18,14 @@ const SALARY_MAP: Record<string,number> = {
 
 export function PayrollPage() {
   const { user } = useAuth();
-  const [editRun, setEditRun] = useState<any|null>(null);
-  const [viewRun, setViewRun] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const updPayrollRun = useUpdatePayrollRun();
+  const delPayrollRun = useDeletePayrollRun();
+  const [editRunId, setEditRunId] = useState<string|null>(null);
+  const [viewRunId, setViewRunId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const viewRunOrEdit = viewRunId ?? editRunId;
+  const { data: viewRunData } = usePayrollRunById(viewRunOrEdit ?? undefined);
+    const viewRunItem: any = viewRunData ?? null;
+
   const [tab, setTab] = useState<"register"|"runs"|"payslips">("register");
   const [search, setSearch] = useState("");
   const [runModal, setRunModal] = useState(false);
@@ -107,11 +113,11 @@ export function PayrollPage() {
                       <td><span className={`status-pill ${e.status==="ACTIVE"?"success":"gray"}`}>{e.status}</span></td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => run.id}
-                                onEdit={() => setViewRun(run)}
-                                onDelete={() => { setEditRun(run) }}
-                                deleteLabel="setLocalRuns && setLocalRuns((p:any)=>p.filter((x:any)=>x.id!==run.id))"
-                                payroll run
+                                onView={() => setViewRunId(e.id)}
+                                onEdit={() => setEditRunId(e.id)}
+                                onDelete={() => delPayrollRun.mutate(e.id)}
+                                deleteLabel="record"
+                                
                               />
                             </td>
                     </tr>
@@ -210,8 +216,8 @@ export function PayrollPage() {
         </div>
       )}
 
-      {viewRun && (
-        <ViewDrawer title="Payroll run" item={viewRun} onClose={() => setViewRun(null)}
+      {viewRunId && viewRunItem && (
+        <ViewDrawer title="Payroll run" item={viewRunItem} onClose={() => setViewRunId(null)}
           fields={[
             { key: "name",      label: "Run name", wide: true },
             { key: "month",     label: "Month" },

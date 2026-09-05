@@ -152,7 +152,6 @@ export function WorkflowCenterPage() {
                                 onView={() => a.id}
                                 onEdit={() => setViewWf(a)}
                                                                 deleteLabel="record"
-                                workflow item
                               />
                             </td>
                     </tr>

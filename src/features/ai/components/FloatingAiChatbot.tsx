@@ -47,7 +47,7 @@ export function FloatingAiChatbot() {
     setMessages(m => [...m, { role:"user", text }]);
     setLoading(true);
     try {
-      const res = await aiApi.chatbot(bot, { question: text, tenantId });
+      const res = await aiApi.chatbot(bot, { Question: text, TenantId:  tenantId });
       setMessages(m => [...m, { role:"ai", text: res.data.answer }]);
     } catch {
       setMessages(m => [...m, { role:"ai", text:"I'm having trouble connecting. Please try again." }]);

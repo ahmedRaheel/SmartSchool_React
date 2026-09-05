@@ -3,18 +3,16 @@
  * Teacher view: create, view submissions, grade inline
  * Student view: view assigned work, submit with file + comment, see grade
  */
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
   Plus, X, Upload, CheckCircle2, Clock, FileText,
-  AlertCircle, Send, Eye, BookOpen, Edit3, Star,
-} from "lucide-react";
+  AlertCircle, Send, Eye, BookOpen, Edit3, Star} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import {
   useAssignments, useCreateAssignment, useLessons,
-  useCreateLesson, useClassSections, useSubjects,
-} from "../../../core/api/queries";
+  useCreateLesson, useClassSections, useSubjects, useUpdateAssignment, useDeleteAssignment, useAssignmentById} from "../../../core/api/queries";
 import { env } from "../../../config/env";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
@@ -38,9 +36,11 @@ const MOCK_SUBMISSIONS = [
 // ─── Student Submit Modal ─────────────────────────────────────────────────────
 function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose: () => void; onDone: () => void }) {
   const meta = parseMeta(assignment.metadataJson);
+  const [localAsgns, setLocalAsgns] = useState<any[]>([]);
   const { user } = useAuth();
-  const [editAsgn, setEditAsgn] = useState<any|null>(null);
-  const [viewAsgn, setViewAsgn] = useState<any|null>(null);
+    
+  const delAssignment = useDeleteAssignment();
+
   const tid = effectiveTenantId(user) ?? "";
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile]       = useState<File | null>(null);
@@ -50,7 +50,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
   const [error, setError]     = useState("");
 
   const due = meta.dueDate ? new Date(meta.dueDate + "T" + (meta.dueTime ?? "23:59")) : null;
-  const isLate = due && new Date() > due;
+  const isLate = due ? due && new Date() > due : false;
 
   async function submit() {
     if (!file && !comment.trim()) { setError("Attach a file or write a comment before submitting."); return; }
@@ -160,7 +160,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
 
             <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
               <button className="secondary" onClick={onClose}>Cancel</button>
-              <button className="primary" onClick={submit} disabled={submitting || (isLate && !meta.allowLate)}
+              <button className="primary" onClick={submit} disabled={!!(submitting || (isLate && !meta.allowLate))}
                 style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Send size={13} /> {submitting ? "Submitting…" : "Submit assignment"}
               </button>
@@ -232,7 +232,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
         {/* Progress bar */}
         <div style={{ padding: "12px 20px", background: "var(--surface-2)", borderBottom: "1px solid var(--line)", display: "flex", gap: 16, alignItems: "center" }}>
           {[["Submitted", counts.submitted, "info"], ["Late", counts.late, "warning"], ["Graded", counts.graded, "success"], ["Missing", counts.missing, "danger"]].map(([l, v, t]) => (
-            <div key={String(l)} style={{ display: "flex", align: "center", gap: 6 }}>
+            <div key={String(l)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span className={`status-pill ${t}`} style={{ fontSize: 10 }}>{v} {l}</span>
             </div>
           ))}
@@ -287,15 +287,6 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                         </button>
                       )}
                     </td>
-<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                              <RowActions
-                                onView={() => a.id}
-                                onEdit={() => setViewAsgn(a)}
-                                onDelete={() => { setEditAsgn(a) }}
-                                deleteLabel="setLocalItems && setLocalItems((p:any)=>p.filter((x:any)=>x.id!==a.id))"
-                                assignment
-                              />
-                            </td>
                   </tr>
                 ))}
               </tbody>
@@ -380,6 +371,15 @@ export function LearningPage() {
   const [submitModal, setSubmit] = useState<any | null>(null);
   const [gradeDrawer, setGrade] = useState<any | null>(null);
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
+  const [editAsgnId, setEditAsgnId] = useState<string|null>(null);
+  const [viewAsgnId, setViewAsgnId] = useState<string|null>(null);
+  const viewAsgnOrEdit = viewAsgnId ?? editAsgnId;
+
+  const { data: viewAsgnData } = useAssignmentById(viewAsgnOrEdit ?? undefined);
+
+  const viewAsgnItem: any = viewAsgnData ?? null;
+    const updAssignment = useUpdateAssignment();
+
   const [error, setError]       = useState("");
 
   const { data, isLoading } = useAssignments();
@@ -714,12 +714,12 @@ export function LearningPage() {
         <GradeDrawer assignment={gradeDrawer} onClose={() => setGrade(null)} />
       )}
 
-      {viewAsgn && (
+      {viewAsgnId && viewAsgnItem && (
         <ViewDrawer
           title="Assignment"
-          item={viewAsgn}
-          onClose={() => setViewAsgn(null)}
-          onEdit={() => { setEditAsgn(viewAsgn!); setViewAsgn(null); }}
+          item={viewAsgnItem}
+          onClose={() => setViewAsgnId(null)}
+          onEdit={() => { setEditAsgnId(viewAsgnId!); setViewAsgnId(null); }}
           fields={[
             { key: "name", label: "Title", wide: true },
             { key: "type", label: "Type" },
@@ -731,16 +731,12 @@ export function LearningPage() {
           ]}
         />
       )}
-      {editAsgn && (
+      {editAsgnId && viewAsgnItem && (
         <EditModal
           title="Assignment"
-          item={editAsgn}
-          onClose={() => setEditAsgn(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editAsgn!.id ? { ...x, ...data } : x));
-            setEditAsgn(null);
-          }}
+          item={viewAsgnItem}
+          onClose={() => setEditAsgnId(null)}
+          onSave={async data => { await updAssignment.mutateAsync({id: editAsgnId!, body: data}); setEditAsgnId(null); }}
           fields={[
             { key: "name", label: "Title", type: "text", required: true, wide: true },
             { key: "dueDate", label: "Due date", type: "date" },

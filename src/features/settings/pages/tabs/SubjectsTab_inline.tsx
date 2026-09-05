@@ -41,7 +41,7 @@ export function SubjectsTab() {
             <thead><tr><th>Code</th><th>Subject</th><th>Elective</th></tr></thead>
             <tbody>
               {items.length===0 ? <tr><td colSpan={3} style={{padding:24,textAlign:"center",color:"var(--muted)"}}>No subjects yet.</td></tr>
-              : items.map(s=>{
+              : items.map((s: any)=>{
                 const m = s.metadataJson?JSON.parse(s.metadataJson):{};
                 return <tr key={s.id}><td><code style={{fontSize:11}}>{s.code}</code></td><td><b>{s.name}</b></td><td><span className={`status-pill ${m.isElective?"info":"gray"}`}>{m.isElective?"Yes":"No"}</span></td></tr>;
               })}

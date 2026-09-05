@@ -37,10 +37,25 @@ export function LookupConfigTab() {
           <div style={{ fontSize:10, color:"var(--muted)", padding:"6px 8px 4px", fontWeight:700, textTransform:"uppercase", letterSpacing:.8 }}>Lookup types</div>
           {tLoad ? <div style={{ padding:10, color:"var(--muted)", fontSize:12 }}>Loading…</div> :
             typeList.map((t: string) => (
-              <button key={t} onClick={() => setSelected(t)}
-                style={{ width:"100%", padding:"8px 10px", border:"none", borderRadius:8, cursor:"pointer", textAlign:"left", fontSize:11, fontWeight:selected===t?600:400, background:selected===t?"var(--navy)":t==="transparent", color:selected===t?"#fff":"var(--text)", marginBottom:2 }}>
-                {t.replace(/_/g," ")}
-              </button>
+           <button
+  key={t}
+  onClick={() => setSelected(t)}
+  style={{
+    width: "100%",
+    padding: "8px 10px",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+    textAlign: "left",
+    fontSize: 11,
+    fontWeight: selected === t ? 600 : 400,
+    background: selected === t ? "var(--navy)" : "transparent",
+    color: selected === t ? "#fff" : "var(--text)",
+    marginBottom: 2
+  }}
+>
+  {t.replace(/_/g, " ")}
+</button>
             ))
           }
         </div>

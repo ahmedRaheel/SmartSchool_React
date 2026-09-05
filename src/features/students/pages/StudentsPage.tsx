@@ -9,15 +9,20 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
 import {
   useStudents, useCreateStudent, useCreateEnrollment,
-  useCampuses, useAcademicYears, useClassSections, useGradeLevels,
-} from "../../../core/api/queries";
+  useCampuses, useAcademicYears, useClassSections, useGradeLevels, useUpdateStudent, useDeleteStudent, useStudentById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
 export function StudentsPage() {
   const { user } = useAuth();
-  const [viewStudent, setViewStudent] = useState<any|null>(null);
-  const [editStudent, setEditStudent] = useState<any|null>(null);
+  const updStudent = useUpdateStudent();
+  const delStudent = useDeleteStudent();
+  const [viewStudentId, setViewStudentId] = useState<string|null>(null);
+  const [editStudentId, setEditStudentId] = useState<string|null>(null);
+  const viewStudentOrEdit = viewStudentId ?? editStudentId;
+  const { data: viewStudentData } = useStudentById(viewStudentOrEdit ?? undefined);
+  const viewStudentItem: any = viewStudentData ?? null;
+
   const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -152,9 +157,9 @@ export function StudentsPage() {
                               {s.status !== "ACTIVE" && (
                                 <>
                                   <RowActions
-                                    onView={() => setViewStudent(s)}
-                                    onEdit={() => setEditStudent(s)}
-                                    onDelete={() => setLocalEmp(p => p.filter((x:any) => x.id !== s.id))}
+                                    onView={() => setViewStudentId(s.id)}
+                                    onEdit={() => setEditStudentId(s.id)}
+                                    onDelete={() => delStudent.mutate(s.id)}
                                     deleteLabel="student"
                                     extra={[]}
                                   />
@@ -324,11 +329,11 @@ export function StudentsPage() {
         </div>
       )}
 
-      {viewStudent && (
+      {viewStudentId && viewStudentItem && (
         <ViewDrawer
           title="Student"
-          item={viewStudent}
-          onClose={() => setViewStudent(null)}
+          item={viewStudentItem}
+          onClose={() => setViewStudentId(null)}
           fields={[
             { key: "firstName", label: "First name" },
             { key: "lastName", label: "Last name" },
@@ -336,6 +341,26 @@ export function StudentsPage() {
             { key: "gender", label: "Gender" },
             { key: "dateOfBirth", label: "Date of birth" },
             { key: "status", label: "Status" },
+          ]}
+        
+          onEdit={() => { setEditStudentId(viewStudentId!); setViewStudentId(null); }}/>
+      )}
+
+      {editStudentId && viewStudentItem && (
+        <EditModal
+          title="Student"
+          item={viewStudentItem}
+          onClose={() => setEditStudentId(null)}
+          onSave={async data => {
+            await updStudent.mutateAsync({id: editStudentId!, body: data});
+            setEditStudentId(null);
+          }}
+          fields={[
+            { key:"firstName",   label:"First name",   required:true },
+            { key:"lastName",    label:"Last name",    required:true },
+            { key:"gender",      label:"Gender",       type:"select", options:[{value:"Male",label:"Male"},{value:"Female",label:"Female"},{value:"Other",label:"Other"}] },
+            { key:"dateOfBirth", label:"Date of birth",type:"date" },
+            { key:"phone",       label:"Phone",        type:"pk-phone" },
           ]}
         />
       )}

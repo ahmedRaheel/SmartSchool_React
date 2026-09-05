@@ -14,8 +14,7 @@ import {
   useInvoices, useCreateInvoice, useCreatePayment,
   useFeeTypes, useCreateFeeType,
   useFeeStructure, useCreateFeeStructure,
-  useGradeLevels, useStudents,
-} from "../../../core/api/queries";
+  useGradeLevels, useStudents, useUpdateInvoice, useDeleteInvoice, useInvoiceById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -25,9 +24,16 @@ const STATUS_PILL: Record<string,string> = { PAID:"success", PENDING:"warning", 
 const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
 
 export function FinancePage() {
+  const [localInvoices, setLocalInvoices] = useState<any[]>([]);
   const { user } = useAuth();
-  const [viewInv, setViewInv] = useState<any|null>(null);
-  const [editInv, setEditInv] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const updInvoice = useUpdateInvoice();
+  const delInvoice = useDeleteInvoice();
+  const [viewInvId, setViewInvId] = useState<string|null>(null);
+  const [editInvId, setEditInvId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const viewInvOrEdit = viewInvId ?? editInvId;
+  const { data: viewInvData } = useInvoiceById(viewInvOrEdit ?? undefined);
+    const viewInvItem: any = viewInvData ?? null;
+
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"invoices"|"feetype"|"structure"|"payments">("invoices");
@@ -167,9 +173,9 @@ export function FinancePage() {
                           {meta.status !== "PAID" && meta.status !== "CANCELLED" && (
                             <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                               <RowActions
-                                onView={() => setViewInv(inv)}
-                                onEdit={() => setEditInv(inv)}
-                                onDelete={() => setLocalInvoices && setLocalInvoices((p:any)=>p.filter((x:any)=>x.id!==inv.id))}
+                                onView={() => setViewInvId(inv.id)}
+                                onEdit={() => setEditInvId(inv.id)}
+                                onDelete={() => delInvoice.mutate(inv.id)}
                                 deleteLabel="invoice"
                               />
                               <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>
@@ -368,12 +374,12 @@ export function FinancePage() {
         </div>
       )}
 
-      {viewInv && (
+      {viewInvId && viewInvItem && (
         <ViewDrawer
           title="Invoice"
-          item={viewInv}
-          onClose={() => setViewInv(null)}
-          onEdit={() => { setEditInv(viewInv!); setViewInv(null); }}
+          item={viewInvItem}
+          onClose={() => setViewInvId(null)}
+          onEdit={() => { setEditInvId(viewInvId!); setViewInvId(null); }}
           fields={[
             { key: "invoiceNumber", label: "Invoice #" },
             { key: "studentName", label: "Student" },
@@ -384,16 +390,12 @@ export function FinancePage() {
           ]}
         />
       )}
-      {editInv && (
+      {editInvId && viewInvItem && (
         <EditModal
           title="Invoice"
-          item={editInv}
-          onClose={() => setEditInv(null)}
-          onSave={async data => {
-            /* update local state; real app calls API */
-            setLocalItems && setLocalItems((p:any) => p.map((x:any) => x.id === editInv!.id ? { ...x, ...data } : x));
-            setEditInv(null);
-          }}
+          item={viewInvItem}
+          onClose={() => setEditInvId(null)}
+          onSave={async data => { await updInvoice.mutateAsync({id: editInvId!, body: data}); setEditInvId(null); }}
           fields={[
             { key: "amount", label: "Amount", type: "number", required: true },
             { key: "dueDate", label: "Due date", type: "date" },

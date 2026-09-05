@@ -1,24 +1,32 @@
+import { RowActions } from "../../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
+import { EditModal  } from "../../../../components/ui/EditModal";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
+import { PkPhoneInput, PkEmailInput, PkWebsiteInput, PkAddressBlock } from "../../../../components/ui/PakistanFields";
 import { Building2, GitBranch, Plus, Trash2, X } from "lucide-react";
 import {
   useSchools, useCreateSchool, useUpdateSchool,
   useCampuses, useCreateCampus, useUpdateCampus,
   useDepartments, useCreateDepartment, useDeleteDepartment,
-  useBranchGenderTypes, useEducationLevels, useAcademicSystems,
-} from "../../../../core/api/queries";
+  useBranchGenderTypes, useEducationLevels, useAcademicSystems, useDeleteSchool, useDeleteCampus, useSchoolById, useCampusById} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
 const BRANCH_TYPES = [
-  { value:"MIXED",  label:"Co-Educational",   icon:"⚥", color:"#6366F1" },
-  { value:"MALE",   label:"Boys Only",          icon:"♂", color:"#2563EB" },
-  { value:"FEMALE", label:"Girls Only",          icon:"♀", color:"#DB2777" },
-];
+  { value: 1, label: "Head Office" },
+  { value: 2, label: "Regional Head Office" },
+  { value: 3, label: "Regional Branch" },
+] as any[];
 
 function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
 
 export function SchoolCampusTab() {
+  const updSchool = useUpdateSchool();
+  const updCampus = useUpdateCampus();
   const { user } = useAuth();
+  const delCampus = useDeleteCampus();
+  const delSchool = useDeleteSchool();
   const tid = effectiveTenantId(user) ?? "";
 
   const { data: schoolsData } = useSchools();
@@ -45,8 +53,24 @@ export function SchoolCampusTab() {
   const [deptModal,    setDeptModal]    = useState(false);
   const [error, setError] = useState("");
 
+  const [viewSchoolId, setViewSchoolId] = useState<string|null>(null);
+  const [editSchoolId, setEditSchoolId] = useState<string|null>(null);
+  const viewSchoolOrEdit = viewSchoolId ?? editSchoolId;
+  const { data: viewSchoolData } = useSchoolById(viewSchoolOrEdit ?? undefined);
+  const viewSchoolItem: any = viewSchoolData ?? null;
+
+  const [viewCampusId, setViewCampusId] = useState<string|null>(null);
+  const [editCampusId, setEditCampusId] = useState<string|null>(null);
+  const viewCampusOrEdit = viewCampusId ?? editCampusId;
+  const { data: viewCampusData } = useCampusById(viewCampusOrEdit ?? undefined);
+  const viewCampusItem: any = viewCampusData ?? null;
+
+  const [viewDept,   setViewDept]   = useState<any|null>(null);
+  const [editDept,   setEditDept]   = useState<any|null>(null);
+  const [page,       setPage]       = useState(1);
+  const [pageSize,   setPageSize]   = useState(10);
   const [sForm, setSForm] = useState({ name:"", registrationNumber:"", email:"", phone:"", website:"", address:"", city:"", province:"", country:"Pakistan" });
-  const [cForm, setCForm] = useState({ schoolId:"", name:"", branchType:"MIXED", branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[] as string[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" });
+  const [cForm, setCForm] = useState({ schoolId:"", name:"", branchType:1, branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[] as string[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" });
   const [dForm, setDForm] = useState({ campusId:"", name:"", telephone:"", email:"" });
 
   function ssf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setSForm(p=>({...p,[k]:e.target.value})); }
@@ -82,7 +106,7 @@ export function SchoolCampusTab() {
         province:cForm.province||undefined, country:cForm.country||undefined,
         phone:cForm.phone||undefined, email:cForm.email||undefined,
       });
-      setCampusModal(false); setCForm({ schoolId:"", name:"", branchType:"MIXED", branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" }); setError("");
+      setCampusModal(false); setCForm({ schoolId:"", name:"", branchType:1, branchGenderTypeId:"", academicSystemId:"", educationLevelIds:[], address:"", city:"", province:"", country:"Pakistan", phone:"", email:"" }); setError("");
     } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
@@ -94,10 +118,10 @@ export function SchoolCampusTab() {
     } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
-  const BT_BADGE: Record<string,{bg:string;color:string;label:string}> = {
-    MIXED:  { bg:"#EEF2FF", color:"#6366F1", label:"Co-Ed"      },
-    MALE:   { bg:"#EFF6FF", color:"#2563EB", label:"Boys Only"   },
-    FEMALE: { bg:"#FDF2F8", color:"#DB2777", label:"Girls Only"  },
+  const BT_BADGE: Record<number,{bg:string;color:string;label:string}> = {
+    1: { bg: "#EEF2FF", color: "#6366F1", label: "Head Office" },
+    2: { bg: "#EFF6FF", color: "#2563EB", label: "Regional Head Office" },
+    3: { bg: "#F0FDF4", color: "#059669", label: "Regional Branch" },
   };
 
   return (
@@ -143,19 +167,19 @@ export function SchoolCampusTab() {
               <tbody>
                 {campuses.length===0 ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No campuses yet.</td></tr>
                 : campuses.map((c:any)=>{
-                  const bt = BT_BADGE[c.branchType] ?? BT_BADGE["MIXED"];
+                  const bt = BT_BADGE[Number(c.branchType)] ?? BT_BADGE[3];
                   const acName = acSys.find((a:any)=>a.id===c.academicSystemId)?.name ?? c.academicSystemId ?? "—";
                   return (
                     <tr key={c.id}>
                       <td>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <Building2 size={14} style={{color:bt.color,flexShrink:0}}/>
+                          <Building2 size={14} style={{color:(bt as any).color,flexShrink:0}}/>
                           <b>{c.name}</b>
                         </div>
                       </td>
                       <td><code style={{fontSize:11}}>{c.code}</code></td>
                       <td>
-                        <span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:bt.bg,color:bt.color}}>
+                        <span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:bt.bg,color:(bt as any).color}}>
                           {bt.label}
                         </span>
                       </td>
@@ -171,12 +195,12 @@ export function SchoolCampusTab() {
           {/* Info cards showing branch types */}
           <div style={{padding:"0 20px 20px",display:"flex",gap:12,flexWrap:"wrap",marginTop:8}}>
             {BRANCH_TYPES.map(bt=>(
-              <div key={bt.value} style={{padding:"10px 16px",borderRadius:10,border:`1.5px solid ${bt.color}30`,background:`${bt.color}10`,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:20}}>{bt.icon}</span>
+              <div key={bt.value} style={{padding:"10px 16px",borderRadius:10,border:`1.5px solid ${(bt as any).color}30`,background:`${(bt as any).color}10`,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:20}}>{(bt as any).icon}</span>
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,color:bt.color}}>{bt.label}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:(bt as any).color}}>{bt.label}</div>
                   <div style={{fontSize:10,color:"var(--muted)"}}>
-                    {campuses.filter((c:any)=>c.branchType===bt.value).length} branch(es)
+                    {campuses.filter((c:any)=>Number(c.branchType)===bt.value).length} branch(es)
                   </div>
                 </div>
               </div>
@@ -205,12 +229,14 @@ export function SchoolCampusTab() {
                       <td style={{fontSize:11}}>{campus?.name??d.campusId??"-"}</td>
                       <td>{d.email??"-"}</td>
                       <td>{d.telephone??"-"}</td>
-                      <td>
-                        <button className="table-action" style={{fontSize:10,color:"var(--danger)"}}
-                          onClick={()=>deleteDept.mutate(d.id)}>
-                          <Trash2 size={12}/>
-                        </button>
-                      </td>
+                      <td style={{textAlign:"right"}}>
+                    <RowActions
+                      onView={() => setViewDept(d)}
+                      onEdit={() => setEditDept(d)}
+                      onDelete={() => deleteDept.mutate(d.id)}
+                      deleteLabel="department"
+                    />
+                  </td>
                     </tr>
                   );
                 })}
@@ -228,9 +254,9 @@ export function SchoolCampusTab() {
             <div className="human-form"><div className="human-form-grid">
               <label className="human-field field-wide"><span>School name *</span><input value={sForm.name} onChange={ssf("name")} placeholder="e.g. Al-Noor Academy"/></label>
               <label className="human-field"><span>Registration #</span><input value={sForm.registrationNumber} onChange={ssf("registrationNumber")}/></label>
-              <label className="human-field"><span>Email</span><input type="email" value={sForm.email} onChange={ssf("email")}/></label>
-              <label className="human-field"><span>Phone</span><input value={sForm.phone} onChange={ssf("phone")}/></label>
-              <label className="human-field"><span>Website</span><input value={sForm.website} onChange={ssf("website")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={sForm.email} onChange={ssf("email")} placeholder="info@school.edu.pk"/></label>
+              <label className="human-field"><span>Phone</span><input value={sForm.phone} onChange={ssf("phone")} placeholder="021-12345678"/></label>
+              <label className="human-field"><span>Website</span><input value={sForm.website} onChange={ssf("website")} placeholder="https://www.school.edu.pk"/></label>
               <label className="human-field"><span>City</span><input value={sForm.city} onChange={ssf("city")}/></label>
               <label className="human-field"><span>Province</span><input value={sForm.province} onChange={ssf("province")}/></label>
               <label className="human-field"><span>Country</span><input value={sForm.country} onChange={ssf("country")}/></label>
@@ -263,21 +289,13 @@ export function SchoolCampusTab() {
               </label>
               <label className="human-field field-wide"><span>Branch name *</span><input value={cForm.name} onChange={csf("name")} placeholder="e.g. Main Campus (Boys)"/></label>
 
-              {/* Branch type selector */}
-              <div style={{gridColumn:"1/-1"}}>
-                <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:8}}>Gender policy *</div>
-                <div style={{display:"flex",gap:8}}>
-                  {BRANCH_TYPES.map(bt=>(
-                    <button key={bt.value} type="button" onClick={()=>setCForm(p=>({...p,branchType:bt.value}))}
-                      style={{flex:1,padding:"12px 8px",border:`2px solid ${cForm.branchType===bt.value?bt.color:"var(--line)"}`,borderRadius:10,background:cForm.branchType===bt.value?`${bt.color}15`:"var(--surface)",cursor:"pointer",transition:"all .15s"}}>
-                      <div style={{fontSize:24,marginBottom:4}}>{bt.icon}</div>
-                      <div style={{fontSize:11,fontWeight:700,color:cForm.branchType===bt.value?bt.color:"var(--text)"}}>{bt.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <label className="human-field"><span>Branch type *</span>
+                <select value={cForm.branchType} onChange={e=>setCForm(p=>({...p,branchType:Number(e.target.value)}))}>
+                  {BRANCH_TYPES.map(bt=><option key={bt.value} value={bt.value}>{bt.label}</option>)}
+                </select>
+              </label>
 
-              <label className="human-field"><span>Gender type *</span>
+              <label className="human-field"><span>Gender policy *</span>
                 <select value={cForm.branchGenderTypeId} onChange={csf("branchGenderTypeId")}>
                   <option value="">— Select —</option>
                   {gTypes.map((g:any)=><option key={g.id} value={g.id}>{g.name}</option>)}
@@ -307,8 +325,8 @@ export function SchoolCampusTab() {
                 </div>
               </div>
 
-              <label className="human-field"><span>Email</span><input type="email" value={cForm.email} onChange={csf("email")}/></label>
-              <label className="human-field"><span>Phone</span><input value={cForm.phone} onChange={csf("phone")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={cForm.email} onChange={csf("email")} placeholder="campus@school.edu.pk"/></label>
+              <label className="human-field"><span>Phone</span><input value={cForm.phone} onChange={csf("phone")} placeholder="042-12345678"/></label>
               <label className="human-field"><span>City</span><input value={cForm.city} onChange={csf("city")}/></label>
               <label className="human-field"><span>Province</span><input value={cForm.province} onChange={csf("province")}/></label>
               <label className="human-field field-wide"><span>Address</span><input value={cForm.address} onChange={csf("address")}/></label>
@@ -336,8 +354,8 @@ export function SchoolCampusTab() {
                 </select>
               </label>
               <label className="human-field field-wide"><span>Department name *</span><input value={dForm.name} onChange={dsf("name")} placeholder="e.g. Mathematics"/></label>
-              <label className="human-field"><span>Email</span><input type="email" value={dForm.email} onChange={dsf("email")}/></label>
-              <label className="human-field"><span>Phone</span><input value={dForm.telephone} onChange={dsf("telephone")}/></label>
+              <label className="human-field"><span>Email</span><input type="email" value={dForm.email} onChange={dsf("email")} placeholder="dept@school.edu.pk"/></label>
+              <label className="human-field"><span>Phone</span><input value={dForm.telephone} onChange={dsf("telephone")} placeholder="042-12345678"/></label>
             </div>
             {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
@@ -347,6 +365,71 @@ export function SchoolCampusTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {viewSchoolId && viewSchoolItem && (
+        <ViewDrawer title="School" item={viewSchoolItem} onClose={() => setViewSchoolId(null)}
+          onEdit={() => { setEditSchoolId(viewSchoolId!); setViewSchoolId(null); }}
+          fields={[
+            {key:"name",               label:"School name",    wide:true},
+            {key:"registrationNumber", label:"Reg #"},
+            {key:"city",               label:"City"},
+            {key:"province",           label:"Province"},
+            {key:"country",            label:"Country"},
+            {key:"phone",              label:"Phone"},
+            {key:"email",              label:"Email",          wide:true},
+          ]} />
+      )}
+      {editSchoolId && viewSchoolItem && (
+        <EditModal title="School" item={viewSchoolItem} onClose={() => setEditSchoolId(null)}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchoolId(null); }}
+          fields={[
+            {key:"name",     label:"School name",required:true, wide:true},
+            {key:"city",     label:"City",        type:"pk-city"},
+            {key:"province", label:"Province",    type:"pk-province"},
+            {key:"phone",    label:"Phone",       type:"pk-phone"},
+            {key:"email",    label:"Email",       type:"pk-email", wide:true},
+          ]} />
+      )}
+      {viewCampusId && viewCampusItem && (
+        <ViewDrawer title="Campus" item={viewCampusItem} onClose={() => setViewCampusId(null)}
+          onEdit={() => { setEditCampusId(viewCampusId!); setViewCampusId(null); }}
+          fields={[
+            {key:"name",        label:"Campus name", wide:true},
+            {key:"branchType",  label:"Type"},
+            {key:"city",        label:"City"},
+            {key:"phone",       label:"Phone"},
+            {key:"status",      label:"Status"},
+          ]} />
+      )}
+      {editCampusId && viewCampusItem && (
+        <EditModal title="Campus" item={viewCampusItem} onClose={() => setEditCampusId(null)}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchoolId(null); }}
+          fields={[
+            {key:"name",  label:"Campus name", required:true, wide:true},
+            {key:"city",  label:"City",         type:"pk-city"},
+            {key:"phone", label:"Phone",        type:"pk-phone"},
+            {key:"email", label:"Email",        type:"pk-email"},
+          ]} />
+      )}
+      {viewDept && (
+        <ViewDrawer title="Department" item={viewDept} onClose={() => setViewDept(null)}
+          onEdit={() => { setEditDept(viewDept); setViewDept(null); }}
+          fields={[
+            {key:"name",      label:"Name",  wide:true},
+            {key:"code",      label:"Code"},
+            {key:"email",     label:"Email"},
+            {key:"telephone", label:"Phone"},
+          ]} />
+      )}
+      {editDept && (
+        <EditModal title="Department" item={editDept} onClose={() => setEditDept(null)}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchoolId(null); }}
+          fields={[
+            {key:"name",      label:"Name",  required:true, wide:true},
+            {key:"email",     label:"Email", type:"pk-email"},
+            {key:"telephone", label:"Phone", type:"pk-phone"},
+          ]} />
       )}
     </>
   );

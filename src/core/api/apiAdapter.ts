@@ -22,8 +22,7 @@ import {
   MOCK_INQUIRIES, MOCK_WORKFLOW_DEFS, MOCK_APPROVALS,
   MOCK_ACTIVITIES, MOCK_ASSIGNMENTS, MOCK_INVENTORY,
   MOCK_LEAVE_REQUESTS,
-  page,
-} from "./mockData";
+  page} from "./mockData";
 
 const M = env.useMocks;
 const ms = <T>(v: T, delay = 100): Promise<T> => new Promise(r => setTimeout(() => r(v), delay));
@@ -332,3 +331,100 @@ export const submitQuizAttempt = (body: object) => M ? ms({ id:uid(), score:0, p
 export const sendChatbotMessage = (bot: string, body: { message: string; conversationId?: string; tenantId: string; contextId?: string }) =>
   M ? ms({ answer: MOCK_AI_RESPONSE.answer, conversationId: uid(), citations: MOCK_AI_RESPONSE.citations }, 900) :
   api.post(`/api/chatbots/${bot}/ask`, body).then(r=>r.data);
+
+// ── Tenant settings ───────────────────────────────────────────────────────────
+export const getTenantSettings = (tenantId: string) =>
+  M ? ms(null) : api.get("/api/organization/settings", { params: { tenantId } }).then(r => r.data);
+export const saveTenantSettings = (body: object) =>
+  M ? ms(body) : api.put("/api/organization/settings", body).then(r => r.data);
+
+// ── CRUD: Students ────────────────────────────────────────────────────────────
+export const updateStudent     = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/students/student/${id}`, body).then(r=>r.data);
+export const deleteStudent     = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/students/student/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: HR / Employees ──────────────────────────────────────────────────────
+export const updateEmployee    = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/hr/employee/${id}`, body).then(r=>r.data);
+export const deleteEmployee    = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/hr/employee/${id}`, { params:{tenantId} }).then(r=>r.data);
+export const updateLeaveRequest= (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/hr/leave-request/${id}`, body).then(r=>r.data);
+export const deleteLeaveRequest= (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/hr/leave-request/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Payroll ─────────────────────────────────────────────────────────────
+export const updatePayrollRun  = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/payroll/payroll-run/${id}`, body).then(r=>r.data);
+export const deletePayrollRun  = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/payroll/payroll-run/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Finance / Invoices ──────────────────────────────────────────────────
+export const updateInvoice     = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/finance/invoice/${id}`, body).then(r=>r.data);
+export const deleteInvoice     = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/finance/invoice/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Library / Books ─────────────────────────────────────────────────────
+export const updateBook        = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/library/book/${id}`, body).then(r=>r.data);
+export const deleteBook        = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/library/book/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Transport ───────────────────────────────────────────────────────────
+export const updateVehicle     = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/transport/vehicle/${id}`, body).then(r=>r.data);
+export const deleteVehicle     = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/transport/vehicle/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Inventory ───────────────────────────────────────────────────────────
+export const updateInventoryItem = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/inventory/item/${id}`, body).then(r=>r.data);
+export const deleteInventoryItem = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/inventory/item/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Activities ──────────────────────────────────────────────────────────
+export const updateActivity    = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/activities/activity/${id}`, body).then(r=>r.data);
+export const deleteActivity    = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/activities/activity/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Admissions ──────────────────────────────────────────────────────────
+export const updateApplication = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/admissions/application/${id}`, body).then(r=>r.data);
+export const deleteApplication = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/admissions/application/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Examinations ────────────────────────────────────────────────────────
+export const updateExam        = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/examinations/exam/${id}`, body).then(r=>r.data);
+export const deleteExam        = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/examinations/exam/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Learning / Assignments ──────────────────────────────────────────────
+export const updateAssignment  = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/learning/assignment/${id}`, body).then(r=>r.data);
+export const deleteAssignment  = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/learning/assignment/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Organization ────────────────────────────────────────────────────────
+export const deleteSchool      = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/organization/school/${id}`, { params:{tenantId} }).then(r=>r.data);
+export const deleteCampus      = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/organization/campus/${id}`, { params:{tenantId} }).then(r=>r.data);
+export const updateDepartment  = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/organization/department/${id}`, body).then(r=>r.data);
+
+// ── CRUD: Academic Systems ────────────────────────────────────────────────────
+export const updateAcademicSystem = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/academics/academic-system/${id}`, body).then(r=>r.data);
+export const deleteAcademicSystem = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/academics/academic-system/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Academic Structure ──────────────────────────────────────────────────
+export const updateAcademicYear   = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/academics/academic-year/${id}`, body).then(r=>r.data);
+export const updateGradeLevel     = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/academics/grade-level/${id}`, body).then(r=>r.data);
+export const deleteGradeLevel     = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/academics/grade-level/${id}`, { params:{tenantId} }).then(r=>r.data);
+export const updateClassSection   = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/academics/class-section/${id}`, body).then(r=>r.data);
+export const deleteClassSection   = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/academics/class-section/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Subjects / Rooms ────────────────────────────────────────────────────
+export const updateSubject     = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/academics/subject/${id}`, body).then(r=>r.data);
+export const deleteSubject     = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/academics/subject/${id}`, { params:{tenantId} }).then(r=>r.data);
+
+// ── CRUD: Tenants ─────────────────────────────────────────────────────────────
+export const updateTenant      = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/tenancy/tenant/${id}`, body).then(r=>r.data);
+export const deleteTenant      = (id: string) => M ? ms({}) : api.delete(`/api/tenancy/tenant/${id}`).then(r=>r.data);
+
+// ── GetById — called when View or Edit is opened ──────────────────────────────
+// Mock: returns the matching item from the list mock, or a stub with the id.
+// Real: GET /{entity}/{id}
+
+export const getStudentById      = (id: string, tid: string) => M ? ms(MOCK_STUDENTS.find(x=>x.id===id) ?? {...MOCK_STUDENTS[0],id}) : api.get(`/api/students/student/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getEmployeeById     = (id: string, tid: string) => M ? ms(MOCK_EMPLOYEES.find(x=>x.id===id) ?? {...MOCK_EMPLOYEES[0],id}) : api.get(`/api/hr/employee/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getInvoiceById      = (id: string, tid: string) => M ? ms(MOCK_INVOICES.find(x=>x.id===id) ?? {...MOCK_INVOICES[0],id}) : api.get(`/api/finance/invoice/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getBookById         = (id: string, tid: string) => M ? ms(MOCK_BOOKS.find(x=>x.id===id) ?? {...MOCK_BOOKS[0],id}) : api.get(`/api/library/book/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getVehicleById      = (id: string, tid: string) => M ? ms(MOCK_VEHICLES.find(x=>x.id===id) ?? {...MOCK_VEHICLES[0],id}) : api.get(`/api/transport/vehicle/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getInventoryItemById= (id: string, tid: string) => M ? ms(MOCK_INVENTORY.find(x=>x.id===id) ?? {...MOCK_INVENTORY[0],id}) : api.get(`/api/inventory/item/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getActivityById     = (id: string, tid: string) => M ? ms(MOCK_ACTIVITIES.find(x=>x.id===id) ?? {...MOCK_ACTIVITIES[0],id}) : api.get(`/api/activities/activity/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getApplicationById  = (id: string, tid: string) => M ? ms({id}) : api.get(`/api/admissions/application/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getExamById         = (id: string, tid: string) => M ? ms(MOCK_EXAMS.find(x=>x.id===id) ?? {...MOCK_EXAMS[0],id}) : api.get(`/api/examinations/exam/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getAssignmentById   = (id: string, tid: string) => M ? ms(MOCK_ASSIGNMENTS.find(x=>x.id===id) ?? {...MOCK_ASSIGNMENTS[0],id}) : api.get(`/api/learning/assignment/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getSchoolById       = (id: string, tid: string) => M ? ms(MOCK_SCHOOLS.find(x=>x.id===id) ?? {...MOCK_SCHOOLS[0],id}) : api.get(`/api/organization/school/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getCampusById       = (id: string, tid: string) => M ? ms(MOCK_CAMPUSES.find(x=>x.id===id) ?? {...MOCK_CAMPUSES[0],id}) : api.get(`/api/organization/campus/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getDepartmentById   = (id: string, tid: string) => M ? ms(MOCK_DEPARTMENTS.find(x=>x.id===id) ?? {...MOCK_DEPARTMENTS[0],id}) : api.get(`/api/organization/department/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getExamResultById   = (id: string, tid: string) => M ? ms({id}) : api.get(`/api/examinations/student-exam-result/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+export const getTenantById       = (id: string) => M ? ms(MOCK_TENANTS.find(x=>x.id===id) ?? {...MOCK_TENANTS[0],id}) : api.get(`/api/tenancy/tenant/${id}`).then(r=>r.data?.value??r.data);
+export const getPayrollRunById   = (id: string, tid: string) => M ? ms({id}) : api.get(`/api/payroll/payroll-run/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);

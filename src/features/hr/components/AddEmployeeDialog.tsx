@@ -22,6 +22,7 @@ type EmployeeForm = {
   schoolId: string; branchId: string; departmentId: string; firstName: string; lastName: string;
   cnicNumber: string; email: string; phone: string; hireDate: string; employmentTypeCode: string;
   staffType: StaffType; alternatePhone: string; address: string; emergencyContactName: string; emergencyContactPhone: string;
+  city:string; province: string; country: string;
 };
 
 const staffOptions: Array<[StaffType, string]> = [
@@ -45,7 +46,7 @@ export function AddEmployeeDialog({ tenantId, onClose, onCreated }: AddEmployeeD
   const [form, setForm] = useState<EmployeeForm>({
     schoolId: "", branchId: "", departmentId: "", firstName: "", lastName: "", cnicNumber: "", email: "", phone: "",
     hireDate: new Date().toISOString().slice(0, 10), employmentTypeCode: "FULL_TIME", staffType: "TEACHER", alternatePhone: "",
-    address: "", emergencyContactName: "", emergencyContactPhone: "",
+    address: "", emergencyContactName: "", emergencyContactPhone: "", city:"", province:"", country:""
   });
 
   const actorType = form.staffType === "TEACHER" ? "TEACHER" : form.staffType === "DRIVER" ? "DRIVER" : form.staffType === "ADMIN_OFFICER" ? "ADMIN_OFFICER" : "EMPLOYEE";
@@ -129,7 +130,7 @@ export function AddEmployeeDialog({ tenantId, onClose, onCreated }: AddEmployeeD
 <div style={{gridColumn:"1/-1"}}>
   <PkAddressBlock label="Address *"
     value={{ street: form.address, city: form.city ?? "", province: form.province ?? "", country: form.country ?? "Pakistan" }}
-    onChange={(v) => { set("address")(v.street); set("city")(v.city); set("province")(v.province); set("country")(v.country); }}
+    onChange={(v) => { set("address",v.street); set("city", v.city); set("province", v.province); set("country", v.country); }}
     required
   />
 </div></div></Section>}

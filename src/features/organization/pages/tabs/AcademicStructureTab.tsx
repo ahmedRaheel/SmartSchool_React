@@ -1,3 +1,7 @@
+import { RowActions } from "../../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
+import { EditModal  } from "../../../../components/ui/EditModal";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import {
@@ -5,8 +9,7 @@ import {
   useGradeLevels, useCreateGradeLevel,
   useClassSections, useCreateClassSection,
   useSubjects, useCreateSubject,
-  useCampuses,
-} from "../../../../core/api/queries";
+  useCampuses} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
@@ -15,6 +18,10 @@ type SubTab = "years"|"grades"|"sections"|"subjects";
 export function AcademicStructureTab() {
   const { user } = useAuth();
   const tid = effectiveTenantId(user);
+  const [viewAcad, setViewAcad] = useState<any|null>(null);
+  const [editAcad, setEditAcad] = useState<any|null>(null);
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [sub, setSub] = useState<SubTab>("years");
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<Record<string,any>>({});
@@ -77,7 +84,7 @@ export function AcademicStructureTab() {
         {loading ? <div style={{ padding:30, color:"var(--muted)", textAlign:"center" }}>Loading…</div> : (
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Name</th><th>Code</th>{sub==="years"&&<th>Details</th>}<th/></tr></thead>
+              <thead><tr><th>Name</th><th>Code</th>{sub==="years"&&<th>Details</th>}<th/><th style={{textAlign:"right"}}>Actions</th></tr></thead>
               <tbody>
                 {items.length===0
                   ? <tr><td colSpan={4} style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>None yet. Click "Add" to create one.</td></tr>
@@ -143,6 +150,29 @@ export function AcademicStructureTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {viewAcad && (
+        <ViewDrawer title="Record" item={viewAcad} onClose={() => setViewAcad(null)}
+          onEdit={() => { setEditAcad(viewAcad); setViewAcad(null); }}
+          fields={[
+            {key:"name",      label:"Name",       wide:true},
+            {key:"code",      label:"Code"},
+            {key:"startDate", label:"Start date"},
+            {key:"endDate",   label:"End date"},
+            {key:"status",    label:"Status"},
+          ]}
+        />
+      )}
+      {editAcad && (
+        <EditModal title="Record" item={editAcad} onClose={() => setEditAcad(null)}
+          onSave={async data => { setEditAcad(null); }}
+          fields={[
+            {key:"name",      label:"Name",       required:true, wide:true},
+            {key:"startDate", label:"Start date", type:"date"},
+            {key:"endDate",   label:"End date",   type:"date"},
+          ]}
+        />
       )}
     </>
   );
