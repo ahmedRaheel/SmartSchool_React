@@ -85,13 +85,14 @@ const WORKFLOW_RULES = [
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function AdmissionsPage() {
   const { user } = useAuth();
-  const viewAppItem: any = viewAppData ?? null;
   const updApplication = useUpdateApplication();
   const delApplication = useDeleteApplication();
   const [viewAppId, setViewAppId] = useState<string|null>(null);
   const [editAppId, setEditAppId] = useState<string|null>(null);
   const viewAppOrEdit = viewAppId ?? editAppId;
-  const { data: viewAppIdData } = useApplicationById(viewAppOrEdit ?? undefined);
+  const { data: viewAppData } = useApplicationById(viewAppOrEdit ?? undefined);
+    const viewAppItem: any = viewAppData ?? null;
+
   const tid = effectiveTenantId(user) ?? "";
 
   const [page, setPage]         = useState(1);

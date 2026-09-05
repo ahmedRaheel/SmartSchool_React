@@ -21,13 +21,14 @@ const EMPLOYMENT_TYPES = ["PERMANENT","CONTRACT","PART_TIME"];
 
 export function HrPage() {
   const { user } = useAuth();
-  const viewEmpItem: any = viewEmpData ?? null;
   const updEmployee = useUpdateEmployee();
   const delEmployee = useDeleteEmployee();
   const [viewEmpId, setViewEmpId] = useState<string|null>(null);
   const [editEmpId, setEditEmpId] = useState<string|null>(null);
   const viewEmpOrEdit = viewEmpId ?? editEmpId;
-  const { data: viewEmpIdData } = useEmployeeById(viewEmpOrEdit ?? undefined);
+  const { data: viewEmpData } = useEmployeeById(viewEmpOrEdit ?? undefined);
+    const viewEmpItem: any = viewEmpData ?? null;
+
   const tid = effectiveTenantId(user) ?? "";
   const perms = usePermissions();
   const [page, setPage]         = useState(1);
@@ -293,8 +294,8 @@ export function HrPage() {
                             <td style={{ textAlign: "right" }}>
                               <RowActions
                                 onView={() => setViewEmpId(viewEmpId!)}
-                                onEdit={() => setEditEmpId(emp.id)}
-                                onDelete={() => delEmployee.mutate(emp.id)}
+                                onEdit={() => setEditEmpId(leave.id)}
+                                onDelete={() => delEmployee.mutate(leave.id)}
                                 deleteLabel="staff member"
                               />
                             </td>

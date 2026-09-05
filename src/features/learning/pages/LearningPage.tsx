@@ -38,8 +38,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
   const meta = parseMeta(assignment.metadataJson);
   const [localAsgns, setLocalAsgns] = useState<any[]>([]);
   const { user } = useAuth();
-  const viewAsgnItem: any = viewAsgnData ?? null;
-  const updAssignment = useUpdateAssignment();
+    
   const delAssignment = useDeleteAssignment();
 
   const tid = effectiveTenantId(user) ?? "";
@@ -375,7 +374,12 @@ export function LearningPage() {
   const [editAsgnId, setEditAsgnId] = useState<string|null>(null);
   const [viewAsgnId, setViewAsgnId] = useState<string|null>(null);
   const viewAsgnOrEdit = viewAsgnId ?? editAsgnId;
-  const { data: viewAsgnIdData } = useAssignmentById(viewAsgnOrEdit ?? undefined);
+
+  const { data: viewAsgnData } = useAssignmentById(viewAsgnOrEdit ?? undefined);
+
+  const viewAsgnItem: any = viewAsgnData ?? null;
+    const updAssignment = useUpdateAssignment();
+
   const [error, setError]       = useState("");
 
   const { data, isLoading } = useAssignments();

@@ -24,6 +24,8 @@ export function TenantManagementPage() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<any>(null);
+  const updTenant = useUpdateTenant();
+  const delTenant = useDeleteTenant();
   const [form, setForm] = useState({
     organizationName:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"",
     contactName:"", contactEmail:"", contactPhone:"", contactAddress:"",
@@ -35,8 +37,7 @@ export function TenantManagementPage() {
   const [viewTenantId, setViewTenantId] = React.useState<string|null>(null);
   const [editTenantId, setEditTenantId] = React.useState<string|null>(null);
   const viewTenantOrEdit = viewTenantId ?? editTenantId;
-  const { data: viewTenantIdData } = useTenantById(viewTenantOrEdit ?? undefined);
-  const { data: viewTenantData } = useTenantById(viewTenantIdOrEdit ?? undefined);
+  const { data: viewTenantData } = useTenantById(viewTenantOrEdit ?? undefined);
   const viewTenantItem: any = viewTenantData ?? null;
   const { data, isLoading, isFetching } = useTenants(page, pageSize);
   React.useEffect(()=>{

@@ -25,8 +25,6 @@ export function SchoolCampusTab() {
   const updSchool = useUpdateSchool();
   const updCampus = useUpdateCampus();
   const { user } = useAuth();
-  const viewCampusItem: any = viewCampusData ?? null;
-  const viewSchoolItem: any = viewSchoolData ?? null;
   const delCampus = useDeleteCampus();
   const delSchool = useDeleteSchool();
   const tid = effectiveTenantId(user) ?? "";
@@ -58,11 +56,15 @@ export function SchoolCampusTab() {
   const [viewSchoolId, setViewSchoolId] = useState<string|null>(null);
   const [editSchoolId, setEditSchoolId] = useState<string|null>(null);
   const viewSchoolOrEdit = viewSchoolId ?? editSchoolId;
-  const { data: viewSchoolIdData } = useSchoolById(viewSchoolOrEdit ?? undefined);
+  const { data: viewSchoolData } = useSchoolById(viewSchoolOrEdit ?? undefined);
+  const viewSchoolItem: any = viewSchoolData ?? null;
+
   const [viewCampusId, setViewCampusId] = useState<string|null>(null);
   const [editCampusId, setEditCampusId] = useState<string|null>(null);
   const viewCampusOrEdit = viewCampusId ?? editCampusId;
-  const { data: viewCampusIdData } = useCampusById(viewCampusOrEdit ?? undefined);
+  const { data: viewCampusData } = useCampusById(viewCampusOrEdit ?? undefined);
+  const viewCampusItem: any = viewCampusData ?? null;
+
   const [viewDept,   setViewDept]   = useState<any|null>(null);
   const [editDept,   setEditDept]   = useState<any|null>(null);
   const [page,       setPage]       = useState(1);

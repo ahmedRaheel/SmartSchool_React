@@ -17,14 +17,15 @@ const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning",
 
 export function ActivitiesPage() {
   const { user } = useAuth();
-  const viewActivityItem: any = viewActivityData ?? null;
   const updActivity = useUpdateActivity();
   const delActivity = useDeleteActivity();
   const [localActivities, setLocalActivities] = useState<any[]>([]);
   const [viewActivityId, setViewActivityId] = useState<string|null>(null);
   const [editActivityId, setEditActivityId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
   const viewActivityOrEdit = viewActivityId ?? editActivityId;
-  const { data: viewActivityIdData } = useActivityById(viewActivityOrEdit ?? undefined);
+  const { data: viewActivityData } = useActivityById(viewActivityOrEdit ?? undefined);
+    const viewActivityItem: any = viewActivityData ?? null;
+
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab]  = useState<"activities"|"awards">("activities");

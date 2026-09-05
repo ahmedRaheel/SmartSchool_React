@@ -26,13 +26,14 @@ const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
 export function FinancePage() {
   const [localInvoices, setLocalInvoices] = useState<any[]>([]);
   const { user } = useAuth();
-  const viewInvItem: any = viewInvData ?? null;
   const updInvoice = useUpdateInvoice();
   const delInvoice = useDeleteInvoice();
   const [viewInvId, setViewInvId] = useState<string|null>(null);
   const [editInvId, setEditInvId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
   const viewInvOrEdit = viewInvId ?? editInvId;
-  const { data: viewInvIdData } = useInvoiceById(viewInvOrEdit ?? undefined);
+  const { data: viewInvData } = useInvoiceById(viewInvOrEdit ?? undefined);
+    const viewInvItem: any = viewInvData ?? null;
+
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"invoices"|"feetype"|"structure"|"payments">("invoices");

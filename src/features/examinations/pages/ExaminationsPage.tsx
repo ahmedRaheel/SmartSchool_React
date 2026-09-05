@@ -67,7 +67,7 @@ function computeGrade(pct: number, scale: GradeScaleEntry[]): { grade: string; g
 // ─ Marks Entry Grid ─────────────────────────────────────────────────────────
 function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScaleEntry[]; onClose: () => void }) {
   const meta = parseMeta(exam.metadataJson);
-  
+  const [editExamId, setEditExamId] = useState<string|null>(null);
   const { user } = useAuth();
   const updExam = useUpdateExam();
   const delExam = useDeleteExam();
@@ -259,8 +259,8 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
                                 onView={() => row.studentId}
-                                onEdit={() => setEditExamId(exam.id)}
-                                onDelete={() => delExam.mutate(e.id)}
+                                onEdit={() => setEditExamId(row.studentId)}
+                                onDelete={() => delExam.mutate(row.studentId)}
                                 deleteLabel="record"
                               />
                             </td>
@@ -301,8 +301,7 @@ export function ExaminationsPage() {
   const [viewExamId, setViewExamId] = useState<string|null>(null);
   const [editExamId, setEditExamId] = useState<string|null>(null);
   const viewExamOrEdit = viewExamId ?? editExamId;
-  const { data: viewExamIdData } = useExamById(viewExamOrEdit ?? undefined);
-  const { data: viewExamData } = useExamById(viewExamIdOrEdit ?? undefined);
+  const { data: viewExamData } = useExamById(viewExamOrEdit ?? undefined);
   const viewExamItem: any = viewExamData ?? null;
   const [error, setError] = useState("");
 
@@ -626,7 +625,7 @@ export function ExaminationsPage() {
           title="Exam"
           item={viewExamItem}
           onClose={() => setEditExamId(null)}
-          onSave={async data => { await updExam.mutateAsync({id: editExamId!, body: data}); setEditExamId(null); }}
+          onSave={async data => { await viewExamItem.mutateAsync({id: editExamId!, body: data}); setEditExamId(null); }}
           fields={[
             { key: "name", label: "Exam name", type: "text", required: true, wide: true },
             { key: "startDate", label: "Start date", type: "date" },

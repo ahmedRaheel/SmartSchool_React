@@ -15,13 +15,14 @@ const CATS = ["Textbook","Literature","History","Science","Technology","Referenc
 
 export function LibraryPage() {
   const { user } = useAuth();
-  const viewBookItem: any = viewBookData ?? null;
   const updBook = useUpdateBook();
   const delBook = useDeleteBook();
   const [viewBookId, setViewBookId] = useState<string|null>(null);
   const [editBookId, setEditBookId] = useState<string|null>(null);
   const viewBookOrEdit = viewBookId ?? editBookId;
-  const { data: viewBookIdData } = useBookById(viewBookOrEdit ?? undefined);
+  const { data: viewBookData } = useBookById(viewBookOrEdit ?? undefined);
+  const viewBookItem: any = viewBookData ?? null;
+
   const [localDeletedIds, setLocalDeletedIds] = useState<string[]>([]);
   const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);

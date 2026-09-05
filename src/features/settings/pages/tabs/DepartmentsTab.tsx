@@ -13,7 +13,6 @@ const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } cat
 
 export function DepartmentsTab() {
   const { user } = useAuth();
-  const viewItemItem: any = viewItemData ?? null;
   const updDepartment = useUpdateDepartment();
   const tid = effectiveTenantId(user);
   const { data: departments, isLoading } = useDepartments();
@@ -28,7 +27,9 @@ export function DepartmentsTab() {
   const [viewItemId, setViewItemId] = useState<string|null>(null);
   const [editItemId, setEditItemId] = useState<string|null>(null);
   const viewItemOrEdit = viewItemId ?? editItemId;
-  const { data: viewItemIdData } = useDepartmentById(viewItemOrEdit ?? undefined);
+  const { data: viewItemData } = useDepartmentById(viewItemOrEdit ?? undefined);
+  const viewItemItem: any = viewItemData ?? null;
+
   const [page,     setPage]     = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [form,     setForm]     = useState({ name:"", campusId:"", email:"", telephone:"" });
