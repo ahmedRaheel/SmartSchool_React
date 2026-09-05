@@ -26,13 +26,13 @@ const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
 export function FinancePage() {
   const [localInvoices, setLocalInvoices] = useState<any[]>([]);
   const { user } = useAuth();
-  const viewInvIdOrEdit = viewInvId ?? editInvId;
-  const { data: viewInvData, isLoading: viewInvLoading } = useInvoiceById(viewInvIdOrEdit ?? undefined);
   const viewInvItem: any = viewInvData ?? null;
   const updInvoice = useUpdateInvoice();
   const delInvoice = useDeleteInvoice();
   const [viewInvId, setViewInvId] = useState<string|null>(null);
   const [editInvId, setEditInvId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const viewInvOrEdit = viewInvId ?? editInvId;
+  const { data: viewInvIdData } = useInvoiceById(viewInvOrEdit ?? undefined);
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"invoices"|"feetype"|"structure"|"payments">("invoices");
@@ -174,7 +174,7 @@ export function FinancePage() {
                               <RowActions
                                 onView={() => setViewInvId(inv.id)}
                                 onEdit={() => setEditInvId(inv.id)}
-                                onDelete={() => delInvoice.mutate(i.id)}
+                                onDelete={() => delInvoice.mutate(inv.id)}
                                 deleteLabel="invoice"
                               />
                               <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>
@@ -394,7 +394,7 @@ export function FinancePage() {
           title="Invoice"
           item={viewInvItem}
           onClose={() => setEditInvId(null)}
-          onSave={async data => { await updInvoice.mutateAsync({id: editInvId!, body: data}); setEditInv(null); }}
+          onSave={async data => { await updInvoice.mutateAsync({id: editInvId!, body: data}); setEditInvId(null); }}
           fields={[
             { key: "amount", label: "Amount", type: "number", required: true },
             { key: "dueDate", label: "Due date", type: "date" },

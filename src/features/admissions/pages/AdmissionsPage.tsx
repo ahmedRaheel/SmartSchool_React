@@ -22,8 +22,7 @@ import { Pagination } from "../../../components/ui/Pagination";
 import {
   AlertTriangle, Bot, CheckCircle2, ChevronDown, ChevronRight,
   ClipboardCheck, FileText, GraduationCap, Plus, Search, Users, X,
-  Zap, Clock, ArrowRight,
-} from "lucide-react";
+  Zap, Clock, ArrowRight} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
@@ -86,13 +85,13 @@ const WORKFLOW_RULES = [
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function AdmissionsPage() {
   const { user } = useAuth();
-  const viewAppIdOrEdit = viewAppId ?? editAppId;
-  const { data: viewAppData, isLoading: viewAppLoading } = useApplicationById(viewAppIdOrEdit ?? undefined);
   const viewAppItem: any = viewAppData ?? null;
   const updApplication = useUpdateApplication();
   const delApplication = useDeleteApplication();
   const [viewAppId, setViewAppId] = useState<string|null>(null);
   const [editAppId, setEditAppId] = useState<string|null>(null);
+  const viewAppOrEdit = viewAppId ?? editAppId;
+  const { data: viewAppIdData } = useApplicationById(viewAppOrEdit ?? undefined);
   const tid = effectiveTenantId(user) ?? "";
 
   const [page, setPage]         = useState(1);
@@ -163,8 +162,8 @@ export function AdmissionsPage() {
     setProcessing(true);
     if (env.useMocks) {
       await new Promise(r => setTimeout(r, 600));
-      setApps(p => p.map(a => a.Id === appId ? { ...a, Status:status, DecisionNotes:notes??null, StudentId: status==="ADMISSION_ACCEPTED" ? `stu-${Date.now()}` : a.StudentId } : a));
-      setSelected((p:any) => p?.Id === appId ? { ...p, Status:status, DecisionNotes:notes??null } : p);
+      setApps(p => p.map(a => a.Id === appId ? { ...a, Status:status, DecisionNotes:(notes ?? null) as any, StudentId: status==="ADMISSION_ACCEPTED" ? `stu-${Date.now()}` : a.StudentId } : a));
+      setSelected((p:any) => p?.Id === appId ? { ...p, Status:status, DecisionNotes:(notes ?? null) as any } : p);
     } else {
       const s = JSON.parse(localStorage.getItem("smartschool.session")??"{}");
       const headers: Record<string,string> = { "Content-Type":"application/json", "X-Mock-Role":s.role??"SchoolAdmin", "X-Mock-TenantId":tid };
@@ -195,7 +194,7 @@ export function AdmissionsPage() {
       StudentId: autoStatus==="ADMISSION_ACCEPTED" ? `stu-auto-${Date.now()}` : null,
       BranchId:appForm.branchId, SchoolId:appForm.schoolId, ClassId:appForm.classId, docsComplete:docCompliant,
     };
-    setApps(p => [newApp, ...p]);
+    setApps(p => [newApp as any, ...p]);
     setNewApp(false);
     setPhase("applications");
     setSelected(newApp);
@@ -342,9 +341,9 @@ export function AdmissionsPage() {
                       <td><span className={`status-pill ${sm.pill}`}>{sm.label}</span></td>
                       <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewAppId(app.Id)}
-                                onEdit={() => setEditAppId(app.Id)}
-                                onDelete={() => delApplication.mutate(app.Id)}
+                                onView={() => setViewAppId(a.Id)}
+                                onEdit={() => setEditAppId(a.Id)}
+                                onDelete={() => delApplication.mutate(a.Id)}
                                 deleteLabel="application"
                               />
                             </td>
@@ -725,7 +724,7 @@ export function AdmissionsPage() {
           title="Application"
           item={viewAppItem}
           onClose={() => setEditAppId(null)}
-          onSave={async data => { await updApplication.mutateAsync({id: editAppId!, body: data}); setEditApp(null); }}
+          onSave={async data => { await updApplication.mutateAsync({id: editAppId!, body: data}); setEditAppId(null); }}
           fields={[
             { key: "FirstName", label: "First name", type: "text", required: true },
             { key: "LastName", label: "Last name", type: "text", required: true },

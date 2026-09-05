@@ -11,8 +11,7 @@ import { useState, useMemo, useRef } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
   ClipboardCheck, Plus, Search, X, BookOpen, CheckCircle2,
-  AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy,
-} from "lucide-react";
+  AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy} from "lucide-react";
 import { PageHeader }  from "../../../components/ui/PageHeader";
 import { StatCard }    from "../../../components/ui/StatCard";
 import {
@@ -70,13 +69,8 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
   const meta = parseMeta(exam.metadataJson);
   
   const { user } = useAuth();
-  const viewExamIdOrEdit = viewExamId ?? editExamId;
-  const { data: viewExamData, isLoading: viewExamLoading } = useExamById(viewExamIdOrEdit ?? undefined);
-  const viewExamItem: any = viewExamData ?? null;
   const updExam = useUpdateExam();
   const delExam = useDeleteExam();
-const [editExam, setEditExam] = useState<any | null>(null);
-const [viewExam, setViewExam] = useState<any | null>(null);
  
   const tid = effectiveTenantId(user) ?? "";
 
@@ -265,7 +259,7 @@ const [viewExam, setViewExam] = useState<any | null>(null);
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
                                 onView={() => row.studentId}
-                                onEdit={() => setViewExam(row)}
+                                onEdit={() => setEditExamId(exam.id)}
                                 onDelete={() => delExam.mutate(e.id)}
                                 deleteLabel="record"
                               />
@@ -304,8 +298,12 @@ export function ExaminationsPage() {
   const [open, setOpen] = useState(false);
   const [gsOpen, setGsOpen] = useState(false);
   const [markEntry, setMarkEntry] = useState<any | null>(null);
-  const [editExam, setEditExam] = useState<any | null>(null);
-  const [viewExam, setViewExam] = useState<any | null>(null);
+  const [viewExamId, setViewExamId] = useState<string|null>(null);
+  const [editExamId, setEditExamId] = useState<string|null>(null);
+  const viewExamOrEdit = viewExamId ?? editExamId;
+  const { data: viewExamIdData } = useExamById(viewExamOrEdit ?? undefined);
+  const { data: viewExamData } = useExamById(viewExamIdOrEdit ?? undefined);
+  const viewExamItem: any = viewExamData ?? null;
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -628,7 +626,7 @@ export function ExaminationsPage() {
           title="Exam"
           item={viewExamItem}
           onClose={() => setEditExamId(null)}
-          onSave={async data => { await updExam.mutateAsync({id: editExamId!, body: data}); setEditExam(null); }}
+          onSave={async data => { await updExam.mutateAsync({id: editExamId!, body: data}); setEditExamId(null); }}
           fields={[
             { key: "name", label: "Exam name", type: "text", required: true, wide: true },
             { key: "startDate", label: "Start date", type: "date" },

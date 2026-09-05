@@ -17,7 +17,7 @@ const BRANCH_TYPES = [
   { value: 1, label: "Head Office" },
   { value: 2, label: "Regional Head Office" },
   { value: 3, label: "Regional Branch" },
-] as const;
+] as any[];
 
 function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
 
@@ -25,11 +25,7 @@ export function SchoolCampusTab() {
   const updSchool = useUpdateSchool();
   const updCampus = useUpdateCampus();
   const { user } = useAuth();
-  const viewCampusIdOrEdit = viewCampusId ?? editCampusId;
-  const { data: viewCampusData, isLoading: viewCampusLoading } = useCampusById(viewCampusIdOrEdit ?? undefined);
   const viewCampusItem: any = viewCampusData ?? null;
-  const viewSchoolIdOrEdit = viewSchoolId ?? editSchoolId;
-  const { data: viewSchoolData, isLoading: viewSchoolLoading } = useSchoolById(viewSchoolIdOrEdit ?? undefined);
   const viewSchoolItem: any = viewSchoolData ?? null;
   const delCampus = useDeleteCampus();
   const delSchool = useDeleteSchool();
@@ -61,8 +57,12 @@ export function SchoolCampusTab() {
 
   const [viewSchoolId, setViewSchoolId] = useState<string|null>(null);
   const [editSchoolId, setEditSchoolId] = useState<string|null>(null);
+  const viewSchoolOrEdit = viewSchoolId ?? editSchoolId;
+  const { data: viewSchoolIdData } = useSchoolById(viewSchoolOrEdit ?? undefined);
   const [viewCampusId, setViewCampusId] = useState<string|null>(null);
   const [editCampusId, setEditCampusId] = useState<string|null>(null);
+  const viewCampusOrEdit = viewCampusId ?? editCampusId;
+  const { data: viewCampusIdData } = useCampusById(viewCampusOrEdit ?? undefined);
   const [viewDept,   setViewDept]   = useState<any|null>(null);
   const [editDept,   setEditDept]   = useState<any|null>(null);
   const [page,       setPage]       = useState(1);
@@ -171,13 +171,13 @@ export function SchoolCampusTab() {
                     <tr key={c.id}>
                       <td>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <Building2 size={14} style={{color:bt.color,flexShrink:0}}/>
+                          <Building2 size={14} style={{color:(bt as any).color,flexShrink:0}}/>
                           <b>{c.name}</b>
                         </div>
                       </td>
                       <td><code style={{fontSize:11}}>{c.code}</code></td>
                       <td>
-                        <span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:bt.bg,color:bt.color}}>
+                        <span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:bt.bg,color:(bt as any).color}}>
                           {bt.label}
                         </span>
                       </td>
@@ -193,10 +193,10 @@ export function SchoolCampusTab() {
           {/* Info cards showing branch types */}
           <div style={{padding:"0 20px 20px",display:"flex",gap:12,flexWrap:"wrap",marginTop:8}}>
             {BRANCH_TYPES.map(bt=>(
-              <div key={bt.value} style={{padding:"10px 16px",borderRadius:10,border:`1.5px solid ${bt.color}30`,background:`${bt.color}10`,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:20}}>{bt.icon}</span>
+              <div key={bt.value} style={{padding:"10px 16px",borderRadius:10,border:`1.5px solid ${(bt as any).color}30`,background:`${(bt as any).color}10`,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:20}}>{(bt as any).icon}</span>
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,color:bt.color}}>{bt.label}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:(bt as any).color}}>{bt.label}</div>
                   <div style={{fontSize:10,color:"var(--muted)"}}>
                     {campuses.filter((c:any)=>Number(c.branchType)===bt.value).length} branch(es)
                   </div>
@@ -380,7 +380,7 @@ export function SchoolCampusTab() {
       )}
       {editSchoolId && viewSchoolItem && (
         <EditModal title="School" item={viewSchoolItem} onClose={() => setEditSchoolId(null)}
-          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchool(null); }}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchoolId(null); }}
           fields={[
             {key:"name",     label:"School name",required:true, wide:true},
             {key:"city",     label:"City",        type:"pk-city"},
@@ -402,7 +402,7 @@ export function SchoolCampusTab() {
       )}
       {editCampusId && viewCampusItem && (
         <EditModal title="Campus" item={viewCampusItem} onClose={() => setEditCampusId(null)}
-          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchool(null); }}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchoolId(null); }}
           fields={[
             {key:"name",  label:"Campus name", required:true, wide:true},
             {key:"city",  label:"City",         type:"pk-city"},
@@ -422,7 +422,7 @@ export function SchoolCampusTab() {
       )}
       {editDept && (
         <EditModal title="Department" item={editDept} onClose={() => setEditDept(null)}
-          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchool(null); }}
+          onSave={async data => { await updSchool.mutateAsync({id: editSchoolId!, body: data}); setEditSchoolId(null); }}
           fields={[
             {key:"name",      label:"Name",  required:true, wide:true},
             {key:"email",     label:"Email", type:"pk-email"},

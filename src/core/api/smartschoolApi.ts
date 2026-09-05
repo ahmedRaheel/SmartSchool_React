@@ -23,8 +23,7 @@ import {
   type ModelConfigMeta, type KnowledgeCollectionMeta,
   type NotificationItem, type ChatConversation, type ChatMessage,
   type LookupValue, type AskResponse, type TutorSession, type TutorAnswer,
-  type GeneratedQuiz, type PredictionResult,
-} from "./backendContract";
+  type GeneratedQuiz, type PredictionResult} from "./backendContract";
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────
 export const dashboardApi = {

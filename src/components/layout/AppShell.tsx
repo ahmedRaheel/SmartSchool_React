@@ -2,8 +2,7 @@ import { Suspense, useEffect, useState, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   Bell, Bot, LogOut, Menu, Moon, Search, Settings,
-  ShieldAlert, Sun, X, ChevronRight, User,
-} from "lucide-react";
+  ShieldAlert, Sun, X, ChevronRight, User} from "lucide-react";
 import { useAuth } from "../../features/auth/auth";
 import { Sidebar } from "./Sidebar";
 import { FloatingAiChatbot } from "../../features/ai/components/FloatingAiChatbot";

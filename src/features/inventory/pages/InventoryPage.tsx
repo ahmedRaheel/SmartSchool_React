@@ -19,13 +19,13 @@ const PO_STATUS: Record<string,string> = { DRAFT:"gray", PENDING:"info", APPROVE
 export function InventoryPage() {
   const [localItems, setLocalItems] = useState<any[]>([]);
   const { user } = useAuth();
-  const viewItemIdOrEdit = viewItemId ?? editItemId;
-  const { data: viewItemData, isLoading: viewItemLoading } = useInventoryItemById(viewItemIdOrEdit ?? undefined);
   const viewItemItem: any = viewItemData ?? null;
   const updInventoryItem = useUpdateInventoryItem();
   const delInventoryItem = useDeleteInventoryItem();
   const [viewItemId, setViewItemId] = useState<string|null>(null);
   const [editItemId, setEditItemId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const viewItemOrEdit = viewItemId ?? editItemId;
+  const { data: viewItemIdData } = useInventoryItemById(viewItemOrEdit ?? undefined);
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"items"|"orders">("items");
@@ -119,7 +119,7 @@ export function InventoryPage() {
                               <RowActions
                                 onView={() => setViewItemId(it.id)}
                                 onEdit={() => setEditItemId(it.id)}
-                                onDelete={() => delInventoryItem.mutate(i.id)}
+                                onDelete={() => delInventoryItem.mutate(it.id)}
                                 deleteLabel="item"
                               />
                             </td>
@@ -229,7 +229,7 @@ export function InventoryPage() {
           onClose={() => setEditItemId(null)}
           onSave={async data => {
             await updInventoryItem.mutateAsync({id: editItemId!, body: data});
-            setEditItem(null);
+            setEditItemId(null);
           }}
           fields={[
             { key:"name",         label:"Item name",   required:true, wide:true },

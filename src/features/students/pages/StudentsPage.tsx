@@ -15,13 +15,13 @@ import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
 export function StudentsPage() {
   const { user } = useAuth();
-  const viewStudentIdOrEdit = viewStudentId ?? editStudentId;
-  const { data: viewStudentData, isLoading: viewStudentLoading } = useStudentById(viewStudentIdOrEdit ?? undefined);
   const viewStudentItem: any = viewStudentData ?? null;
   const updStudent = useUpdateStudent();
   const delStudent = useDeleteStudent();
   const [viewStudentId, setViewStudentId] = useState<string|null>(null);
   const [editStudentId, setEditStudentId] = useState<string|null>(null);
+  const viewStudentOrEdit = viewStudentId ?? editStudentId;
+  const { data: viewStudentIdData } = useStudentById(viewStudentOrEdit ?? undefined);
   const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -352,7 +352,7 @@ export function StudentsPage() {
           onClose={() => setEditStudentId(null)}
           onSave={async data => {
             await updStudent.mutateAsync({id: editStudentId!, body: data});
-            setEditStudent(null);
+            setEditStudentId(null);
           }}
           fields={[
             { key:"firstName",   label:"First name",   required:true },

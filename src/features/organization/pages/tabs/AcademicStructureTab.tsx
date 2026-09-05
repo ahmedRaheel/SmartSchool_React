@@ -9,8 +9,7 @@ import {
   useGradeLevels, useCreateGradeLevel,
   useClassSections, useCreateClassSection,
   useSubjects, useCreateSubject,
-  useCampuses,
-} from "../../../../core/api/queries";
+  useCampuses} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 

@@ -18,13 +18,13 @@ const SALARY_MAP: Record<string,number> = {
 
 export function PayrollPage() {
   const { user } = useAuth();
-  const viewRunIdOrEdit = viewRunId ?? editRunId;
-  const { data: viewRunData, isLoading: viewRunLoading } = usePayrollRunById(viewRunIdOrEdit ?? undefined);
   const viewRunItem: any = viewRunData ?? null;
   const updPayrollRun = useUpdatePayrollRun();
   const delPayrollRun = useDeletePayrollRun();
   const [editRunId, setEditRunId] = useState<string|null>(null);
   const [viewRunId, setViewRunId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
+  const viewRunOrEdit = viewRunId ?? editRunId;
+  const { data: viewRunIdData } = usePayrollRunById(viewRunOrEdit ?? undefined);
   const [tab, setTab] = useState<"register"|"runs"|"payslips">("register");
   const [search, setSearch] = useState("");
   const [runModal, setRunModal] = useState(false);
@@ -112,9 +112,9 @@ export function PayrollPage() {
                       <td><span className={`status-pill ${e.status==="ACTIVE"?"success":"gray"}`}>{e.status}</span></td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
-                                onView={() => setViewRunId(run.id)}
-                                onEdit={() => setEditRunId(run.id)}
-                                onDelete={() => { setEditRun(run) }}
+                                onView={() => setViewRunId(r.id)}
+                                onEdit={() => setEditRunId(r.id)}
+                                onDelete={() => delPayrollRun.mutate(r.id)}
                                 deleteLabel="record"
                                 
                               />

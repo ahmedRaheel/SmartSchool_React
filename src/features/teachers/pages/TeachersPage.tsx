@@ -5,14 +5,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookOpen, Clock, Users, ClipboardCheck, GraduationCap,
-  CalendarDays, ChevronRight, Bot, FileCheck2, Star,
-} from "lucide-react";
+  CalendarDays, ChevronRight, Bot, FileCheck2, Star} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import {
   useTeacherDashboard, useTeacherStudents, useTeacherTimetable,
-  useTeacherWorkload, useTeacherClasses,
-} from "../../../core/api/queries";
+  useTeacherWorkload, useTeacherClasses} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 
 // ─── Rich mock class data — what actually matters for a teacher ───────────────

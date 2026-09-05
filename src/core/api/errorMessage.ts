@@ -1,9 +1,9 @@
 import axios from "axios";
-import { SmartSchoolApiError } from "./ApiClient";
+
 
 /** Converts API, OAuth and network failures into a user-friendly message. */
 export function getErrorMessage(error: unknown, fallback = "The request could not be completed."): string {
-  if (error instanceof SmartSchoolApiError) return error.message;
+  if (error instanceof Error) return error.message;
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as Record<string, unknown> | undefined;
     const value = data?.detail ?? data?.title ?? data?.message ?? data?.error_description ?? data?.error;

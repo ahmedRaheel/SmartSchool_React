@@ -15,13 +15,13 @@ const CATS = ["Textbook","Literature","History","Science","Technology","Referenc
 
 export function LibraryPage() {
   const { user } = useAuth();
-  const viewBookIdOrEdit = viewBookId ?? editBookId;
-  const { data: viewBookData, isLoading: viewBookLoading } = useBookById(viewBookIdOrEdit ?? undefined);
   const viewBookItem: any = viewBookData ?? null;
   const updBook = useUpdateBook();
   const delBook = useDeleteBook();
   const [viewBookId, setViewBookId] = useState<string|null>(null);
   const [editBookId, setEditBookId] = useState<string|null>(null);
+  const viewBookOrEdit = viewBookId ?? editBookId;
+  const { data: viewBookIdData } = useBookById(viewBookOrEdit ?? undefined);
   const [localDeletedIds, setLocalDeletedIds] = useState<string[]>([]);
   const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
@@ -284,7 +284,7 @@ export function LibraryPage() {
           onClose={() => setEditBookId(null)}
           onSave={async data => {
             await updBook.mutateAsync({id: editBookId!, body: data});
-            setEditBook(null);
+            setEditBookId(null);
           }}
           fields={[
             { key:"name",      label:"Title",     required:true, wide:true },

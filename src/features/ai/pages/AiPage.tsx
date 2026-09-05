@@ -7,15 +7,13 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   BookMarked, Brain, Cpu, Layers, Send, Sparkles, TrendingUp,
   Settings, RefreshCw, Plus, FileText, Upload, X, CheckCircle2,
-  AlertTriangle, Zap, ChevronRight, Bot, BarChart3, Info,
-} from "lucide-react";
+  AlertTriangle, Zap, ChevronRight, Bot, BarChart3, Info} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import {
   useAskAssistant, useStartTutorSession, useAskTutor, useGenerateQuiz,
   useStudentPrediction, useEarlyWarning, useModelConfigs, useCollections,
-  useExecLogs, useCreateCollection, useIndexKnowledge,
-} from "../../../core/api/queries";
+  useExecLogs, useCreateCollection, useIndexKnowledge} from "../../../core/api/queries";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";

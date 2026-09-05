@@ -16,14 +16,14 @@ function parseMeta(j?: string|null) { try { return JSON.parse(j ?? "{}"); } catc
 
 export function TransportPage() {
   const { user } = useAuth();
-  const viewVehicleIdOrEdit = viewVehicleId ?? editVehicleId;
-  const { data: viewVehicleData, isLoading: viewVehicleLoading } = useVehicleById(viewVehicleIdOrEdit ?? undefined);
   const viewVehicleItem: any = viewVehicleData ?? null;
   const updVehicle = useUpdateVehicle();
   const delVehicle = useDeleteVehicle();
   const [localVehicles, setLocalVehicles] = useState<any[]>([]);
   const [viewVehicleId, setViewVehicleId] = useState<string|null>(null);
   const [editVehicleId, setEditVehicleId] = useState<string|null>(null);
+  const viewVehicleOrEdit = viewVehicleId ?? editVehicleId;
+  const { data: viewVehicleIdData } = useVehicleById(viewVehicleOrEdit ?? undefined);
   const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -217,7 +217,7 @@ export function TransportPage() {
           onClose={() => setEditVehicleId(null)}
           onSave={async data => {
             await updVehicle.mutateAsync({id: editVehicleId!, body: data});
-            setEditVehicle(null);
+            setEditVehicleId(null);
           }}
           fields={[
             { key:"name",            label:"Registration #", required:true },

@@ -6,8 +6,7 @@ import { useMemo } from "react";
 import { useAuth } from "../../features/auth/auth";
 import {
   can, canAny, canAll, permissionsFor, primaryRole,
-  type Permission, type Role,
-} from "./permissions";
+  type Permission, type Role} from "./permissions";
 
 export interface PermissionSet {
   role:    Role;

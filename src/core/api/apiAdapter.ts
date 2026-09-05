@@ -22,8 +22,7 @@ import {
   MOCK_INQUIRIES, MOCK_WORKFLOW_DEFS, MOCK_APPROVALS,
   MOCK_ACTIVITIES, MOCK_ASSIGNMENTS, MOCK_INVENTORY,
   MOCK_LEAVE_REQUESTS,
-  page,
-} from "./mockData";
+  page} from "./mockData";
 
 const M = env.useMocks;
 const ms = <T>(v: T, delay = 100): Promise<T> => new Promise(r => setTimeout(() => r(v), delay));
@@ -350,7 +349,6 @@ export const updateLeaveRequest= (id: string, body: object) => M ? ms({ id, ...b
 export const deleteLeaveRequest= (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/hr/leave-request/${id}`, { params:{tenantId} }).then(r=>r.data);
 
 // ── CRUD: Payroll ─────────────────────────────────────────────────────────────
-export const getPayrollRuns    = (tenantId: string, p=1, ps=50) => M ? ms(pg([], p, ps)) : api.get("/api/payroll/payroll-run", { params:{tenantId,page:p,pageSize:ps} }).then(r=>r.data);
 export const updatePayrollRun  = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/payroll/payroll-run/${id}`, body).then(r=>r.data);
 export const deletePayrollRun  = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/payroll/payroll-run/${id}`, { params:{tenantId} }).then(r=>r.data);
 

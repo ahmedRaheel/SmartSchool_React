@@ -13,8 +13,6 @@ const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } cat
 
 export function DepartmentsTab() {
   const { user } = useAuth();
-  const viewItemIdOrEdit = viewItemId ?? editItemId;
-  const { data: viewItemData, isLoading: viewItemLoading } = useDepartmentById(viewItemIdOrEdit ?? undefined);
   const viewItemItem: any = viewItemData ?? null;
   const updDepartment = useUpdateDepartment();
   const tid = effectiveTenantId(user);
@@ -29,6 +27,8 @@ export function DepartmentsTab() {
   const [modal,    setModal]    = useState(false);
   const [viewItemId, setViewItemId] = useState<string|null>(null);
   const [editItemId, setEditItemId] = useState<string|null>(null);
+  const viewItemOrEdit = viewItemId ?? editItemId;
+  const { data: viewItemIdData } = useDepartmentById(viewItemOrEdit ?? undefined);
   const [page,     setPage]     = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [form,     setForm]     = useState({ name:"", campusId:"", email:"", telephone:"" });
@@ -163,7 +163,7 @@ export function DepartmentsTab() {
       {editItemId && viewItemItem && (
         <EditModal title="Department" item={viewItemItem}
           onClose={() => setEditItemId(null)}
-          onSave={async () => setEditItem(null)}
+          onSave={async () => setEditItemId(null)}
           fields={[
             { key:"name",      label:"Name",  required:true, wide:true },
             { key:"email",     label:"Email", type:"pk-email" },

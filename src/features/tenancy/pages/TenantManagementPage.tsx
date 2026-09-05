@@ -32,8 +32,12 @@ export function TenantManagementPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(25);
   const [localTenants, setLocalTenants] = React.useState<any[]>([]);
-  const [viewTenant, setViewTenant]     = React.useState<any|null>(null);
-  const [editTenant, setEditTenant]     = React.useState<any|null>(null);
+  const [viewTenantId, setViewTenantId] = React.useState<string|null>(null);
+  const [editTenantId, setEditTenantId] = React.useState<string|null>(null);
+  const viewTenantOrEdit = viewTenantId ?? editTenantId;
+  const { data: viewTenantIdData } = useTenantById(viewTenantOrEdit ?? undefined);
+  const { data: viewTenantData } = useTenantById(viewTenantIdOrEdit ?? undefined);
+  const viewTenantItem: any = viewTenantData ?? null;
   const { data, isLoading, isFetching } = useTenants(page, pageSize);
   React.useEffect(()=>{
     const rows = (data as any)?.items;
@@ -239,7 +243,7 @@ export function TenantManagementPage() {
           title="School"
           item={viewTenantItem}
           onClose={() => setEditTenantId(null)}
-          onSave={async data => { await updTenant.mutateAsync({id: editTenantId!, body: data}); setEditTenant(null); }}
+          onSave={async data => { await updTenant.mutateAsync({id: editTenantId!, body: data}); setEditTenantId(null); }}
           fields={[
             { key: "organizationName", label: "School name", type: "text", required: true, wide: true },
             { key: "contactEmail", label: "Contact email", type: "pk-email", wide: true },

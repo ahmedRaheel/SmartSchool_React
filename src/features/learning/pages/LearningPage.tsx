@@ -7,8 +7,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
   Plus, X, Upload, CheckCircle2, Clock, FileText,
-  AlertCircle, Send, Eye, BookOpen, Edit3, Star,
-} from "lucide-react";
+  AlertCircle, Send, Eye, BookOpen, Edit3, Star} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import {
@@ -39,8 +38,6 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
   const meta = parseMeta(assignment.metadataJson);
   const [localAsgns, setLocalAsgns] = useState<any[]>([]);
   const { user } = useAuth();
-  const viewAsgnIdOrEdit = viewAsgnId ?? editAsgnId;
-  const { data: viewAsgnData, isLoading: viewAsgnLoading } = useAssignmentById(viewAsgnIdOrEdit ?? undefined);
   const viewAsgnItem: any = viewAsgnData ?? null;
   const updAssignment = useUpdateAssignment();
   const delAssignment = useDeleteAssignment();
@@ -377,6 +374,8 @@ export function LearningPage() {
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
   const [editAsgnId, setEditAsgnId] = useState<string|null>(null);
   const [viewAsgnId, setViewAsgnId] = useState<string|null>(null);
+  const viewAsgnOrEdit = viewAsgnId ?? editAsgnId;
+  const { data: viewAsgnIdData } = useAssignmentById(viewAsgnOrEdit ?? undefined);
   const [error, setError]       = useState("");
 
   const { data, isLoading } = useAssignments();
@@ -733,7 +732,7 @@ export function LearningPage() {
           title="Assignment"
           item={viewAsgnItem}
           onClose={() => setEditAsgnId(null)}
-          onSave={async data => { await updAssignment.mutateAsync({id: editAsgnId!, body: data}); setEditAsgn(null); }}
+          onSave={async data => { await updAssignment.mutateAsync({id: editAsgnId!, body: data}); setEditAsgnId(null); }}
           fields={[
             { key: "name", label: "Title", type: "text", required: true, wide: true },
             { key: "dueDate", label: "Due date", type: "date" },

@@ -21,8 +21,7 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import {
   BookOpen, Bot, Bus, Calendar, CheckCircle2, ChevronRight,
   CreditCard, GraduationCap, TrendingDown, TrendingUp, Users,
-  Wallet, Zap, Clock, FileText, AlertTriangle, Star,
-} from "lucide-react";
+  Wallet, Zap, Clock, FileText, AlertTriangle, Star} from "lucide-react";
 
 const fmt  = (n?: number|null, pre = "") => n !== undefined && n !== null ? `${pre}${Number(n).toLocaleString()}` : "—";
 const pkr  = (n?: number|null) => n !== undefined && n !== null ? `PKR ${(Number(n)/1000).toFixed(0)}K` : "—";

@@ -13,8 +13,7 @@ import type {
   ModelConfigItem, KnowledgeCollectionItem, AiExecutionLogItem, LookupValue,
   PredictionResult, BranchGenderType, EducationLevel, PagedResult,
   ActivityItem, AwardItem, WorkflowDefinitionItem, ApprovalItem,
-  AssignmentItem, LessonItem, InventoryItem,
-} from "./backendContracts";
+  AssignmentItem, LessonItem, InventoryItem} from "./backendContracts";
 
 const T1 = "11111111-1111-1111-1111-111111111111";
 const S1 = "22222222-2222-2222-2222-222222222222"; // schoolId matches seed data
