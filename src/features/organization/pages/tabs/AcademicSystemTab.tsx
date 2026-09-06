@@ -3,6 +3,7 @@
  * Full CRUD: create · view · edit · delete · paginate
  */
 import { useState, useMemo } from "react";
+import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import { Plus, X, BookMarked, Search } from "lucide-react";
 import { useAcademicSystems, useCreateAcademicSystem } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
@@ -13,7 +14,6 @@ import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
 
 const SYSTEM_TYPES = ["MATRIC","INTERMEDIATE","O_LEVEL","A_LEVEL","CAMBRIDGE","IB","MONTESSORI","OTHER"];
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 
 export function AcademicSystemTab() {
   const { user } = useAuth();
@@ -21,7 +21,7 @@ export function AcademicSystemTab() {
   const { data, isLoading, refetch } = useAcademicSystems();
   const create = useCreateAcademicSystem();
 
-  const items: any[] = (data as any)?.items ?? (data as any) ?? [];
+  const items: any[] = toItems(data);
 
   const [search, setSearch]     = useState("");
   const [page, setPage]         = useState(1);

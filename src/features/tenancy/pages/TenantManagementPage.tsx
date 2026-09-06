@@ -9,8 +9,7 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { useTenants, useCreateTenant, useImpersonate , useUpdateTenant, useDeleteTenant, useTenantById} from "../../../core/api/queries";
 import { useNavigate } from "react-router-dom";
-
-function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 
 const PLANS: Record<string,{color:string;bg:string}> = {
   Starter:    { color:"#6B7280", bg:"#F9FAFB" },

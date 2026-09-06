@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
@@ -11,8 +12,6 @@ import { useVehicles, useRoutes, useCreateVehicle, useCreateRoute , useUpdateVeh
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { Bus, Route, Users, AlertTriangle } from "lucide-react";
-
-function parseMeta(j?: string|null) { try { return JSON.parse(j ?? "{}"); } catch { return {}; } }
 
 export function TransportPage() {
   const { user } = useAuth();
@@ -39,8 +38,8 @@ export function TransportPage() {
   const createVehicle = useCreateVehicle();
   const createRoute   = useCreateRoute();
 
-  const vehicles = (vehiclesData as any)?.items ?? (vehiclesData as any) ?? [];
-  const routes   = (routesData as any)?.items   ?? (routesData as any) ?? [];
+  const vehicles = toItems(vehiclesData);
+  const routes   = toItems(routesData);
 
   function sf(k: string) {
     return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>

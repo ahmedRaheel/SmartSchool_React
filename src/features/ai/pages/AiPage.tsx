@@ -4,13 +4,13 @@
  * Predictions · Agent · Knowledge base management with chunking
  */
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import {
   BookMarked, Brain, Cpu, Layers, Send, Sparkles, TrendingUp,
   Settings, RefreshCw, Plus, FileText, Upload, X, CheckCircle2,
   AlertTriangle, Zap, ChevronRight, Bot, BarChart3, Info} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import {
   useAskAssistant, useStartTutorSession, useAskTutor, useGenerateQuiz,
   useStudentPrediction, useEarlyWarning, useModelConfigs, useCollections,
   useExecLogs, useCreateCollection, useIndexKnowledge} from "../../../core/api/queries";
@@ -22,7 +22,6 @@ type AiTab = "assistant" | "tutor" | "quiz" | "prediction" | "agent" | "knowledg
 
 interface ChatMsg { id: string; role: "user" | "assistant" | "system"; content: string; citations?: any[]; ts: Date; }
 
-const parseMeta = (j?: string | null) => { try { return JSON.parse(j ?? "{}"); } catch { return {}; } }
 function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
 
 const SUBJECTS = ["Mathematics","Physics","Chemistry","English","Computer Science","Biology","Urdu","History","Islamiyat","Pakistan Studies","Economics"];
@@ -579,8 +578,8 @@ function KnowledgeTab() {
   const createCol = useCreateCollection();
   const indexKnowledge = useIndexKnowledge();
 
-  const collections = (collectionsData as any)?.items ?? (collectionsData as any) ?? [];
-  const logs = (logsData as any)?.items ?? (logsData as any) ?? [];
+  const collections = toItems(collectionsData);
+  const logs = toItems(logsData);
 
   const [colName, setColName]   = useState("");
   const [colDesc, setColDesc]   = useState("");
@@ -619,8 +618,6 @@ function KnowledgeTab() {
     catch { }
     setReindexing(null);
   }
-
-  const parseMeta = (j?: string | null) => { try { return JSON.parse(j ?? "{}"); } catch { return {}; } };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -836,7 +833,7 @@ export function AiPage() {
   const defaultTab: AiTab = role.includes("student") ? "tutor" : "assistant";
   const [tab, setTab] = useState<AiTab>(defaultTab);
   const { data: modelsData } = useModelConfigs();
-  const models = (modelsData as any)?.items ?? (modelsData as any) ?? [];
+  const models = toItems(modelsData);
   const activeModels = models.filter((m: any) => parseMeta(m.metadataJson).active).length || 3;
 
   const TABS: { id: AiTab; label: string; icon: React.ReactNode; roles?: string[] }[] = [

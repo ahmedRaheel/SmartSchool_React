@@ -3,6 +3,7 @@
  * Tabs: Invoices (with pay now) · Fee Types · Fee Structure · Payments · Reports
  */
 import { useState, useMemo } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
@@ -18,7 +19,6 @@ import {
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const parseMeta = (j?:string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const pkr = (n?: number) => n !== undefined ? `PKR ${Number(n).toLocaleString()}` : "—";
 const STATUS_PILL: Record<string,string> = { PAID:"success", PENDING:"warning", OVERDUE:"danger", CANCELLED:"gray", PARTIAL:"info" };
 const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
@@ -56,11 +56,11 @@ export function FinancePage() {
   const createFeeType = useCreateFeeType();
   const createFeeStructure = useCreateFeeStructure();
 
-  const invoices   = (invData as any)?.items  ?? (invData as any)  ?? [];
+  const invoices   = toItems(invData);
   const feeTypes   = Array.isArray(ftData)    ? ftData              : (ftData as any)?.items  ?? [];
-  const feeStruct  = (fsData as any)?.items   ?? (fsData as any)   ?? [];
-  const grades     = (gradeData as any)?.items?? (gradeData as any)?? [];
-  const students   = (studData as any)?.items ?? (studData as any) ?? [];
+  const feeStruct  = toItems(fsData);
+  const grades     = toItems(gradeData);
+  const students   = toItems(studData);
 
   const [invForm, setInvForm] = useState({ studentId:"", name:"", totalAmount:"", dueDate:"", notes:"" });
   const [ftForm, setFtForm]   = useState({ name:"", frequency:"Monthly", description:"" });

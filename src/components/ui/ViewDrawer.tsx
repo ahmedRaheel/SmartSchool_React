@@ -6,6 +6,7 @@
  *   <ViewDrawer title="Student" item={selected} fields={STUDENT_FIELDS} onClose={() => setSelected(null)} />
  */
 import { X, Edit3 } from "lucide-react";
+import { parseMeta, toItems } from "../../core/utils/dataHelpers";
 
 export interface DrawerField {
   label:   string;
@@ -25,9 +26,6 @@ interface Props {
   avatar?: React.ReactNode;
   extra?:  React.ReactNode; // additional content below fields
 }
-
-function parseMeta(j?: string | null): Record<string, any> {
-  try { return JSON.parse(j ?? "{}"); } catch { return {}; }
 }
 
 export function ViewDrawer({ title, subtitle, item, fields, onClose, onEdit, badge, avatar, extra }: Props) {

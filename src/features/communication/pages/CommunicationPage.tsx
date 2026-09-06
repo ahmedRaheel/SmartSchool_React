@@ -4,19 +4,17 @@
  * Roles: All actors — each sees their own conversations
  */
 import { useState, useEffect, useRef, useMemo } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import {
   Bell, MessageSquare, Plus, Send, X, CheckCheck, Search,
   Users, RefreshCw, Megaphone, Dot} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import {
   useConversations, useMessages, useSendMessage,
   useCreateConversation, useNotifications,
   useMarkRead, useMarkAllRead, useUnreadCount} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-
-function parseMeta(j?: string|null) { try { return JSON.parse(j??"{}"); } catch { return {}; } }
 
 const NOTIF_TYPE_ICON: Record<string|number, string> = {
   1:"⚠️", 2:"💰", 3:"🎓", 4:"📊", 5:"🚌",
@@ -35,7 +33,7 @@ function NotificationsPanel() {
   const markAll  = useMarkAllRead();
   const { data: unread = 0 } = useUnreadCount();
 
-  const notifs = (notifData as any)?.items ?? (notifData as any) ?? [];
+  const notifs = toItems(notifData);
   const [filter, setFilter] = useState<"all"|"unread">("all");
 
   const visible = filter === "unread" ? notifs.filter((n:any) => !n.isRead) : notifs;

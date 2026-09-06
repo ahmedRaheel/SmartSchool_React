@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import { Plus, X } from "lucide-react";
 import { useFeeTypes, useCreateFeeType, useFeeStructure, useCreateFeeStructure, useGradeLevels } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
@@ -29,7 +30,7 @@ export function FeeConfigTab() {
 
   const feeTypeItems      = Array.isArray(feeTypes)     ? feeTypes     : (feeTypes     as any)?.items ?? [];
   const feeStructureItems = Array.isArray(feeStructure) ? feeStructure : (feeStructure as any)?.items ?? [];
-  const gradeItems        = (grades as any)?.items ?? (grades as any) ?? [];
+  const gradeItems        = toItems(grades);
 
   async function saveFeeType() {
     if (!ftForm.name) { setError("Name required"); return; }

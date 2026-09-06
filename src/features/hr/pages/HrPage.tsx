@@ -1,4 +1,5 @@
 import { PkPhoneInput, PkEmailInput, PkCnicInput, PkAddressBlock } from "../../../components/ui/PakistanFields";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import React, { useEffect, useState } from "react";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
@@ -52,16 +53,16 @@ export function HrPage() {
   const { data: leavesData } = useLeaveRequests();
   const approveLeave = useApproveLeave();
   const rejectLeave  = useRejectLeave();
-  useEffect(()=>{ setLocalEmp((data as any)?.items??(data as any)??[]); },[data]);
-  useEffect(()=>{ setLocalLeaves((leavesData as any)?.items??(leavesData as any)??[]); },[leavesData]);
+  useEffect(()=>{ setLocalEmp(toItems(data)); },[data]);
+  useEffect(()=>{ setLocalLeaves(toItems(leavesData)); },[leavesData]);
   const { data: campusesData } = useCampuses();
   const { data: deptsData } = useDepartments();
   const createEmployee = useCreateEmployee();
 
   const employees = localEmp;
   const pagedEmployees = employees.slice((page-1)*pageSize, page*pageSize);
-  const campuses  = (campusesData as any)?.items ?? (campusesData as any) ?? [];
-  const depts     = (deptsData as any)?.items ?? (deptsData as any) ?? [];
+  const campuses  = toItems(campusesData);
+  const depts     = toItems(deptsData);
 
   const pendingLeaves = localLeaves.filter((l:any) => l.status === "PENDING").length;
 

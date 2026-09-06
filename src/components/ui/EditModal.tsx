@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { PkPhoneInput, PkMobileInput, PkEmailInput, PkWebsiteInput, PkCnicInput, PkCitySelect, PkProvinceSelect, PkCountrySelect } from "./PakistanFields";
 import { X, Save } from "lucide-react";
+import { parseMeta, toItems } from "../../core/utils/dataHelpers";
 
 export interface EditField {
   key:      string;
@@ -27,9 +28,6 @@ interface Props {
   onClose:  () => void;
   isCreate?: boolean;
 }
-
-function parseMeta(j?: string | null): Record<string, any> {
-  try { return JSON.parse(j ?? "{}"); } catch { return {}; }
 }
 
 export function EditModal({ title, item, fields, onSave, onClose, isCreate }: Props) {

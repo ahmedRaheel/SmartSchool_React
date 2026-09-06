@@ -4,13 +4,13 @@
  * Student view: view assigned work, submit with file + comment, see grade
  */
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
   Plus, X, Upload, CheckCircle2, Clock, FileText,
   AlertCircle, Send, Eye, BookOpen, Edit3, Star} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import {
   useAssignments, useCreateAssignment, useLessons,
   useCreateLesson, useClassSections, useSubjects, useUpdateAssignment, useDeleteAssignment, useAssignmentById} from "../../../core/api/queries";
 import { env } from "../../../config/env";
@@ -21,7 +21,6 @@ import { RowActions } from "../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { EditModal }  from "../../../components/ui/EditModal";
 
-const parseMeta = (j?: string | null) => { try { return JSON.parse(j ?? "{}"); } catch { return {}; } };
 const TYPES = ["HOMEWORK","PROJECT","ESSAY","LAB_REPORT","PRESENTATION","RESEARCH","CLASSWORK"];
 
 // ─── Mock submissions for teacher grading view ────────────────────────────────
@@ -392,10 +391,10 @@ export function LearningPage() {
   const createAssignment = useCreateAssignment();
   const createLesson     = useCreateLesson();
 
-  const assignments = (data as any)?.items       ?? (data as any) ?? [];
-  const lessons     = (lessonsData as any)?.items ?? (lessonsData as any) ?? [];
-  const sections    = (sectionsData as any)?.items ?? (sectionsData as any) ?? [];
-  const subjects    = (subjectsData as any)?.items ?? (subjectsData as any) ?? [];
+  const assignments = toItems(data);
+  const lessons     = toItems(lessonsData);
+  const sections    = toItems(sectionsData);
+  const subjects    = toItems(subjectsData);
 
   const [aForm, setAForm] = useState({
     title: "", assignmentType: "HOMEWORK", sectionId: "", subjectId: "",

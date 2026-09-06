@@ -3,6 +3,7 @@
  * Real bulk save to API · click-to-cycle status · keyboard nav
  */
 import React, { useState, useMemo, useCallback } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Check, X as XIcon, Clock, CalendarCheck, BarChart3, ChevronDown, Save, RefreshCw } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -47,8 +48,8 @@ export function AttendancePage() {
   const { data: sectionsData } = useClassSections();
   const { data: studentData }  = useStudents(1);
 
-  const sections   = (sectionsData as any)?.items ?? (sectionsData as any) ?? [];
-  const allStudents = (studentData as any)?.items ?? (studentData as any) ?? [];
+  const sections   = toItems(sectionsData);
+  const allStudents = toItems(studentData);
 
   // Filter & sort students
   const students = useMemo(() => {

@@ -428,3 +428,31 @@ export const getDepartmentById   = (id: string, tid: string) => M ? ms(MOCK_DEPA
 export const getExamResultById   = (id: string, tid: string) => M ? ms({id}) : api.get(`/api/examinations/student-exam-result/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
 export const getTenantById       = (id: string) => M ? ms(MOCK_TENANTS.find(x=>x.id===id) ?? {...MOCK_TENANTS[0],id}) : api.get(`/api/tenancy/tenant/${id}`).then(r=>r.data?.value??r.data);
 export const getPayrollRunById   = (id: string, tid: string) => M ? ms({id}) : api.get(`/api/payroll/payroll-run/${id}`, {params:{tenantId:tid}}).then(r=>r.data?.value??r.data);
+
+// ── AI / RAG / Knowledge ──────────────────────────────────────────────────────
+export const getKnowledgeDocuments = (collectionId: string, tid: string) =>
+  M ? ms({ items: [], totalCount: 0 }) : api.get(`/api/ai/knowledge-collection/${collectionId}/documents`, { params:{tenantId:tid} }).then(r=>r.data);
+
+export const uploadKnowledgeDocument = (collectionId: string, formData: FormData) =>
+  M ? ms({ id: uid(), status:"PROCESSING" }, 800) : api.post(`/api/ai/knowledge-collection/${collectionId}/document`, formData, { headers:{"Content-Type":"multipart/form-data"} }).then(r=>r.data);
+
+export const deleteKnowledgeDocument = (docId: string, tid: string) =>
+  M ? ms({}) : api.delete(`/api/ai/knowledge-document/${docId}`, { params:{tenantId:tid} }).then(r=>r.data);
+
+export const triggerReindex = (collectionId: string, tid: string) =>
+  M ? ms({ status:"INDEXING" }, 300) : api.post(`/api/ai/knowledge-collection/${collectionId}/reindex`, { tenantId:tid }).then(r=>r.data);
+
+export const getModelConfigs = (tid: string) =>
+  M ? ms(MOCK_MODEL_CONFIGS) : api.get("/api/ai/model-config", { params:{tenantId:tid} }).then(r=>r.data);
+
+export const updateModelConfig = (id: string, body: object) =>
+  M ? ms({ id, ...body }) : api.put(`/api/ai/model-config/${id}`, body).then(r=>r.data);
+
+export const createModelConfig = (body: object) =>
+  M ? ms({ id: uid(), ...body }) : api.post("/api/ai/model-config", body).then(r=>r.data);
+
+export const getAiSettings = (tid: string) =>
+  M ? ms({ ragEnabled:true, tutorEnabled:true, quizEnabled:true, predictionsEnabled:true, parentChatbotEnabled:true }) : api.get("/api/ai/settings", { params:{tenantId:tid} }).then(r=>r.data);
+
+export const updateAiSettings = (body: object) =>
+  M ? ms({}) : api.put("/api/ai/settings", body).then(r=>r.data);

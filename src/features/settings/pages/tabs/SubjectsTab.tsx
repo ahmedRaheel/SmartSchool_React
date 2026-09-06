@@ -1,4 +1,5 @@
 import { RowActions } from "../../../../components/ui/RowActions";
+import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
 import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -22,8 +23,8 @@ export function SubjectsTab() {
   const [form, setForm] = useState({ name:"", branchId:"" });
   const [error, setError] = useState("");
 
-  const items = (subjects as any)?.items ?? (subjects as any) ?? [];
-  const campusItems = (campuses as any)?.items ?? (campuses as any) ?? [];
+  const items = toItems(subjects);
+  const campusItems = toItems(campuses);
 
   async function save() {
     if (!form.name||!form.branchId) { setError("Campus and name required"); return; }

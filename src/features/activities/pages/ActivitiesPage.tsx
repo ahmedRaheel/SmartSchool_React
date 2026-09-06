@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
@@ -10,7 +11,6 @@ import { useActivities, useCreateActivity, useAwards, useCreateAward, useStudent
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const ACT_TYPES = ["SPORTS","CULTURAL","ACADEMIC","SCIENCE_FAIR","DEBATE","ART","COMMUNITY","FIELD_TRIP","CEREMONY"];
 const AWD_TYPES = ["ACADEMIC","SPORTS","CULTURAL","ATTENDANCE","LEADERSHIP","COMMUNITY","SPECIAL"];
 const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning", COMPLETED:"success", CANCELLED:"danger" };
@@ -39,9 +39,9 @@ export function ActivitiesPage() {
   const createActivity = useCreateActivity();
   const createAward    = useCreateAward();
 
-  const activities = (data as any)?.items       ?? (data as any) ?? [];
-  const awards     = (awardsData as any)?.items  ?? (awardsData as any) ?? [];
-  const students   = (studData as any)?.items    ?? (studData as any) ?? [];
+  const activities = toItems(data);
+  const awards     = toItems(awardsData);
+  const students   = toItems(studData);
 
   const [aForm, setAForm] = useState({ name:"", activityType:"SPORTS", activityDate:"", venue:"", description:"", maxParticipants:"", status:"UPCOMING" });
   const [wForm, setWForm] = useState({ studentId:"", title:"", awardType:"ACADEMIC", awardDate:"", description:"" });

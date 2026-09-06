@@ -7,6 +7,7 @@
  * ─ Grade scale configuration
  */
 import { env } from "../../../config/env";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { useState, useMemo, useRef } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
@@ -14,7 +15,6 @@ import {
   AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy} from "lucide-react";
 import { PageHeader }  from "../../../components/ui/PageHeader";
 import { StatCard }    from "../../../components/ui/StatCard";
-import {
   useExams, useCreateExam, useGradeScales, useCreateGradeScale,
   useExamResults, useCampuses, useStudents, useClassSections, useUpdateExam, useDeleteExam, useExamById} from "../../../core/api/queries";
 import * as A from "../../../core/api/apiAdapter";
@@ -34,8 +34,6 @@ interface ResultRow {
 
 const EXAM_TYPES = ["UNIT_TEST","MID_TERM","FINAL","ANNUAL","MOCK","ENTRANCE","OLEVEL","ALEVEL"];
 const SUBJECTS   = ["Mathematics","Physics","Chemistry","English","Urdu","Computer Science","Biology","History","Islamiyat","Pakistan Studies"];
-
-function parseMeta(j?: string | null) { try { return JSON.parse(j ?? "{}"); } catch { return {}; } }
 
 // Mock students for result entry
 const MOCK_STUDENTS_RESULT: ResultRow[] = [
@@ -321,10 +319,10 @@ export function ExaminationsPage() {
   const createExam = useCreateExam();
   const createGradeScale = useCreateGradeScale();
 
-  const items    = (data as any)?.items       ?? (data as any) ?? [];
-  const scales   = (scalesData as any)?.items ?? (scalesData as any) ?? [];
-  const results  = (resultsData as any)?.items ?? (resultsData as any) ?? [];
-  const campuses = (campusesData as any)?.items ?? (campusesData as any) ?? [];
+  const items    = toItems(data);
+  const scales   = toItems(scalesData);
+  const results  = toItems(resultsData);
+  const campuses = toItems(campusesData);
 
   // Build scale from DB or use defaults
   const activeScale: GradeScaleEntry[] = scales.length > 0

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { BookOpen, Clock, DollarSign, TrendingUp, Zap, Send, Bot, RefreshCw } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -6,7 +7,6 @@ import { useStudentDashboard, useAssignments, useInvoices, useAskChatbot } from 
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const pkr = (n?: number) => `PKR ${Number(n||0).toLocaleString()}`;
 const GRADE_COLOR: Record<string,string> = { "A+":"#10B981","A":"#10B981","B+":"#2563EB","B":"#2563EB","C+":"#D97706","C":"#D97706","D":"#EF4444","F":"#EF4444" };
 
@@ -46,8 +46,8 @@ export function StudentPortalPage() {
   const { data: invData }    = useInvoices();
   const chatbot = useAskChatbot("student");
 
-  const assignments = (assignData as any)?.items ?? (assignData as any) ?? [];
-  const invoices    = (invData as any)?.items     ?? (invData as any) ?? [];
+  const assignments = toItems(assignData);
+  const invoices    = toItems(invData);
 
   const pending  = assignments.filter((a:any) => { const m=parseMeta(a.metadataJson); return m.status==="PENDING"||m.status==="ACTIVE"; }).length;
   const due      = assignments.filter((a:any) => { const m=parseMeta(a.metadataJson); return m.dueDate && new Date(m.dueDate)<new Date(); }).length;

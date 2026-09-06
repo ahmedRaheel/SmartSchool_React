@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { TrendingUp, Bus, DollarSign, MessageCircle, Send, RefreshCw, Bell, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -6,7 +7,6 @@ import { useParentDashboard, useAskChatbot, useNotifications, useMarkAllRead } f
 import { useAuth } from "../../auth/auth";
 
 const GRADE_COLOR: Record<string,string> = { "A+":"#10B981","A":"#10B981","B+":"#2563EB","B":"#2563EB","C+":"#D97706","C":"#D97706","D":"#EF4444" };
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const pkr = (n?: number) => `PKR ${Number(n||0).toLocaleString()}`;
 
 const CHILDREN = [
@@ -50,7 +50,7 @@ export function ParentPortalPage() {
   const markAll  = useMarkAllRead();
   const chatbot  = useAskChatbot("parent");
 
-  const notifs   = (notifData as any)?.items ?? (notifData as any) ?? [];
+  const notifs   = toItems(notifData);
   const unread   = notifs.filter((n:any) => !n.isRead).length;
   const totalOutstanding = CHILDREN.reduce((a,c) => a+c.outstandingFee, 0);
 

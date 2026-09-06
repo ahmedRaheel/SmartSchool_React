@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Shield, Database, Cpu, Settings, Users, Activity, RefreshCw, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -6,8 +7,6 @@ import { useTenants, useModelConfigs, useExecLogs, useAuditLogs } from "../../..
 import { useAuth } from "../../auth/auth";
 import { RowActions } from "../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
-
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 
 export function PlatformAdminPage() {
   const { user } = useAuth();
@@ -19,10 +18,10 @@ export function PlatformAdminPage() {
   const { data: logsData    } = useExecLogs();
   const { data: auditData   } = useAuditLogs();
 
-  const tenants  = (tenantsData as any)?.items ?? (tenantsData as any) ?? [];
-  const models   = (modelsData as any)?.items  ?? (modelsData as any) ?? [];
-  const execLogs = (logsData as any)?.items    ?? (logsData as any) ?? [];
-  const auditLogs= (auditData as any)?.items   ?? (auditData as any) ?? [];
+  const tenants  = toItems(tenantsData);
+  const models   = toItems(modelsData);
+  const execLogs = toItems(logsData);
+  const auditLogs= toItems(auditData);
 
   const active = tenants.filter((t:any) => parseMeta(t.metadataJson).status === "ACTIVE").length;
   const trial  = tenants.filter((t:any) => parseMeta(t.metadataJson).status === "TRIAL").length;
