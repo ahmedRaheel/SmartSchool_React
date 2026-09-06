@@ -586,14 +586,22 @@ export function HrPage() {
           item={viewEmpItem}
           onClose={() => setViewEmpId(null)}
           fields={[
-            { key: "firstName", label: "First name" },
-            { key: "lastName", label: "Last name" },
-            { key: "employeeNumber", label: "Employee #" },
-            { key: "staffType", label: "Role" },
-            { key: "employmentType", label: "Employment" },
-            { key: "joiningDate", label: "Joined" },
-            { key: "phone", label: "Phone" },
-            { key: "email", label: "Email", wide: true },
+            { key:"firstName",          label:"First name"                      },
+            { key:"lastName",           label:"Last name"                       },
+            { key:"jobTitle",           label:"Job title",       wide:true      },
+            { key:"staffType",          label:"Staff type"                      },
+            { key:"employmentTypeCode", label:"Employment"                      },
+            { key:"gender",             label:"Gender"                          },
+            { key:"dateOfBirth",        label:"Date of birth"                   },
+            { key:"cnicNumber",         label:"CNIC"                            },
+            { key:"phone",              label:"Phone"                           },
+            { key:"alternatePhone",     label:"Alt. phone"                      },
+            { key:"email",              label:"Email",           wide:true      },
+            { key:"address",            label:"Address",         wide:true      },
+            { key:"city",               label:"City"                            },
+            { key:"province",           label:"Province"                        },
+            { key:"hireDate",           label:"Hire date"                       },
+            { key:"status",             label:"Status"                          },
           ]}
         />
       )}
@@ -608,10 +616,22 @@ export function HrPage() {
             setEditEmpId(null);
           }}
           fields={[
-            { key:"firstName",  label:"First name",  required:true },
-            { key:"lastName",   label:"Last name",   required:true },
-            { key:"phone",      label:"Phone",       type:"pk-phone" },
-            { key:"email",      label:"Email",       type:"pk-email", wide:true },
+            { key:"firstName",          label:"First name",    required:true                                                                                            },
+            { key:"lastName",           label:"Last name",     required:true                                                                                            },
+            { key:"jobTitle",           label:"Job title",     wide:true                                                                                                },
+            { key:"staffType",          label:"Staff type",    type:"select", options:[{value:"TEACHING",label:"Teaching"},{value:"NONTEACHING",label:"Non-Teaching"},{value:"ADMIN",label:"Admin"}] },
+            { key:"employmentTypeCode", label:"Employment",    type:"select", options:[{value:"FULL_TIME",label:"Full-time"},{value:"PART_TIME",label:"Part-time"},{value:"CONTRACT",label:"Contract"}] },
+            { key:"gender",             label:"Gender",        type:"select", options:[{value:"Male",label:"Male"},{value:"Female",label:"Female"}]                    },
+            { key:"dateOfBirth",        label:"Date of birth", type:"date"                                                                                              },
+            { key:"cnicNumber",         label:"CNIC #",        type:"pk-cnic"                                                                                           },
+            { key:"phone",              label:"Phone",         type:"pk-phone"                                                                                          },
+            { key:"alternatePhone",     label:"Alt. phone",    type:"pk-phone"                                                                                          },
+            { key:"email",              label:"Email",         type:"pk-email",  wide:true                                                                              },
+            { key:"address",            label:"Address",       wide:true                                                                                                },
+            { key:"city",               label:"City",          type:"pk-city"                                                                                           },
+            { key:"province",           label:"Province",      type:"pk-province"                                                                                       },
+            { key:"hireDate",           label:"Hire date",     type:"date"                                                                                              },
+            { key:"status",             label:"Status",        type:"select", options:[{value:"ACTIVE",label:"Active"},{value:"INACTIVE",label:"Inactive"},{value:"ON_LEAVE",label:"On Leave"}] },
           ]}
         />
       )}

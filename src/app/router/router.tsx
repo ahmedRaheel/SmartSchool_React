@@ -37,6 +37,7 @@ import { TeachersPage }        from "../../features/teachers/pages/TeachersPage"
 
 // Organization / Setup
 import { TenantSetupPage }     from "../../features/organization/pages/TenantSetupPage";
+import { AiConfigPage }        from "../../features/organization/pages/AiConfigPage";
 import { SettingsPage }        from "../../features/settings/pages/SettingsPage";
 
 // Platform / Super Admin
@@ -219,7 +220,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "ai-config",
-        element: <RoleGuard requireAny={["ai.knowledge.manage","ai.models.configure"]}><TenantSetupPage /></RoleGuard>,
+        element: <RoleGuard requireAny={["ai.knowledge.manage","ai.models.configure"]}><AiConfigPage /></RoleGuard>,
       },
       { path: "setup-finance", element: <RoleGuard require="finance.fees.manage"><SettingsPage /></RoleGuard> },
       { path: "setup-hr",      element: <RoleGuard require="hr.create"><HrPage /></RoleGuard> },

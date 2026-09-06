@@ -214,11 +214,14 @@ export function InventoryPage() {
           item={viewItemItem}
           onClose={() => setViewItemId(null)}
           fields={[
-            { key: "name", label: "Item name", wide: true },
-            { key: "category", label: "Category" },
-            { key: "quantity", label: "Quantity" },
-            { key: "unitPrice", label: "Unit price" },
-            { key: "supplier", label: "Supplier" },
+            { key:"name",         label:"Item name",    wide:true },
+            { key:"code",         label:"Code"                    },
+            { key:"category",     label:"Category"                },
+            { key:"unit",         label:"Unit"                    },
+            { key:"quantity",     label:"In stock"                },
+            { key:"reorderLevel", label:"Reorder at"              },
+            { key:"unitCost",     label:"Unit cost"               },
+            { key:"location",     label:"Location"                },
           ]}
         />
       )}
@@ -233,11 +236,14 @@ export function InventoryPage() {
             setEditItemId(null);
           }}
           fields={[
-            { key:"name",         label:"Item name",   required:true, wide:true },
-            { key:"category",     label:"Category" },
-            { key:"quantity",     label:"Quantity",    type:"number" },
-            { key:"unitPrice",    label:"Unit price",  type:"number" },
-            { key:"reorderLevel", label:"Reorder at",  type:"number" },
+            { key:"name",         label:"Item name",    required:true, wide:true },
+            { key:"code",         label:"Code"                                   },
+            { key:"category",     label:"Category"                               },
+            { key:"unit",         label:"Unit"                                   },
+            { key:"quantity",     label:"In stock",     type:"number"            },
+            { key:"reorderLevel", label:"Reorder at",   type:"number"            },
+            { key:"unitCost",     label:"Unit cost",    type:"number"            },
+            { key:"location",     label:"Location"                               },
           ]}
         />
       )}

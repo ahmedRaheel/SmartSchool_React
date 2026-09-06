@@ -336,12 +336,18 @@ export function StudentsPage() {
           item={viewStudentItem}
           onClose={() => setViewStudentId(null)}
           fields={[
-            { key: "firstName", label: "First name" },
-            { key: "lastName", label: "Last name" },
-            { key: "studentNumber", label: "Reg #" },
-            { key: "gender", label: "Gender" },
-            { key: "dateOfBirth", label: "Date of birth" },
-            { key: "status", label: "Status" },
+            { key: "firstName",     label: "First name"                                                     },
+            { key: "lastName",      label: "Last name"                                                      },
+            { key: "studentNumber", label: "Student #"                                                      },
+            { key: "gender",        label: "Gender"                                                         },
+            { key: "dateOfBirth",   label: "Date of birth"                                                  },
+            { key: "phone",         label: "Phone"                                                          },
+            { key: "email",         label: "Email",         wide:true                                       },
+            { key: "address",       label: "Address",       wide:true                                       },
+            { key: "city",          label: "City"                                                           },
+            { key: "province",      label: "Province"                                                       },
+            { key: "country",       label: "Country"                                                        },
+            { key: "status",        label: "Status"                                                         },
           ]}
         
           onEdit={() => { setEditStudentId(viewStudentId!); setViewStudentId(null); }}/>
@@ -357,11 +363,17 @@ export function StudentsPage() {
             setEditStudentId(null);
           }}
           fields={[
-            { key:"firstName",   label:"First name",   required:true },
-            { key:"lastName",    label:"Last name",    required:true },
-            { key:"gender",      label:"Gender",       type:"select", options:[{value:"Male",label:"Male"},{value:"Female",label:"Female"},{value:"Other",label:"Other"}] },
-            { key:"dateOfBirth", label:"Date of birth",type:"date" },
-            { key:"phone",       label:"Phone",        type:"pk-phone" },
+            { key:"firstName",    label:"First name",    required:true                                                                              },
+            { key:"lastName",     label:"Last name",     required:true                                                                              },
+            { key:"gender",       label:"Gender",        type:"select", options:[{value:"Male",label:"Male"},{value:"Female",label:"Female"},{value:"Other",label:"Other"}] },
+            { key:"dateOfBirth",  label:"Date of birth", type:"date"                                                                               },
+            { key:"phone",        label:"Phone",         type:"pk-phone"                                                                            },
+            { key:"email",        label:"Email",         type:"pk-email",  wide:true                                                               },
+            { key:"address",      label:"Address",       wide:true                                                                                  },
+            { key:"city",         label:"City",          type:"pk-city"                                                                             },
+            { key:"province",     label:"Province",      type:"pk-province"                                                                         },
+            { key:"country",      label:"Country"                                                                                                   },
+            { key:"status",       label:"Status",        type:"select", options:[{value:"ACTIVE",label:"Active"},{value:"INACTIVE",label:"Inactive"},{value:"ALUMNI",label:"Alumni"}] },
           ]}
         />
       )}

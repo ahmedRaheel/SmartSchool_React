@@ -610,14 +610,14 @@ export function ExaminationsPage() {
           onClose={() => setViewExamId(null)}
           onEdit={() => { setEditExamId(viewExamId!); setViewExamId(null); }}
           fields={[
-            { key: "name", label: "Exam name", wide: true },
-            { key: "type", label: "Type" },
-            { key: "startDate", label: "Start date" },
-            { key: "endDate", label: "End date" },
-            { key: "marks", label: "Total marks" },
-            { key: "passMarks", label: "Pass marks" },
-            { key: "status", label: "Status" },
-            { key: "description", label: "Description", wide: true },
+            { key:"name",        label:"Exam name",      wide:true },
+            { key:"examType",    label:"Type"                      },
+            { key:"startDate",   label:"Start date"                },
+            { key:"endDate",     label:"End date"                  },
+            { key:"totalMarks",  label:"Total marks"               },
+            { key:"passMarks",   label:"Pass marks"                },
+            { key:"status",      label:"Status"                    },
+            { key:"description", label:"Description",    wide:true },
           ]}
         />
       )}
@@ -628,11 +628,13 @@ export function ExaminationsPage() {
           onClose={() => setEditExamId(null)}
           onSave={async data => { await viewExamItem.mutateAsync({id: editExamId!, body: data}); setEditExamId(null); }}
           fields={[
-            { key: "name", label: "Exam name", type: "text", required: true, wide: true },
-            { key: "startDate", label: "Start date", type: "date" },
-            { key: "endDate", label: "End date", type: "date" },
-            { key: "marks", label: "Total marks", type: "number" },
-            { key: "passMarks", label: "Pass marks", type: "number" },
+            { key:"name",        label:"Exam name",    required:true, wide:true                                                                                  },
+            { key:"examType",    label:"Type",         type:"select", options:[{value:"UNIT_TEST",label:"Unit Test"},{value:"MID_TERM",label:"Mid Term"},{value:"FINAL",label:"Final"},{value:"ANNUAL",label:"Annual"},{value:"MOCK",label:"Mock"}] },
+            { key:"startDate",   label:"Start date",   type:"date"                                                                                               },
+            { key:"endDate",     label:"End date",     type:"date"                                                                                               },
+            { key:"totalMarks",  label:"Total marks",  type:"number"                                                                                             },
+            { key:"passMarks",   label:"Pass marks",   type:"number"                                                                                             },
+            { key:"description", label:"Description",  wide:true                                                                                                 },
           ]}
         />
       )}

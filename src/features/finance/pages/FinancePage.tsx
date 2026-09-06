@@ -381,12 +381,13 @@ export function FinancePage() {
           onClose={() => setViewInvId(null)}
           onEdit={() => { setEditInvId(viewInvId!); setViewInvId(null); }}
           fields={[
-            { key: "invoiceNumber", label: "Invoice #" },
-            { key: "studentName", label: "Student" },
-            { key: "amount", label: "Amount" },
-            { key: "dueDate", label: "Due date" },
-            { key: "status", label: "Status" },
-            { key: "description", label: "Description", wide: true },
+            { key:"name",        label:"Description",   wide:true   },
+            { key:"totalAmount", label:"Total amount"               },
+            { key:"paidAmount",  label:"Amount paid"                },
+            { key:"dueDate",     label:"Due date"                   },
+            { key:"issuedDate",  label:"Issue date"                 },
+            { key:"status",      label:"Status"                     },
+            { key:"notes",       label:"Notes",         wide:true   },
           ]}
         />
       )}
@@ -397,9 +398,11 @@ export function FinancePage() {
           onClose={() => setEditInvId(null)}
           onSave={async data => { await updInvoice.mutateAsync({id: editInvId!, body: data}); setEditInvId(null); }}
           fields={[
-            { key: "amount", label: "Amount", type: "number", required: true },
-            { key: "dueDate", label: "Due date", type: "date" },
-            { key: "description", label: "Description", type: "textarea", wide: true },
+            { key:"name",        label:"Description",  required:true, wide:true                                                                                 },
+            { key:"totalAmount", label:"Total amount", type:"number", required:true                                                                             },
+            { key:"dueDate",     label:"Due date",     type:"date"                                                                                              },
+            { key:"status",      label:"Status",       type:"select", options:[{value:"DRAFT",label:"Draft"},{value:"SENT",label:"Sent"},{value:"PAID",label:"Paid"},{value:"OVERDUE",label:"Overdue"},{value:"CANCELLED",label:"Cancelled"}] },
+            { key:"notes",       label:"Notes",        wide:true                                                                                                },
           ]}
         />
       )}

@@ -229,12 +229,16 @@ export function TenantManagementPage() {
           onClose={() => setViewTenantId(null)}
           onEdit={() => { setEditTenantId(viewTenantId!); setViewTenantId(null); }}
           fields={[
-            { key: "organizationName", label: "School name", wide: true },
-            { key: "code", label: "Code" },
-            { key: "city", label: "City" },
-            { key: "plan", label: "Plan" },
-            { key: "status", label: "Status" },
-            { key: "adminEmail", label: "Admin email", wide: true },
+            { key:"organizationName",  label:"Organisation",     wide:true },
+            { key:"adminFirstName",    label:"Admin first name"            },
+            { key:"adminLastName",     label:"Admin last name"             },
+            { key:"adminEmail",        label:"Admin email",      wide:true },
+            { key:"adminPhoneNumber",  label:"Admin phone"                 },
+            { key:"contactName",       label:"Contact name"                },
+            { key:"contactEmail",      label:"Contact email",    wide:true },
+            { key:"contactPhone",      label:"Contact phone"               },
+            { key:"contactAddress",    label:"Address",          wide:true },
+            { key:"status",            label:"Status"                      },
           ]}
         />
       )}
@@ -245,9 +249,15 @@ export function TenantManagementPage() {
           onClose={() => setEditTenantId(null)}
           onSave={async data => { await updTenant.mutateAsync({id: editTenantId!, body: data}); setEditTenantId(null); }}
           fields={[
-            { key: "organizationName", label: "School name", type: "text", required: true, wide: true },
-            { key: "contactEmail", label: "Contact email", type: "pk-email", wide: true },
-            { key: "contactPhone", label: "Contact phone", type: "pk-phone", wide: true },
+            { key:"organizationName",  label:"Organisation",    required:true, wide:true          },
+            { key:"adminFirstName",    label:"Admin first name"                                   },
+            { key:"adminLastName",     label:"Admin last name"                                    },
+            { key:"adminEmail",        label:"Admin email",     type:"pk-email",  wide:true       },
+            { key:"adminPhoneNumber",  label:"Admin phone",     type:"pk-phone"                   },
+            { key:"contactName",       label:"Contact name"                                       },
+            { key:"contactEmail",      label:"Contact email",   type:"pk-email",  wide:true       },
+            { key:"contactPhone",      label:"Contact phone",   type:"pk-phone"                   },
+            { key:"contactAddress",    label:"Address",         wide:true                         },
           ]}
         />
       )}

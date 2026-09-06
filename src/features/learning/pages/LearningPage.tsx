@@ -725,13 +725,14 @@ export function LearningPage() {
           onClose={() => setViewAsgnId(null)}
           onEdit={() => { setEditAsgnId(viewAsgnId!); setViewAsgnId(null); }}
           fields={[
-            { key: "name", label: "Title", wide: true },
-            { key: "type", label: "Type" },
-            { key: "subject", label: "Subject" },
-            { key: "dueDate", label: "Due date" },
-            { key: "totalMarks", label: "Total marks" },
-            { key: "status", label: "Status" },
-            { key: "description", label: "Instructions", wide: true },
+            { key:"name",           label:"Title",           wide:true },
+            { key:"assignmentType", label:"Type"                       },
+            { key:"dueDate",        label:"Due date"                   },
+            { key:"dueTime",        label:"Due time"                   },
+            { key:"totalMarks",     label:"Total marks"                },
+            { key:"passingMarks",   label:"Passing marks"              },
+            { key:"status",         label:"Status"                     },
+            { key:"description",    label:"Instructions",    wide:true },
           ]}
         />
       )}
@@ -742,10 +743,13 @@ export function LearningPage() {
           onClose={() => setEditAsgnId(null)}
           onSave={async data => { await updAssignment.mutateAsync({id: editAsgnId!, body: data}); setEditAsgnId(null); }}
           fields={[
-            { key: "name", label: "Title", type: "text", required: true, wide: true },
-            { key: "dueDate", label: "Due date", type: "date" },
-            { key: "totalMarks", label: "Total marks", type: "number" },
-            { key: "description", label: "Instructions", type: "textarea", wide: true },
+            { key:"name",           label:"Title",            required:true, wide:true                                                                              },
+            { key:"assignmentType", label:"Type",             type:"select", options:[{value:"HOMEWORK",label:"Homework"},{value:"CLASSWORK",label:"Classwork"},{value:"PROJECT",label:"Project"},{value:"QUIZ",label:"Quiz"},{value:"ESSAY",label:"Essay"}] },
+            { key:"dueDate",        label:"Due date",         type:"date"                                                                                           },
+            { key:"dueTime",        label:"Due time",         type:"time"                                                                                           },
+            { key:"totalMarks",     label:"Total marks",      type:"number"                                                                                        },
+            { key:"passingMarks",   label:"Passing marks",    type:"number"                                                                                        },
+            { key:"description",    label:"Instructions",     wide:true                                                                                             },
           ]}
         />
       )}
