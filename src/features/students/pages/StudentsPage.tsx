@@ -13,7 +13,7 @@ import { useStudents, useCreateStudent, useCreateEnrollment,
       useUpdateStudent, useDeleteStudent, useStudentById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-
+import { useState, useEffect } from "react";
 export function StudentsPage() {
   const { user } = useAuth();
   const updStudent = useUpdateStudent();
