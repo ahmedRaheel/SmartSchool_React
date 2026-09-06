@@ -7,14 +7,13 @@ import { useState, useRef } from "react";
 import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import {
   Brain, Plus, X, Upload, Trash2, RefreshCw,
-  FileText, Database, Settings, Bot, CheckCircle, Clock, AlertCircle,
-} from "lucide-react";
+    FileText, Database, Settings, Bot, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import {
   useKnowledgeCollections, useCreateKnowledgeCollection,
   useKnowledgeDocuments, useUploadKnowledgeDocument,
   useDeleteKnowledgeDocument, useTriggerReindex,
   useModelConfigs, useUpdateModelConfig, useCreateModelConfig,
-  useAiSettings, useUpdateAiSettings,
-} from "../../../../core/api/queries";
+ useAiSettings, useUpdateAiSettings } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 import { RowActions } from "../../../../components/ui/RowActions";

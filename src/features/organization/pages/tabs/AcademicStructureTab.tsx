@@ -1,7 +1,7 @@
 import { RowActions } from "../../../../components/ui/RowActions";
 import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
-import { EditModal  } from "../../../../components/ui/EditModal";
+import { EditModal } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
@@ -10,7 +10,7 @@ import {
   useGradeLevels, useCreateGradeLevel,
   useClassSections, useCreateClassSection,
   useSubjects, useCreateSubject,
-  useCampuses} from "../../../../core/api/queries";
+   useCampuses} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 

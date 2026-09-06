@@ -15,7 +15,7 @@ import {
   useInvoices, useCreateInvoice, useCreatePayment,
   useFeeTypes, useCreateFeeType,
   useFeeStructure, useCreateFeeStructure,
-  useGradeLevels, useStudents, useUpdateInvoice, useDeleteInvoice, useInvoiceById} from "../../../core/api/queries";
+ useGradeLevels, useStudents, useUpdateInvoice, useDeleteInvoice, useInvoiceById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 

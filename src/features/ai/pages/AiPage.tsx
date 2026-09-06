@@ -8,10 +8,10 @@ import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import {
   BookMarked, Brain, Cpu, Layers, Send, Sparkles, TrendingUp,
   Settings, RefreshCw, Plus, FileText, Upload, X, CheckCircle2,
-  AlertTriangle, Zap, ChevronRight, Bot, BarChart3, Info} from "lucide-react";
+ AlertTriangle, Zap, ChevronRight, Bot, BarChart3, Info} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-  useAskAssistant, useStartTutorSession, useAskTutor, useGenerateQuiz,
+import { useAskAssistant, useStartTutorSession, useAskTutor, useGenerateQuiz,
   useStudentPrediction, useEarlyWarning, useModelConfigs, useCollections,
   useExecLogs, useCreateCollection, useIndexKnowledge} from "../../../core/api/queries";
 import * as A from "../../../core/api/apiAdapter";
@@ -80,7 +80,6 @@ function TypingDots({ color = "#6366F1" }: { color?: string }) {
     </div>
   );
 }
-
 function ChatInput({ onSend, loading, placeholder, accentColor = "var(--indigo)" }: { onSend: (m: string) => void; loading: boolean; placeholder: string; accentColor?: string }) {
   const [val, setVal] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -105,7 +104,6 @@ function ChatInput({ onSend, loading, placeholder, accentColor = "var(--indigo)"
     </div>
   );
 }
-
 function useChatScroll(messages: ChatMsg[]) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);

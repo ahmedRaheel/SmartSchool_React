@@ -22,7 +22,7 @@ import {
   MOCK_INQUIRIES, MOCK_WORKFLOW_DEFS, MOCK_APPROVALS,
   MOCK_ACTIVITIES, MOCK_ASSIGNMENTS, MOCK_INVENTORY,
   MOCK_LEAVE_REQUESTS,
-  page} from "./mockData";
+ page} from "./mockData";
 
 const M = env.useMocks;
 const ms = <T>(v: T, delay = 100): Promise<T> => new Promise(r => setTimeout(() => r(v), delay));

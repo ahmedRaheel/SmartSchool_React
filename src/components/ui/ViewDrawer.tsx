@@ -26,7 +26,7 @@ interface Props {
   avatar?: React.ReactNode;
   extra?:  React.ReactNode; // additional content below fields
 }
-}
+
 
 export function ViewDrawer({ title, subtitle, item, fields, onClose, onEdit, badge, avatar, extra }: Props) {
   if (!item) return null;

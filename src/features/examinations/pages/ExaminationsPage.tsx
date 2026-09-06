@@ -12,11 +12,12 @@ import { useState, useMemo, useRef } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
 import {
   ClipboardCheck, Plus, Search, X, BookOpen, CheckCircle2,
-  AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy} from "lucide-react";
+ AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy} from "lucide-react";
 import { PageHeader }  from "../../../components/ui/PageHeader";
 import { StatCard }    from "../../../components/ui/StatCard";
-  useExams, useCreateExam, useGradeScales, useCreateGradeScale,
-  useExamResults, useCampuses, useStudents, useClassSections, useUpdateExam, useDeleteExam, useExamById} from "../../../core/api/queries";
+import { useExams, useCreateExam, useGradeScales, useCreateGradeScale,
+       useExamResults, useCampuses, useStudents, useClassSections, useUpdateExam,
+        useDeleteExam, useExamById} from "../../../core/api/queries";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
@@ -29,8 +30,7 @@ interface GradeScaleEntry { name: string; min: number; max: number; gradePoint: 
 interface ResultRow {
   studentId: string; name: string; regNo: string;
   marksObtained: number | ""; percentage: number | "";
-  grade: string; gradePoint: string; status: string; dirty: boolean;
-}
+  grade: string; gradePoint: string; status: string; dirty: boolean;}
 
 const EXAM_TYPES = ["UNIT_TEST","MID_TERM","FINAL","ANNUAL","MOCK","ENTRANCE","OLEVEL","ALEVEL"];
 const SUBJECTS   = ["Mathematics","Physics","Chemistry","English","Urdu","Computer Science","Biology","History","Islamiyat","Pakistan Studies"];
@@ -136,7 +136,6 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
     catch { /* toast */ }
     setPublishing(false);
   }
-
   const GRADE_COLOR: Record<string, string> = { "A+":"#059669","A":"#059669","B+":"#2563EB","B":"#2563EB","C":"#D97706","D":"#9333EA","F":"#DC2626" };
 
   return (

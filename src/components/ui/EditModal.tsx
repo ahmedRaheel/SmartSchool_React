@@ -28,7 +28,7 @@ interface Props {
   onClose:  () => void;
   isCreate?: boolean;
 }
-}
+
 
 export function EditModal({ title, item, fields, onSave, onClose, isCreate }: Props) {
   const meta    = parseMeta(item?.metadataJson);

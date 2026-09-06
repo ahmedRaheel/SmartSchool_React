@@ -1,21 +1,20 @@
 import { PkPhoneInput, PkEmailInput, PkCnicInput, PkAddressBlock } from "../../../components/ui/PakistanFields";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
-import React, { useEffect, useState } from "react";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
 import { Pagination } from "../../../components/ui/Pagination";
-import { Plus, Search, X, CheckCircle2, XCircle, Clock, CalendarOff, MessageSquare } from "lucide-react";
+import { Plus, Search, X, CheckCircle2, XCircle, Clock, CalendarOff, MessageSquare, Users, Briefcase, UserCheck, AlertCircle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
+import { StatCard } from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
 import {
   useEmployees, useCreateEmployee, useCampuses, useDepartments,
-  useLeaveRequests, useApproveLeave, useRejectLeave, useUpdateEmployee, useDeleteEmployee, useEmployeeById} from "../../../core/api/queries";
+ useLeaveRequests, useApproveLeave, useRejectLeave, useUpdateEmployee,
+  useDeleteEmployee, useEmployeeById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { usePermissions } from "../../../core/rbac/usePermissions";
-import { Users, Briefcase, UserCheck, AlertCircle } from "lucide-react";
 
 const STAFF_TYPES = ["TEACHER","DRIVER","PRINCIPAL","ADMIN_OFFICER","ACCOUNTANT","HR","LIBRARIAN","TRANSPORT","OTHER"];
 const EMPLOYMENT_TYPES = ["PERMANENT","CONTRACT","PART_TIME"];
