@@ -27,7 +27,7 @@ export function AuditPage() {
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey:["audit-logs",tid], queryFn: () => A.getAuditLogs(tid) });
   const rawItems = (data as any)?.items ?? (data as any) ?? [];
-  const items    = rawItems.length === 0 && env.useMocks ? MOCK_AUDIT_LOGS : rawItems;
+  const items    = env.useMocks && rawItems.length === 0 ? MOCK_AUDIT_LOGS : rawItems;
   const filtered = items.filter((l:any) => `${l.name} ${l.code}`.toLowerCase().includes(q.toLowerCase()));
 
   return (

@@ -174,7 +174,10 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
 
 // ─── Teacher: Grade Submissions Drawer ───────────────────────────────────────
 function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => void }) {
-  const [subs, setSubs]   = useState(env.useMocks ? MOCK_SUBMISSIONS.map(s => ({ ...s })) : []);
+  const [subs, setSubs]   = useState<any[]>([]);
+  useEffect(() => {
+    if (env.useMocks) setSubs(MOCK_SUBMISSIONS.map((s:any) => ({ ...s })));
+  }, []);
   const [selected, setSel] = useState<typeof MOCK_SUBMISSIONS[0] | null>(null);
 
   useEffect(() => {

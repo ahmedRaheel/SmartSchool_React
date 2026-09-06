@@ -104,8 +104,8 @@ export function AdmissionsPage() {
   const [newInqModal, setNewInq] = useState(false);
   const [docCompliant, setDocComp] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [apps, setApps]          = useState(env.useMocks ? MOCK_APPLICATIONS : []);
-  const [inqs, setInqs]          = useState(env.useMocks ? MOCK_INQUIRIES : []);
+  const [apps, setApps]          = useState<any[]>([]);
+  const [inqs, setInqs]          = useState<any[]>([]);
 
   const { data: schoolsData }  = useSchools();
   const { data: campusesData } = useCampuses();

@@ -72,7 +72,7 @@ type JwtClaims = Record<string, unknown> & {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const identityUrl = (path: string) =>
-  import.meta.env.DEV ? `/identity${path}` : `${env.identityBaseUrl}${path}`;
+  `${env.identityBaseUrl}${path}`;
 const SESSION_KEY = "smartschool.session";
 const ORIGINAL_TOKEN_KEY = "smartschool.original_access_token";
 const ORIGINAL_SESSION_KEY = "smartschool.original_session";
