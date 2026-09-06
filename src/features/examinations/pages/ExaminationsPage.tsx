@@ -10,6 +10,7 @@ import { env } from "../../../config/env";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { useState, useMemo, useRef } from "react";
 import { Pagination } from "../../../components/ui/Pagination";
+import { useEffect } from "react";
 import {
   ClipboardCheck, Plus, Search, X, BookOpen, CheckCircle2,
  AlertCircle, Edit3, Save, Send, Eye, Lock, Unlock, Trophy} from "lucide-react";
