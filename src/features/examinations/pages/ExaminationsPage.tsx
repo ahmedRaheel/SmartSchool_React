@@ -76,7 +76,7 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
 
   const totalMarks = meta.marks ?? 100;
   const [subject, setSubject]     = useState(SUBJECTS[0]);
-  const [rows, setRows]           = useState<ResultRow[]>((env.useMocks ? MOCK_STUDENTS_RESULT : []).map(r => ({ ...r })));
+  const [rows, setRows]           = useState<ResultRow[]>([]);
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -297,6 +297,9 @@ export function ExaminationsPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [gsOpen, setGsOpen] = useState(false);
+  useEffect(() => {
+    if (env.useMocks) setRows(MOCK_STUDENTS_RESULT.map(r => ({ ...r })));
+  }, []);
   const [markEntry, setMarkEntry] = useState<any | null>(null);
   const [viewExamId, setViewExamId] = useState<string|null>(null);
   const [editExamId, setEditExamId] = useState<string|null>(null);

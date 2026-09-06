@@ -128,6 +128,15 @@ type Tab = "classes" | "timetable" | "students";
 
 export function TeachersPage() {
   const { user } = useAuth();
+  const { data: classesData   } = useTeacherClasses?.() ?? { data: null };
+  const { data: studentsData  } = useTeacherStudents?.() ?? { data: null };
+  const myClasses  = env.useMocks
+    ? MOCK_MY_CLASSES
+    : ((classesData  as any)?.items ?? (classesData  as any) ?? []);
+  const myStudents = env.useMocks
+    ? MOCK_MY_STUDENTS
+    : ((studentsData as any)?.items ?? (studentsData as any) ?? []);
+  const myTimetable = env.useMocks ? MOCK_TIMETABLE : [];
   const [viewSt, setViewSt] = useState<any|null>(null);
   const nav = useNavigate();
   const eid = user?.employeeId ?? "";
@@ -140,28 +149,28 @@ export function TeachersPage() {
   const { data: workload }= useTeacherWorkload(eid);
   const wl = (workload as any) ?? {};
 
-  const totalStudents  = (env.useMocks ? MOCK_MY_CLASSES : []).reduce((a, c) => a + c.totalStudents, 0);
-  const totalPeriods   = (env.useMocks ? MOCK_MY_CLASSES : []).reduce((a, c) => a + c.periodsPerWeek, 0);
-  const pendingTotal   = (env.useMocks ? MOCK_MY_CLASSES : []).reduce((a, c) => a + c.pendingAssignments, 0);
+  const totalStudents  = myClasses.reduce((a, c) => a + c.totalStudents, 0);
+  const totalPeriods   = myClasses.reduce((a, c) => a + c.periodsPerWeek, 0);
+  const pendingTotal   = myClasses.reduce((a, c) => a + c.pendingAssignments, 0);
 
-  const filteredStudents = (env.useMocks ? MOCK_MY_STUDENTS : []).filter(s =>
+  const filteredStudents = myStudents.filter(s =>
     !studentFilter || s.name.toLowerCase().includes(studentFilter.toLowerCase()) ||
     s.section.toLowerCase().includes(studentFilter.toLowerCase()) ||
     s.reg.includes(studentFilter)
   );
 
-  const selectedClass = (env.useMocks ? MOCK_MY_CLASSES : []).find(c => c.id === activeClass);
+  const selectedClass = myClasses.find(c => c.id === activeClass);
 
   return (
     <>
       <PageHeader
         title={`${dash?.FirstName ?? user?.name ?? "Teacher"}'s Workspace`}
-        subtitle={`${dash?.EmployeeNumber ?? "—"} · Mathematics · ${(env.useMocks ? MOCK_MY_CLASSES : []).length} classes this term`}
+        subtitle={`${dash?.EmployeeNumber ?? "—"} · Mathematics · ${myClasses.length} classes this term`}
       />
 
       {/* KPI strip */}
       <section className="metric-grid" style={{ marginBottom: 20 }}>
-        <StatCard label="My classes"     value={String((env.useMocks ? MOCK_MY_CLASSES : []).length)}        note="This term"       color="#2563EB" bg="#EFF6FF"><BookOpen size={20}/></StatCard>
+        <StatCard label="My classes"     value={String(myClasses.length)}        note="This term"       color="#2563EB" bg="#EFF6FF"><BookOpen size={20}/></StatCard>
         <StatCard label="Total students" value={String(totalStudents)}                 note="Across all classes" color="#10B981" bg="#ECFDF5"><Users size={20}/></StatCard>
         <StatCard label="Periods/week"   value={String(totalPeriods)}                  note=""                color="#8B5CF6" bg="#F5F3FF"><Clock size={20}/></StatCard>
         <StatCard label="Pending tasks"  value={String(pendingTotal)}                  note="Assignments to grade" color={pendingTotal > 0 ? "#D97706" : "#10B981"} bg={pendingTotal > 0 ? "#FFFBEB" : "#ECFDF5"}><ClipboardCheck size={20}/></StatCard>
@@ -170,20 +179,20 @@ export function TeachersPage() {
       {/* Tabs */}
       <div className="section-tabs" style={{ marginBottom: 14 }}>
         <button className={tab === "classes"   ? "active" : ""} onClick={() => { setTab("classes");   setActive(null); }}>
-          📚 My Classes ({(env.useMocks ? MOCK_MY_CLASSES : []).length})
+          📚 My Classes ({myClasses.length})
         </button>
         <button className={tab === "timetable" ? "active" : ""} onClick={() => setTab("timetable")}>
           🕐 Weekly Timetable
         </button>
         <button className={tab === "students"  ? "active" : ""} onClick={() => setTab("students")}>
-          👩‍🎓 My Students ({(env.useMocks ? MOCK_MY_STUDENTS : []).length})
+          👩‍🎓 My Students ({myStudents.length})
         </button>
       </div>
 
       {/* ── MY CLASSES ── */}
       {tab === "classes" && !activeClass && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {(env.useMocks ? MOCK_MY_CLASSES : []).map(cls => (
+          {myClasses.map(cls => (
             <div key={cls.id}
               style={{ background: "var(--surface)", border: "1.5px solid var(--line)", borderRadius: 14,
                        overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s" }}
@@ -348,7 +357,7 @@ export function TeachersPage() {
                     <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr>
                 </thead>
                 <tbody>
-                  {(env.useMocks ? MOCK_MY_STUDENTS : [])
+                  {myStudents
                     .filter(s => s.section === selectedClass.classSection)
                     .map(s => (
                       <tr key={s.id}>
@@ -388,7 +397,7 @@ export function TeachersPage() {
                             </td>
                       </tr>
                     ))}
-                  {(env.useMocks ? MOCK_MY_STUDENTS : []).filter(s => s.section === selectedClass.classSection).length === 0 && (
+                  {myStudents.filter(s => s.section === selectedClass.classSection).length === 0 && (
                     <tr><td colSpan={5} style={{ textAlign: "center", padding: 32, color: "var(--muted)", fontSize: 12 }}>
                       Student data loads from /api/teachers/{`{id}`}/students
                     </td></tr>
@@ -419,12 +428,12 @@ export function TeachersPage() {
               </thead>
               <tbody>
                 {DAYS_ORDER.flatMap(day =>
-                  (env.useMocks ? MOCK_TIMETABLE : []).filter(t => t.day === day).map((t, i) => {
-                    const cls = (env.useMocks ? MOCK_MY_CLASSES : []).find(c => c.classSection === t.section);
+                  myTimetable.filter(t => t.day === day).map((t, i) => {
+                    const cls = myClasses.find(c => c.classSection === t.section);
                     return (
                       <tr key={`${day}-${i}`}>
                         {i === 0 && (
-                          <td rowSpan={(env.useMocks ? MOCK_TIMETABLE : []).filter(x => x.day === day).length}
+                          <td rowSpan={myTimetable.filter(x => x.day === day).length}
                             style={{ fontWeight: 700, verticalAlign: "middle",
                                      background: "var(--surface-2)", fontSize: 12 }}>
                             {day}
@@ -440,7 +449,7 @@ export function TeachersPage() {
                         <td><b style={{ fontSize: 12 }}>{t.subject}</b></td>
                         <td>
                           <button className="text-button" style={{ fontSize: 12 }}
-                            onClick={() => { setTab("classes"); setActive((env.useMocks ? MOCK_MY_CLASSES : []).find(c => c.classSection === t.section)?.id ?? null); }}>
+                            onClick={() => { setTab("classes"); setActive(myClasses.find(c => c.classSection === t.section)?.id ?? null); }}>
                             {t.section}
                           </button>
                         </td>
@@ -459,7 +468,7 @@ export function TeachersPage() {
       {tab === "students" && (
         <div className="surface">
           <div className="surface-head">
-            <div><h3>All my students</h3><p>Students across all {(env.useMocks ? MOCK_MY_CLASSES : []).length} classes</p></div>
+            <div><h3>All my students</h3><p>Students across all {myClasses.length} classes</p></div>
             <label className="search-box" style={{ maxWidth: 260 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input value={studentFilter} onChange={e => setStF(e.target.value)} placeholder="Search by name, section…"/>
@@ -467,12 +476,12 @@ export function TeachersPage() {
           </div>
 
           {/* At-risk banner */}
-          {(env.useMocks ? MOCK_MY_STUDENTS : []).filter(s => s.attendance < 75).length > 0 && (
+          {myStudents.filter(s => s.attendance < 75).length > 0 && (
             <div style={{ margin: "0 20px 14px",padding: "10px 14px", background: "#FFF0F1",
                            border: "1px solid #fecdd3", borderRadius: 10, fontSize: 12, display: "flex", gap: 10 }}>
               <span style={{ fontSize: 16 }}>⚠️</span>
               <span>
-                <b>{(env.useMocks ? MOCK_MY_STUDENTS : []).filter(s => s.attendance < 75).length} students</b> have attendance below 75% —
+                <b>{myStudents.filter(s => s.attendance < 75).length} students</b> have attendance below 75% —
                 {" "}<button className="text-button" onClick={() => nav("/ai")}>run AI prediction →</button>
               </span>
             </div>
@@ -486,7 +495,7 @@ export function TeachersPage() {
               </thead>
               <tbody>
                 {filteredStudents.map(s => {
-                  const cls = (env.useMocks ? MOCK_MY_CLASSES : []).find(c => c.classSection === s.section);
+                  const cls = myClasses.find(c => c.classSection === s.section);
                   return (
                     <tr key={s.id}>
                       <td>
