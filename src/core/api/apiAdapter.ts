@@ -201,8 +201,8 @@ export const createConversation= (body: object)                   => M ? ms({ id
 export const createNotification= (body: object)                   => M ? ms({}) : api.post("/api/communication/notification", body).then(r=>r.data);
 
 // ── AICore ────────────────────────────────────────────────────────────────────
-export const getModelConfigs   = (tenantId: string)               => M ? ms(pg(MOCK_MODEL_CONFIGS)) : api.get("/api/aicore/model-configuration",  { params:{tenantId,page:1,pageSize:50} }).then(r=>r.data);
-export const createModelConfig = (body: object)                   => M ? ms({...MOCK_MODEL_CONFIGS[0], id:uid()}) : api.post("/api/aicore/model-configuration", body).then(r=>r.data);
+//export const getModelConfigs   = (tenantId: string)               => M ? ms(pg(MOCK_MODEL_CONFIGS)) : api.get("/api/aicore/model-configuration",  { params:{tenantId,page:1,pageSize:50} }).then(r=>r.data);
+//export const createModelConfig = (body: object)                   => M ? ms({...MOCK_MODEL_CONFIGS[0], id:uid()}) : api.post("/api/aicore/model-configuration", body).then(r=>r.data);
 export const getCollections    = (tenantId: string)               => M ? ms(pg(MOCK_COLLECTIONS)) : api.get("/api/aicore/knowledge-collection",  { params:{tenantId,page:1,pageSize:50} }).then(r=>r.data);
 export const createCollection  = (body: object)                   => M ? ms({...MOCK_COLLECTIONS[0], id:uid()}) : api.post("/api/aicore/knowledge-collection", body).then(r=>r.data);
 export const indexKnowledge    = (body: object)                   => M ? ms({ queued:true }) : api.post("/api/aicore/knowledge/index", body).then(r=>r.data);

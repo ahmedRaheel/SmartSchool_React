@@ -140,8 +140,8 @@ export const useSendMessage     = (convId:string) => { const qc=useQueryClient()
 export const useCreateConversation=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createConversation(b), onSuccess:()=>qc.invalidateQueries({queryKey:["convs",tid]}) }); };
 
 // ── AICore ────────────────────────────────────────────────────────────────────
-export const useModelConfigs    = () => { const tid=useTid(); return useQuery({ queryKey:["model-configs",tid], queryFn:()=>A.getModelConfigs(tid) }); };
-export const useCreateModelConfig=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createModelConfig(b), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
+//export const useModelConfigs    = () => { const tid=useTid(); return useQuery({ queryKey:["model-configs",tid], queryFn:()=>A.getModelConfigs(tid) }); };
+//export const useCreateModelConfig=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createModelConfig(b), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
 export const useCollections     = () => { const tid=useTid(); return useQuery({ queryKey:["collections",tid], queryFn:()=>A.getCollections(tid) }); };
 export const useCreateCollection= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createCollection(b), onSuccess:()=>qc.invalidateQueries({queryKey:["collections",tid]}) }); };
 export const useIndexKnowledge  = () => useMutation({ mutationFn:(b:object)=>A.indexKnowledge(b) });
