@@ -736,6 +736,8 @@ export function AdmissionsPage() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={apps.length} onPage={setPage} label="applications"/>
     </>
   );
 }

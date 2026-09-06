@@ -1,5 +1,6 @@
 import { RowActions } from "../../../components/ui/RowActions";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
+import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { useState, useMemo } from "react";
 import { DollarSign, Plus, Search, X, CheckCircle2, FileText, Briefcase } from "lucide-react";
@@ -9,6 +10,7 @@ import { useEmployees, usePayrollRuns, useCreatePayrollRun, useSalaryStructures,
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { EditModal }  from "../../../components/ui/EditModal";
+import { Pagination } from "../../../components/ui/Pagination";
 
 const pkr = (n?: number) => n !== undefined ? `PKR ${Number(n).toLocaleString()}` : "—";
 const SALARY_MAP: Record<string,number> = {
@@ -17,6 +19,9 @@ const SALARY_MAP: Record<string,number> = {
 };
 
 export function PayrollPage() {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
+  const pagedList = (lst: any[]) => lst.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
   const { user } = useAuth();
   const updPayrollRun = useUpdatePayrollRun();
   const delPayrollRun = useDeletePayrollRun();
@@ -114,7 +119,7 @@ export function PayrollPage() {
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                               <RowActions
                                 onView={() => setViewRunId(e.id)}
-                                onEdit={() => setEditRunId(e.id)}
+                                onEdit={() => { setEditRunId(viewRunId!); setViewRunId(null); }}
                                 onDelete={() => delPayrollRun.mutate(e.id)}
                                 deleteLabel="record"
                                 
@@ -226,6 +231,27 @@ export function PayrollPage() {
             { key: "totalNet",  label: "Net total" },
             { key: "status",    label: "Status" },
           ]} />
+      )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={runs.length} onPage={setPage} label="payroll runs"/>
+
+      {editRunId && viewRunItem && (
+        <EditModal
+          title="Payroll Run"
+          item={viewRunItem}
+          onClose={() => setEditRunId(null)}
+          onSave={async data => {
+            await updPayrollRun.mutateAsync({ id: editRunId!, body: data });
+            setEditRunId(null);
+          }}
+          fields={[
+            { key:"name",        label:"Run name",     required:true, wide:true },
+            { key:"periodStart", label:"Period start",  type:"date"             },
+            { key:"periodEnd",   label:"Period end",    type:"date"             },
+            { key:"status",      label:"Status",        type:"select", options:[{value:"DRAFT",label:"Draft"},{value:"PROCESSING",label:"Processing"},{value:"COMPLETED",label:"Completed"},{value:"PAID",label:"Paid"}] },
+            { key:"notes",       label:"Notes",         wide:true               },
+          ]}
+        />
       )}
     </>
   );

@@ -20,6 +20,8 @@ const MOCK_AUDIT_LOGS = [
 ];
 
 export function AuditPage() {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const [viewLog, setViewLog] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
@@ -86,6 +88,8 @@ export function AuditPage() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={items.length} onPage={setPage} label="log entries"/>
     </>
   );
 }

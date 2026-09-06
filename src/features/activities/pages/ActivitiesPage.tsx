@@ -231,6 +231,8 @@ export function ActivitiesPage() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={activities.length} onPage={setPage} label="activities"/>
     </>
   );
 }

@@ -576,12 +576,20 @@ export function LearningPage() {
                             {isStudent && isSubmitted && (
                               <span style={{ fontSize: 11, color: "var(--success)", fontWeight: 700 }}>✓ Submitted</span>
                             )}
+                            {isTeacher && (
+                              <RowActions
+                                onView={() => setViewAsgnId(a.id)}
+                                onEdit={() => setEditAsgnId(a.id)}
+                                onDelete={() => delAssignment.mutate(a.id)}
+                                deleteLabel="assignment"
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
+                );
+              })}
+              </tbody>
               </table>
             </div>
           )}

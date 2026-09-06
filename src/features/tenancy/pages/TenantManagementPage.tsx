@@ -261,6 +261,8 @@ export function TenantManagementPage() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={tenants.length} onPage={setPage} label="schools"/>
     </>
   );
 }

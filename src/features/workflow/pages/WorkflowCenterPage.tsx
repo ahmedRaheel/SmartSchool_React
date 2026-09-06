@@ -7,7 +7,9 @@ import { useWorkflowDefinitions, useCreateWorkflowDefinition, useApprovals, useW
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { RowActions } from "../../../components/ui/RowActions";
+import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
+import { Pagination } from "../../../components/ui/Pagination";
 
 const TRIGGER_TYPES  = ["ADMISSION_SUBMITTED","LEAVE_REQUESTED","PAYMENT_OVERDUE","FEE_WAIVER_REQUEST","DOCUMENT_UPLOADED","ASSIGNMENT_SUBMITTED","COMPLAINT_RAISED","CUSTOM"];
 const ENTITY_TYPES   = ["Student","Employee","Invoice","Admission","Assignment","Leave","Document","Custom"];
@@ -26,6 +28,9 @@ const BUILTIN_RULES = [
 ];
 
 export function WorkflowCenterPage() {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
+  const pagedList = (lst: any[]) => lst.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
   const { user } = useAuth();
   const [viewWf, setViewWf] = useState<any|null>(null); const tid = effectiveTenantId(user) ?? "";
   const [tab, setTab] = useState<"rules"|"approvals"|"instances">("rules");
@@ -224,6 +229,24 @@ export function WorkflowCenterPage() {
             { key: "submittedAt", label: "Submitted" },
             { key: "status", label: "Status" },
             { key: "notes", label: "Notes", wide: true },
+          ]}
+        />
+      )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={workflows.length} onPage={setPage} label="workflows"/>
+
+      {editWorkflowId && viewWorkflowItem && (
+        <EditModal
+          title="Workflow"
+          item={viewWorkflowItem}
+          onClose={() => setEditWorkflowId(null)}
+          onSave={async data => {
+            setEditWorkflowId(null);
+          }}
+          fields={[
+            { key:"name",        label:"Name",         required:true, wide:true },
+            { key:"status",      label:"Status",       type:"select", options:[{value:"PENDING",label:"Pending"},{value:"APPROVED",label:"Approved"},{value:"REJECTED",label:"Rejected"}] },
+            { key:"description", label:"Description",  wide:true               },
           ]}
         />
       )}

@@ -1,5 +1,6 @@
 import { RowActions } from "../../../../components/ui/RowActions";
 import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
+import { RowActions } from "../../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
 import { EditModal } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -98,7 +99,16 @@ export function AcademicStructureTab() {
               <thead><tr><th>Name</th><th>Code</th>{sub==="years"&&<th>Details</th>}<th/><th style={{textAlign:"right"}}>Actions</th></tr></thead>
               <tbody>
                 {items.length===0
-                  ? <tr><td colSpan={4} style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>None yet. Click "Add" to create one.</td></tr>
+                  ? <tr><td colSpan={4} style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>None yet. Click "Add" to create one.</td>
+                    <td style={{textAlign:"right"}}>
+                      <RowActions
+                        onView={() => setViewItem(item)}
+                        onEdit={() => setEditItem(item)}
+                        onDelete={() => delItem && delItem.mutate(item.id)}
+                        deleteLabel="item"
+                      />
+                    </td>
+                  </tr>
                   : items.map((item: any) => {
                     let meta: any = {};
                     try { meta = JSON.parse(item.metadataJson ?? "{}"); } catch {}
@@ -208,6 +218,8 @@ export function AcademicStructureTab() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={sections.length} onPage={setPage} label="sections"/>
     </>
   );
 }

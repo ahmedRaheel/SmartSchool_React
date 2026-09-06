@@ -234,6 +234,8 @@ export function TransportPage() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={vehicles.length} onPage={setPage} label="vehicles"/>
     </>
   );
 }

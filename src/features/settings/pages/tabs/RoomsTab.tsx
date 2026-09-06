@@ -70,7 +70,10 @@ export function RoomsTab() {
                       onEdit={() => setEditItem(r)}
                       onDelete={() => setRooms(p => p.filter(x => x.id !== r.id))}
                       deleteLabel="room"
-                    />
+                    
+                          onDelete={() => delRoom.mutate(item.id)}
+                          deleteLabel="room"
+                        />
                   </td>
                 </tr>
               ))}

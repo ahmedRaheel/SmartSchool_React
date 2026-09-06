@@ -1,5 +1,7 @@
+import { Pagination } from "../../../components/ui/Pagination";
 import { RowActions } from "../../../components/ui/RowActions";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
+import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { env } from "../../../config/env";
 import { useState } from "react";
@@ -10,7 +12,7 @@ import {
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { useTeacherDashboard, useTeacherStudents, useTeacherTimetable,
-        useTeacherWorkload, useTeacherClasses} from "../../../core/api/queries";
+        useTeacherWorkload, useTeacherClasses, useDeleteEmployee} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 
 // ─── Rich mock class data — what actually matters for a teacher ───────────────
@@ -127,6 +129,9 @@ const DAYS_ORDER = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday
 type Tab = "classes" | "timetable" | "students";
 
 export function TeachersPage() {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
+  const delTeacher = useDeleteEmployee();
   const { user } = useAuth();
   const { data: classesData   } = useTeacherClasses?.() ?? { data: null };
   const { data: studentsData  } = useTeacherStudents?.() ?? { data: null };
@@ -393,7 +398,10 @@ export function TeachersPage() {
                                 onView={() => s.id}
                                 onEdit={() => setViewSt(s)}
                                                                 deleteLabel="record"
-                              />
+                              
+                          onDelete={() => delTeacher.mutate(item.id)}
+                          deleteLabel="teacher"
+                        />
                             </td>
                       </tr>
                     ))}
@@ -553,6 +561,29 @@ export function TeachersPage() {
             { key: "avgGrade",   label: "Avg grade" },
             { key: "pendingAssignments", label: "Pending work" },
           ]} />
+      )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={myClasses.length} onPage={setPage} label="classes"/>
+
+      {editTeacherId && viewTeacherItem && (
+        <EditModal
+          title="Teacher"
+          item={viewTeacherItem}
+          onClose={() => setEditTeacherId(null)}
+          onSave={async data => {
+            await updEmployee.mutateAsync({ id: editTeacherId!, body: data });
+            setEditTeacherId(null);
+          }}
+          fields={[
+            { key:"firstName",  label:"First name",   required:true             },
+            { key:"lastName",   label:"Last name",    required:true             },
+            { key:"jobTitle",   label:"Job title",    wide:true                 },
+            { key:"gender",     label:"Gender",       type:"select", options:[{value:"Male",label:"Male"},{value:"Female",label:"Female"}] },
+            { key:"phone",      label:"Phone",        type:"pk-phone"           },
+            { key:"email",      label:"Email",        type:"pk-email", wide:true},
+            { key:"status",     label:"Status",       type:"select", options:[{value:"ACTIVE",label:"Active"},{value:"INACTIVE",label:"Inactive"},{value:"ON_LEAVE",label:"On Leave"}] },
+          ]}
+        />
       )}
     </>
   );

@@ -104,6 +104,9 @@ export function AcademicSystemTab() {
                           onEdit={() => setEditItem(item)}
                           onDelete={() => setLocalItems(p => p.filter(x => x.id !== item.id))}
                           deleteLabel="academic system"
+                        
+                          onDelete={() => delSys.mutate(sys.id)}
+                          deleteLabel="academic system"
                         />
                       </td>
                     </tr>
