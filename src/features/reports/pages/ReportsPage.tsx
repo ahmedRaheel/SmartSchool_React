@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Download, TrendingUp, Users, DollarSign, BookOpen, BarChart3 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -6,7 +7,6 @@ import { useAdminDashboard, useStudents, useEmployees, useExams, useInvoices } f
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const pkr = (n?: number) => `PKR ${Number(n||0).toLocaleString()}`;
 
 type ReportType = "academic" | "financial" | "attendance" | "hr";
@@ -50,7 +50,7 @@ export function ReportsPage() {
 
   const students  = (stuData as any)?.totalCount ?? (dash as any)?.Students ?? 2840;
   const employees = (empData as any)?.totalCount ?? (dash as any)?.Employees ?? 128;
-  const invoices  = (invData as any)?.items       ?? (invData as any) ?? [];
+  const invoices  = toItems(invData);
   const collected = invoices.filter((i:any)=>parseMeta(i.metadataJson).status==="PAID").reduce((a:number,i:any)=>a+(parseMeta(i.metadataJson).amount||0),0);
   const outstanding=invoices.filter((i:any)=>!["PAID","CANCELLED"].includes(parseMeta(i.metadataJson).status||"")).reduce((a:number,i:any)=>a+(parseMeta(i.metadataJson).amount||0),0);
   const passRate  = (dash as any)?.PassedResults ? Math.round(((dash as any).PassedResults/((dash as any).PassedResults+(dash as any).FailedResults||1))*100) : 78;

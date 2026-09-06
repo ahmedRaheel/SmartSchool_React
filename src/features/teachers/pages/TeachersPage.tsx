@@ -1,16 +1,16 @@
 import { RowActions } from "../../../components/ui/RowActions";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { env } from "../../../config/env";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  BookOpen, Clock, Users, ClipboardCheck, GraduationCap,
+  BookOpen, Clock, Users, ClipboardCheck, GraduationCap,  
   CalendarDays, ChevronRight, Bot, FileCheck2, Star} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import {
-  useTeacherDashboard, useTeacherStudents, useTeacherTimetable,
-  useTeacherWorkload, useTeacherClasses} from "../../../core/api/queries";
+import { useTeacherDashboard, useTeacherStudents, useTeacherTimetable,
+        useTeacherWorkload, useTeacherClasses} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 
 // ─── Rich mock class data — what actually matters for a teacher ───────────────
@@ -132,10 +132,10 @@ export function TeachersPage() {
   const { data: studentsData  } = useTeacherStudents?.() ?? { data: null };
   const myClasses  = env.useMocks
     ? MOCK_MY_CLASSES
-    : ((classesData  as any)?.items ?? (classesData  as any) ?? []);
+    : (toItems(classesData));
   const myStudents = env.useMocks
     ? MOCK_MY_STUDENTS
-    : ((studentsData as any)?.items ?? (studentsData as any) ?? []);
+    : (toItems(studentsData));
   const myTimetable = env.useMocks ? MOCK_TIMETABLE : [];
   const [viewSt, setViewSt] = useState<any|null>(null);
   const nav = useNavigate();

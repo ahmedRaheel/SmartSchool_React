@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
@@ -10,7 +11,6 @@ import { useItems, useCreateItem, usePurchaseOrders, useCreatePurchaseOrder , us
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const pkr = (n?: number) => n !== undefined ? `PKR ${Number(n).toLocaleString()}` : "—";
 const CATS = ["Stationery","Furniture","Electronics","Sports Equipment","Lab Equipment","Cleaning","Canteen","Other"];
 const UNITS = ["Piece","Box","Pack","Ream","Set","Dozen","Kg","Litre","Metre"];
@@ -40,8 +40,8 @@ export function InventoryPage() {
   const createItem = useCreateItem();
   const createPO   = useCreatePurchaseOrder();
 
-  const items  = (data as any)?.items   ?? (data as any) ?? [];
-  const orders = (poData as any)?.items ?? (poData as any) ?? [];
+  const items  = toItems(data);
+  const orders = toItems(poData);
 
   const [iForm, setIForm] = useState({ name:"", code:"", category:"Stationery", unit:"Piece", quantity:"0", reorderLevel:"5", unitCost:"" });
   const [pForm, setPForm] = useState({ orderNumber:"", supplier:"", expectedDate:"", notes:"", itemId:"", quantity:"", unitCost:"" });

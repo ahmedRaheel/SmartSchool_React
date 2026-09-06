@@ -1,12 +1,12 @@
-import type { LucideIcon } from "lucide-react";
-import {
+import { LucideIcon ,
+
   Activity, BarChart3, Bell, BookOpen, Bot, BriefcaseBusiness, Bus,
   CalendarCheck, ClipboardCheck, FileCheck2, GraduationCap,
   LayoutDashboard, Library, MessageCircle, Route, Settings,
   ShieldCheck, Users, Wallet, Workflow, Building2, ChartNoAxesCombined,
   Cpu, ScrollText, Zap, Globe, CreditCard, Package, Brain, BookMarked,
   FlaskConical, MapPin, Sparkles, UserCircle, Briefcase, FileText,
-  Home, Star, Calendar} from "lucide-react";
+ Home, Star, Calendar} from "lucide-react";
 
 export interface NavigationItem {
   path: string;

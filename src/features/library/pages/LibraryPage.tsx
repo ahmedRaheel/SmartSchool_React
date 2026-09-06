@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
@@ -10,7 +11,6 @@ import { useBooks, useCreateBook, useLoans, useCreateLoan, useStudents , useUpda
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const CATS = ["Textbook","Literature","History","Science","Technology","Reference","Fiction","Islamic Studies","Urdu","Mathematics"];
 
 export function LibraryPage() {
@@ -40,9 +40,9 @@ export function LibraryPage() {
   const createBook = useCreateBook();
   const createLoan = useCreateLoan();
 
-  const books    = ((data as any)?.items ?? (data as any) ?? []).filter((b:any) => !localDeletedIds.includes(b.id));
-  const loans    = (loansData as any)?.items ?? (loansData as any) ?? [];
-  const students = (studData as any)?.items  ?? (studData as any) ?? [];
+  const books    = (toItems(data)).filter((b:any) => !localDeletedIds.includes(b.id));
+  const loans    = toItems(loansData);
+  const students = toItems(studData);
 
   const [bForm, setBForm] = useState({ title:"", author:"", isbn:"", publisher:"", category:"Textbook", totalCopies:"1", publicationYear:"" });
   const [iForm, setIForm] = useState({ bookId:"", studentId:"", dueDate:"" });

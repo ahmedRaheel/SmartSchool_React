@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Plus, X, Zap, ChevronRight, Check, Clock, AlertTriangle, GitBranch } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -7,8 +8,6 @@ import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { RowActions } from "../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
-
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 
 const TRIGGER_TYPES  = ["ADMISSION_SUBMITTED","LEAVE_REQUESTED","PAYMENT_OVERDUE","FEE_WAIVER_REQUEST","DOCUMENT_UPLOADED","ASSIGNMENT_SUBMITTED","COMPLAINT_RAISED","CUSTOM"];
 const ENTITY_TYPES   = ["Student","Employee","Invoice","Admission","Assignment","Leave","Document","Custom"];
@@ -39,9 +38,9 @@ export function WorkflowCenterPage() {
   const { data: instancesData } = useWorkflowInstances();
   const createDef = useCreateWorkflowDefinition();
 
-  const defs      = (defsData as any)?.items      ?? (defsData as any)      ?? [];
-  const approvals = (approvalsData as any)?.items  ?? (approvalsData as any)  ?? [];
-  const instances = (instancesData as any)?.items  ?? (instancesData as any)  ?? [];
+  const defs      = toItems(defsData);
+  const approvals = toItems(approvalsData);
+  const instances = toItems(instancesData);
 
   const ff = (k:string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setForm(p=>({...p,[k]:e.target.value}));
 

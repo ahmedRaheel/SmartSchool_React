@@ -12,6 +12,7 @@
  *   Accountant   → Finance overview, outstanding collections
  */
 import { useNavigate } from "react-router-dom";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { useAuth } from "../../auth/auth";
 import { useAdminDashboard, useStudentDashboard, useTeacherDashboard,
          useParentDashboard, useDriverDashboard, useEarlyWarning,
@@ -21,7 +22,8 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import {
   BookOpen, Bot, Bus, Calendar, CheckCircle2, ChevronRight,
   CreditCard, GraduationCap, TrendingDown, TrendingUp, Users,
-  Wallet, Zap, Clock, FileText, AlertTriangle, Star} from "lucide-react";
+  Wallet, Zap, Clock, FileText, AlertTriangle, Star,
+} from "lucide-react";
 
 const fmt  = (n?: number|null, pre = "") => n !== undefined && n !== null ? `${pre}${Number(n).toLocaleString()}` : "—";
 const pkr  = (n?: number|null) => n !== undefined && n !== null ? `PKR ${(Number(n)/1000).toFixed(0)}K` : "—";
@@ -122,8 +124,8 @@ function AdminDashboard({ role = "SchoolAdmin" }: { role?: string }) {
   const { data: actData }      = useActivities();
   const nav = useNavigate();
 
-  const exams      = (examsData as any)?.items ?? (examsData as any) ?? [];
-  const activities = (actData as any)?.items ?? (actData as any) ?? [];
+  const exams      = toItems(examsData);
+  const activities = toItems(actData);
 
   return (
     <>
@@ -445,7 +447,7 @@ function AccountantDashboard() {
 function ExaminerDashboard() {
   const nav = useNavigate();
   const { data: examsData } = useExams();
-  const exams = (examsData as any)?.items ?? (examsData as any) ?? [];
+  const exams = toItems(examsData);
   let pending = 0, upcoming = 0;
   for(const e of exams) {
     let meta: any = {};

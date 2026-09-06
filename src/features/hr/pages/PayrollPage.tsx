@@ -1,4 +1,5 @@
 import { RowActions } from "../../../components/ui/RowActions";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { useState, useMemo } from "react";
 import { DollarSign, Plus, Search, X, CheckCircle2, FileText, Briefcase } from "lucide-react";
@@ -9,7 +10,6 @@ import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { EditModal }  from "../../../components/ui/EditModal";
 
-const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 const pkr = (n?: number) => n !== undefined ? `PKR ${Number(n).toLocaleString()}` : "—";
 const SALARY_MAP: Record<string,number> = {
   TEACHER:29000, PRINCIPAL:85000, ADMIN_OFFICER:45000, ACCOUNTANT:55000,
@@ -38,9 +38,9 @@ export function PayrollPage() {
   const { data: slipsData } = usePayslips();
   const createRun = useCreatePayrollRun();
 
-  const employees = (empData as any)?.items ?? (empData as any) ?? [];
-  const runs      = (runsData as any)?.items ?? (runsData as any) ?? [];
-  const slips     = (slipsData as any)?.items ?? (slipsData as any) ?? [];
+  const employees = toItems(empData);
+  const runs      = toItems(runsData);
+  const slips     = toItems(slipsData);
 
   const activeEmployees = employees.filter((e:any) => e.status === "ACTIVE");
 

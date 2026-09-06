@@ -140,8 +140,8 @@ export const useSendMessage     = (convId:string) => { const qc=useQueryClient()
 export const useCreateConversation=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createConversation(b), onSuccess:()=>qc.invalidateQueries({queryKey:["convs",tid]}) }); };
 
 // ── AICore ────────────────────────────────────────────────────────────────────
-export const useModelConfigs    = () => { const tid=useTid(); return useQuery({ queryKey:["model-configs",tid], queryFn:()=>A.getModelConfigs(tid) }); };
-export const useCreateModelConfig=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createModelConfig(b), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
+//export const useModelConfigs    = () => { const tid=useTid(); return useQuery({ queryKey:["model-configs",tid], queryFn:()=>A.getModelConfigs(tid) }); };
+//export const useCreateModelConfig=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createModelConfig(b), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
 export const useCollections     = () => { const tid=useTid(); return useQuery({ queryKey:["collections",tid], queryFn:()=>A.getCollections(tid) }); };
 export const useCreateCollection= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createCollection(b), onSuccess:()=>qc.invalidateQueries({queryKey:["collections",tid]}) }); };
 export const useIndexKnowledge  = () => useMutation({ mutationFn:(b:object)=>A.indexKnowledge(b) });
@@ -302,3 +302,26 @@ export const useCampusById       = (id?:string) => { const tid=useTid(); return 
 export const useDepartmentById   = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["department",id],    queryFn:()=>A.getDepartmentById(id!,tid),    enabled:!!id, staleTime:0 }); };
 export const useTenantById       = (id?:string) => useQuery({ queryKey:["tenant",id], queryFn:()=>A.getTenantById(id!), enabled:!!id, staleTime:0 });
 export const usePayrollRunById   = (id?:string) => { const tid=useTid(); return useQuery({ queryKey:["payroll-run",id],   queryFn:()=>A.getPayrollRunById(id!,tid),    enabled:!!id, staleTime:0 }); };
+
+// ── AI / RAG hooks ─────────────────────────────────────────────────────────────
+export const useKnowledgeDocuments = (collectionId?: string) => {
+  const tid = useTid();
+  return useQuery({ queryKey:["kb-docs",collectionId,tid], queryFn:()=>A.getKnowledgeDocuments(collectionId!,tid), enabled:!!collectionId });
+};
+export const useUploadKnowledgeDocument = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn:({collectionId,formData}:{collectionId:string;formData:FormData})=>A.uploadKnowledgeDocument(collectionId,formData), onSuccess:(_,v)=>qc.invalidateQueries({queryKey:["kb-docs",v.collectionId]}) });
+};
+export const useDeleteKnowledgeDocument = () => {
+  const qc = useQueryClient(); const tid = useTid();
+  return useMutation({ mutationFn:(docId:string)=>A.deleteKnowledgeDocument(docId,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["kb-docs"]}) });
+};
+export const useTriggerReindex = () => {
+  const tid = useTid();
+  return useMutation({ mutationFn:(collectionId:string)=>A.triggerReindex(collectionId,tid) });
+};
+export const useModelConfigs = () => { const tid=useTid(); return useQuery({ queryKey:["model-configs",tid], queryFn:()=>A.getModelConfigs(tid) }); };
+export const useUpdateModelConfig = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateModelConfig(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
+export const useCreateModelConfig  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(body:object)=>A.createModelConfig(body), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
+export const useAiSettings = () => { const tid=useTid(); return useQuery({ queryKey:["ai-settings",tid], queryFn:()=>A.getAiSettings(tid) }); };
+export const useUpdateAiSettings = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(body:object)=>A.updateAiSettings(body), onSuccess:()=>qc.invalidateQueries({queryKey:["ai-settings",tid]}) }); };

@@ -1,20 +1,20 @@
 import { PkPhoneInput, PkEmailInput, PkCnicInput, PkAddressBlock } from "../../../components/ui/PakistanFields";
-import React, { useEffect, useState } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
 import { Pagination } from "../../../components/ui/Pagination";
-import { Plus, Search, X, CheckCircle2, XCircle, Clock, CalendarOff, MessageSquare } from "lucide-react";
+import { Plus, Search, X, CheckCircle2, XCircle, Clock, CalendarOff, MessageSquare, Users, Briefcase, UserCheck, AlertCircle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
+import { StatCard } from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
 import {
   useEmployees, useCreateEmployee, useCampuses, useDepartments,
-  useLeaveRequests, useApproveLeave, useRejectLeave, useUpdateEmployee, useDeleteEmployee, useEmployeeById} from "../../../core/api/queries";
+ useLeaveRequests, useApproveLeave, useRejectLeave, useUpdateEmployee,
+  useDeleteEmployee, useEmployeeById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { usePermissions } from "../../../core/rbac/usePermissions";
-import { Users, Briefcase, UserCheck, AlertCircle } from "lucide-react";
 
 const STAFF_TYPES = ["TEACHER","DRIVER","PRINCIPAL","ADMIN_OFFICER","ACCOUNTANT","HR","LIBRARIAN","TRANSPORT","OTHER"];
 const EMPLOYMENT_TYPES = ["PERMANENT","CONTRACT","PART_TIME"];
@@ -52,16 +52,16 @@ export function HrPage() {
   const { data: leavesData } = useLeaveRequests();
   const approveLeave = useApproveLeave();
   const rejectLeave  = useRejectLeave();
-  useEffect(()=>{ setLocalEmp((data as any)?.items??(data as any)??[]); },[data]);
-  useEffect(()=>{ setLocalLeaves((leavesData as any)?.items??(leavesData as any)??[]); },[leavesData]);
+  useEffect(()=>{ setLocalEmp(toItems(data)); },[data]);
+  useEffect(()=>{ setLocalLeaves(toItems(leavesData)); },[leavesData]);
   const { data: campusesData } = useCampuses();
   const { data: deptsData } = useDepartments();
   const createEmployee = useCreateEmployee();
 
   const employees = localEmp;
   const pagedEmployees = employees.slice((page-1)*pageSize, page*pageSize);
-  const campuses  = (campusesData as any)?.items ?? (campusesData as any) ?? [];
-  const depts     = (deptsData as any)?.items ?? (deptsData as any) ?? [];
+  const campuses  = toItems(campusesData);
+  const depts     = toItems(deptsData);
 
   const pendingLeaves = localLeaves.filter((l:any) => l.status === "PENDING").length;
 

@@ -1,4 +1,5 @@
 import { RowActions } from "../../../components/ui/RowActions";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { Pagination } from "../../../components/ui/Pagination";
 import { useState } from "react";
@@ -18,15 +19,13 @@ const MOCK_AUDIT_LOGS = [
   { id:"al5", code:"AUD-005", name:"Fee type created", metadataJson: JSON.stringify({ actor:"admin@alnoor.edu", action:"CreateFeeType", entity:"FeeType", entityId:"ft1", ipAddress:"192.168.1.1", timestamp:"2026-08-29T09:00:00Z", status:"Success" }) },
 ];
 
-function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
-
 export function AuditPage() {
   const { user } = useAuth();
   const [viewLog, setViewLog] = useState<any|null>(null);
   const tid = effectiveTenantId(user) ?? "";
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({ queryKey:["audit-logs",tid], queryFn: () => A.getAuditLogs(tid) });
-  const rawItems = (data as any)?.items ?? (data as any) ?? [];
+  const rawItems = toItems(data);
   const items    = env.useMocks && rawItems.length === 0 ? MOCK_AUDIT_LOGS : rawItems;
   const filtered = items.filter((l:any) => `${l.name} ${l.code}`.toLowerCase().includes(q.toLowerCase()));
 

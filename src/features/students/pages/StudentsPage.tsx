@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Plus, Search, X, GraduationCap, Users, CheckCircle2, AlertCircle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
+import { StatCard } from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
-import {
-  useStudents, useCreateStudent, useCreateEnrollment,
-  useCampuses, useAcademicYears, useClassSections, useGradeLevels, useUpdateStudent, useDeleteStudent, useStudentById} from "../../../core/api/queries";
+
+import { useStudents, useCreateStudent, useCreateEnrollment,
+      useCampuses, useAcademicYears, useClassSections, useGradeLevels, 
+      useUpdateStudent, useDeleteStudent, useStudentById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -35,7 +36,7 @@ export function StudentsPage() {
 
   const [students, setStudents] = useState<any[]>([]);
   const { data, isLoading } = useStudents();
-  useEffect(()=>{ const s=(data as any)?.items??(data as any)??[]; setStudents(s); },[data]);
+  useEffect(()=>{ const s=toItems(data); setStudents(s); },[data]);
   const { data: campusesData } = useCampuses();
   const { data: yearsData }    = useAcademicYears();
   const { data: sectionsData } = useClassSections();
@@ -43,10 +44,10 @@ export function StudentsPage() {
   const createStudent    = useCreateStudent();
   const createEnrollment = useCreateEnrollment();
 
-  const campuses = (campusesData as any)?.items ?? (campusesData as any) ?? [];
-  const years    = (yearsData as any)?.items    ?? (yearsData as any) ?? [];
-  const sections = (sectionsData as any)?.items ?? (sectionsData as any) ?? [];
-  const grades   = (gradesData as any)?.items   ?? (gradesData as any) ?? [];
+  const campuses = toItems(campusesData);
+  const years    = toItems(yearsData);
+  const sections = toItems(sectionsData);
+  const grades   = toItems(gradesData);
 
   const [form, setForm] = useState({
     schoolId:"", branchId:"", academicYearId:"", classSectionId:"",

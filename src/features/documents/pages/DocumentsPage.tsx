@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Upload, FileText, Search, Filter, CheckCircle2, AlertTriangle, X, Eye } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
@@ -22,8 +23,8 @@ export function DocumentsPage() {
 
   const { data: studData } = useStudents();
   const { data: empData  } = useEmployees();
-  const students  = (studData as any)?.items ?? (studData as any) ?? [];
-  const employees = (empData as any)?.items  ?? (empData as any) ?? [];
+  const students  = toItems(studData);
+  const employees = toItems(empData);
 
   const entityOptions = useMemo(() => {
     if (entityType === "STUDENT") return students.map((s:any) => ({ id:s.id, name:`${s.firstName} ${s.lastName??""} (${s.studentNumber??s.id.slice(-5)})` }));

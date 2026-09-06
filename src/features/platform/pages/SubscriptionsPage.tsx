@@ -1,13 +1,12 @@
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { StatCard } from "../../../components/ui/StatCard";
 import { useTenants } from "../../../core/api/queries";
 import { DollarSign } from "lucide-react";
 
-function parseMeta(json?: string|null) { try { return JSON.parse(json ?? "{}"); } catch { return {}; } }
-
 export function SubscriptionsPage() {
   const { data, isLoading } = useTenants();
-  const tenants = (data as any)?.items ?? (data as any) ?? [];
+  const tenants = toItems(data);
 
   const PLANS: Record<string,{price:number;color:string;bg:string}> = {
     Starter:    { price:  99, color:"#6B7280", bg:"#F9FAFB" },

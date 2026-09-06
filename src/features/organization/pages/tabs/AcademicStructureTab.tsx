@@ -1,6 +1,7 @@
 import { RowActions } from "../../../../components/ui/RowActions";
+import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
-import { EditModal  } from "../../../../components/ui/EditModal";
+import { EditModal } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
@@ -9,7 +10,7 @@ import {
   useGradeLevels, useCreateGradeLevel,
   useClassSections, useCreateClassSection,
   useSubjects, useCreateSubject,
-  useCampuses} from "../../../../core/api/queries";
+   useCampuses} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
@@ -32,7 +33,7 @@ export function AcademicStructureTab() {
   const { data: grades, isLoading: gLoad }   = useGradeLevels();
   const { data: sections, isLoading: sLoad } = useClassSections();
   const { data: subjects, isLoading: subLoad }= useSubjects();
-  const campusItems = (campuses as any)?.items ?? (campuses as any) ?? [];
+  const campusItems = toItems(campuses);
 
   const createYear    = useCreateAcademicYear();
   const deleteYear    = useDeleteAcademicYear();
@@ -53,7 +54,17 @@ export function AcademicStructureTab() {
         await createGrade.mutateAsync({ tenantId:tid, name:form.name });
       } else if (sub==="sections") {
         if (!form.name) { setError("Name required"); return; }
-        await createSection.mutateAsync({ tenantId:tid, name:form.name });
+        await createSection.mutateAsync({
+          tenantId: tid,
+          name: form.name,
+          metadataJson: JSON.stringify({
+            gradeId:     form.gradeId     || undefined,
+            campusId:    form.campusId    || undefined,
+            capacity:    form.capacity    ? Number(form.capacity) : undefined,
+            teacherId:   form.teacherId   || undefined,
+            academicYearId: form.academicYearId || undefined,
+          }),
+        });
       } else {
         if (!form.name||!form.branchId) { setError("Campus and name required"); return; }
         await createSubject.mutateAsync({ tenantId:tid, branchId:form.branchId, name:form.name });
@@ -140,7 +151,30 @@ export function AcademicStructureTab() {
                   </select>
                 </label>
               )}
-              <label className="human-field field-wide"><span>Name *</span><input value={form.name??""} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder={sub==="grades"?"e.g. Grade 9":sub==="sections"?"e.g. Grade 9-A":"e.g. Mathematics"}/></label>
+              <label className="human-field field-wide"><span>Name *</span><input value={form.name??""} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder={sub==="grades"?"e.g. Grade 9":sub==="sections"?"e.g. Grade 9-A  /  10-B  /  Primary Red":"e.g. Mathematics"}/></label>
+              {sub==="sections" && <>
+                <label className="human-field"><span>Campus</span>
+                  <select value={form.campusId??""} onChange={e=>setForm(p=>({...p,campusId:e.target.value}))}>
+                    <option value="">— Select campus —</option>
+                    {campusItems.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
+                <label className="human-field"><span>Grade level</span>
+                  <select value={form.gradeId??""} onChange={e=>setForm(p=>({...p,gradeId:e.target.value}))}>
+                    <option value="">— Select grade —</option>
+                    {(toItems(grades)).map((g:any)=><option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                </label>
+                <label className="human-field"><span>Capacity (students)</span>
+                  <input type="number" value={form.capacity??""} onChange={e=>setForm(p=>({...p,capacity:e.target.value}))} placeholder="e.g. 35"/>
+                </label>
+                <label className="human-field"><span>Academic year</span>
+                  <select value={form.academicYearId??""} onChange={e=>setForm(p=>({...p,academicYearId:e.target.value}))}>
+                    <option value="">— Select year —</option>
+                    {(toItems(years)).map((y:any)=><option key={y.id} value={y.id}>{y.name}</option>)}
+                  </select>
+                </label>
+              </>}
             </div>
             {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>

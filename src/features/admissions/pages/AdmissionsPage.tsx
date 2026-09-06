@@ -1,4 +1,6 @@
 import { PkPhoneInput, PkMobileInput, PkEmailInput, PkWebsiteInput, PkCnicInput, PkAddressBlock, PkCitySelect, PkProvinceSelect } from "../../../components/ui/PakistanFields";
+import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
+
 /**
  * AdmissionsPage — Full two-phase admission flow:
  *
@@ -22,7 +24,7 @@ import { Pagination } from "../../../components/ui/Pagination";
 import {
   AlertTriangle, Bot, CheckCircle2, ChevronDown, ChevronRight,
   ClipboardCheck, FileText, GraduationCap, Plus, Search, Users, X,
-  Zap, Clock, ArrowRight} from "lucide-react";
+ Zap, Clock, ArrowRight} from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { DocumentUploader } from "../../../components/ui/DocumentUploader";
@@ -112,10 +114,10 @@ export function AdmissionsPage() {
   const { data: yearsData }    = useAcademicYears();
   const { data: sectionsData } = useClassSections();
 
-  const schools  = (schoolsData  as any)?.items ?? (schoolsData  as any) ?? [];
-  const campuses = (campusesData as any)?.items ?? (campusesData as any) ?? [];
-  const years    = (yearsData    as any)?.items ?? (yearsData    as any) ?? [];
-  const sections = (sectionsData as any)?.items ?? (sectionsData as any) ?? [];
+  const schools  = toItems(schoolsData);
+  const campuses = toItems(campusesData);
+  const years    = toItems(yearsData);
+  const sections = toItems(sectionsData);
 
   // New application form
   const [appForm, setAppForm] = useState({

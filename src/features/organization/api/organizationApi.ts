@@ -86,7 +86,6 @@ export const organizationApi = {
     return items<LookupItem>((await api.get("/api/organization/lookups/branch-gender-types")).data);
   },
 
-
   async getAcademicSystems(tenantId: string): Promise<LookupItem[]> {
     const response = await api.get("/api/academics/academic-system", {
       params: { tenantId, page: 1, pageSize: 100 },
