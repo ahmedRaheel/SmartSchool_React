@@ -16,7 +16,7 @@ const rows = (d: any): any[] => Array.isArray(d) ? d : (d?.value?.items ?? d?.it
 export function AdmissionCriteriaPage() {
   const { user }  = useAuth();
   const tenantId  = user?.roles.includes("SuperAdmin")
-    ? (sessionStorage.getItem("selected_tenant_id") ?? undefined)
+    ? ((sessionStorage.getItem("selected_tenant_id") ?? undefined))
     : user?.tenantId;
 
   const [items,    setItems]    = useState<any[]>([]);
@@ -44,7 +44,7 @@ export function AdmissionCriteriaPage() {
     setClasses(rows((cl as any).data));
   }
 
-  async function load() { setItems(await admissionsApi.criteria(tenantId)); }
+  async function load() { setItems(await admissionsApi.criteria(tenantId ?? undefined)); }
   useEffect(() => { void load(); }, [tenantId]);
 
   async function save() {

@@ -4,6 +4,7 @@ import { RowActions } from "../../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
 import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { useDeleteRoom } from "../../../../core/api/queries";
 
 const INITIAL_ROOMS = [
   { id:"1", name:"Room 101",    type:"Classroom",    capacity:40, floor:"1st" },
@@ -15,6 +16,7 @@ const INITIAL_ROOMS = [
 const ROOM_TYPES = ["Classroom","Laboratory","Computer Lab","Library","Auditorium","Staff Room","Office","Other"];
 
 export function RoomsTab() {
+  const delRoom = useDeleteRoom();
   const [rooms,    setRooms]    = useState(INITIAL_ROOMS);
   const [modal,    setModal]    = useState(false);
   const [viewItem, setViewItem] = useState<any|null>(null);
@@ -65,15 +67,7 @@ export function RoomsTab() {
                   <td style={{ textAlign:"center" }}><b>{r.capacity}</b></td>
                   <td style={{ fontSize:12 }}>{r.floor}</td>
                   <td style={{ textAlign:"right" }}>
-                    <RowActions
-                      onView={() => setViewItem(r)}
-                      onEdit={() => setEditItem(r)}
-                      onDelete={() => setRooms(p => p.filter(x => x.id !== r.id))}
-                      deleteLabel="room"
-                    
-                          onDelete={() => delRoom.mutate(item.id)}
-                          deleteLabel="room"
-                        />
+                    <RowActions onView={() => setViewItem(r)} onEdit={() => setEditItem(r)} onDelete={() => delRoom.mutate(r.id)} deleteLabel="room"/>
                   </td>
                 </tr>
               ))}

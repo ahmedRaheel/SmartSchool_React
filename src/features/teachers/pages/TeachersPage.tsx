@@ -12,7 +12,7 @@ import {
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { useTeacherDashboard, useTeacherStudents, useTeacherTimetable,
-        useTeacherWorkload, useTeacherClasses, useDeleteEmployee} from "../../../core/api/queries";
+        useTeacherWorkload, useTeacherClasses, useDeleteEmployee , useUpdateEmployee , useEmployeeById } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 
 // ─── Rich mock class data — what actually matters for a teacher ───────────────
@@ -132,6 +132,11 @@ export function TeachersPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
   const delTeacher = useDeleteEmployee();
+  const [editTeacherId, setEditTeacherId] = useState<string|null>(null);
+  const updEmployee = useUpdateEmployee();
+  const viewTeacherOrEdit = editTeacherId;
+  const { data: viewTeacherData } = useEmployeeById(viewTeacherOrEdit ?? undefined);
+  const viewTeacherItem: any = viewTeacherData ?? null;
   const { user } = useAuth();
   const { data: classesData   } = useTeacherClasses?.() ?? { data: null };
   const { data: studentsData  } = useTeacherStudents?.() ?? { data: null };
@@ -264,7 +269,7 @@ export function TeachersPage() {
                 <div style={{ flex: 1 }}/>
                 {/* Schedule pills */}
                 <div style={{ display: "flex", gap: 4 }}>
-                  {cls.schedule.map((s, i) => (
+                  {cls.schedule.map((s: any, i: number) => (
                     <span key={i} style={{ padding: "2px 8px", borderRadius: 20, background: cls.bg,
                                            color: cls.color, fontSize: 10, fontWeight: 600 }}>
                       {s.day.slice(0,3)} {s.period}
@@ -321,7 +326,7 @@ export function TeachersPage() {
                 { label: "Students",     value: selectedClass.totalStudents },
                 { label: "Periods/week", value: selectedClass.periodsPerWeek },
                 { label: "To grade",     value: selectedClass.pendingAssignments },
-              ].map((s, i) => (
+              ].map((s: any, i: number) => (
                 <div key={i} style={{ flex: 1, padding: "14px", textAlign: "center",
                                        borderRight: i < 2 ? "1px solid var(--line)" : "none" }}>
                   <div style={{ fontSize: 22, fontWeight: 800, color: selectedClass.color }}>{s.value}</div>
@@ -335,7 +340,7 @@ export function TeachersPage() {
           <div className="surface" style={{ marginBottom: 14 }}>
             <div className="surface-head"><h3>Class schedule</h3><p>Regular periods this week</p></div>
             <div style={{ padding: "0 20px 20px", display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {selectedClass.schedule.map((s, i) => (
+              {selectedClass.schedule.map((s: any, i: number) => (
                 <div key={i} style={{ padding: "12px 16px", borderRadius: 10,
                                        background: selectedClass.bg, border: `1px solid ${selectedClass.color}30`,
                                        minWidth: 160 }}>
@@ -369,7 +374,7 @@ export function TeachersPage() {
                         <td>
                           <div className="person-cell">
                             <span className="row-avatar" style={{ background: selectedClass.bg, color: selectedClass.color, fontSize: 11 }}>
-                              {s.name.split(" ").map(w => w[0]).join("")}
+                              {s.name.split(" ").map((w: string) => w[0]).join("")}
                             </span>
                             <b>{s.name}</b>
                           </div>
@@ -394,14 +399,7 @@ export function TeachersPage() {
                         </td>
                         <td><span className={`status-pill ${s.status === "ACTIVE" ? "success" : "warning"}`}>{s.status}</span></td>
 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                              <RowActions
-                                onView={() => s.id}
-                                onEdit={() => setViewSt(s)}
-                                                                deleteLabel="record"
-                              
-                          onDelete={() => delTeacher.mutate(item.id)}
-                          deleteLabel="teacher"
-                        />
+                              <RowActions onView={() => setViewSt(s)} onEdit={() => setViewSt(s)} deleteLabel="student"/>
                             </td>
                       </tr>
                     ))}
@@ -509,7 +507,7 @@ export function TeachersPage() {
                       <td>
                         <div className="person-cell">
                           <span className="row-avatar" style={{ background: cls?.bg ?? "#EEF2FF", color: cls?.color ?? "#6366F1", fontSize: 11 }}>
-                            {s.name.split(" ").map(w => w[0]).join("")}
+                            {s.name.split(" ").map((w: string) => w[0]).join("")}
                           </span>
                           <b>{s.name}</b>
                         </div>

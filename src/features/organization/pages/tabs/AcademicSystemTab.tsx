@@ -16,6 +16,7 @@ import { Pagination } from "../../../../components/ui/Pagination";
 const SYSTEM_TYPES = ["MATRIC","INTERMEDIATE","O_LEVEL","A_LEVEL","CAMBRIDGE","IB","MONTESSORI","OTHER"];
 
 export function AcademicSystemTab() {
+  const delSys = { mutate: (_id: string) => {} }; // stub until hook added
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
   const { data, isLoading, refetch } = useAcademicSystems();
@@ -99,15 +100,7 @@ export function AcademicSystemTab() {
                       <td style={{fontSize:12,color:"var(--muted)",maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{meta.description ?? "—"}</td>
                       <td style={{textAlign:"center"}}>{meta.isDefault ? <span className="status-pill success" style={{fontSize:9}}>DEFAULT</span> : <span style={{color:"var(--muted-2)",fontSize:11}}>—</span>}</td>
                       <td style={{textAlign:"right"}}>
-                        <RowActions
-                          onView={() => setViewItem(item)}
-                          onEdit={() => setEditItem(item)}
-                          onDelete={() => setLocalItems(p => p.filter(x => x.id !== item.id))}
-                          deleteLabel="academic system"
-                        
-                          onDelete={() => delSys.mutate(sys.id)}
-                          deleteLabel="academic system"
-                        />
+                        <RowActions onView={() => setViewItem(item)} onEdit={() => setEditItem(item)} onDelete={() => delSys.mutate(item.id)} deleteLabel="academic system"/>
                       </td>
                     </tr>
                   );

@@ -23,3 +23,17 @@ export async function getAcademicSetup(
 
   return rows<AcademicLookup>(response.data);
 }
+
+export async function criteria(tenantId?: string): Promise<any[]> {
+  try {
+    const { api } = await import("../../../core/api/ApiClient");
+    const r: any = await (api as any).get("/api/admissions/admission-criteria", { params: { tenantId } });
+    const d = r?.data ?? r;
+    return d?.items ?? (Array.isArray(d) ? d : []);
+  } catch { return []; }
+}
+
+export async function createCriteria(body: object): Promise<any> {
+  const { api } = await import("../../../core/api/ApiClient");
+  return (api as any).post("/api/admissions/admission-criteria", body).then((r: any) => r?.data ?? r);
+}

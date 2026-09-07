@@ -13,6 +13,7 @@ import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
 export function TransportPage() {
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const updVehicle = useUpdateVehicle();
   const delVehicle = useDeleteVehicle();

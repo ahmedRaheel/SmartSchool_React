@@ -1,3 +1,4 @@
+import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import { RowActions } from "../../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
 import { EditModal } from "../../../../components/ui/EditModal";
@@ -15,6 +16,7 @@ export function LookupConfigTab() {
   const PAGE_SIZE = 25;
   const [viewItem, setViewItem] = useState<any|null>(null);
   const [editItem, setEditItem] = useState<any|null>(null);
+  const filteredItems: any[] = toItems(undefined); // populated below
   const { user } = useAuth();
   const tid = effectiveTenantId(user);
   const { data: types, isLoading: tLoad } = useLookupTypes();

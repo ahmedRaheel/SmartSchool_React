@@ -9,7 +9,6 @@ import { StatCard }   from "../../../components/ui/StatCard";
 import { useEmployees, usePayrollRuns, useCreatePayrollRun, useSalaryStructures, usePayslips , useUpdatePayrollRun, useDeletePayrollRun, usePayrollRunById} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-import { EditModal }  from "../../../components/ui/EditModal";
 import { Pagination } from "../../../components/ui/Pagination";
 
 const pkr = (n?: number) => n !== undefined ? `PKR ${Number(n).toLocaleString()}` : "—";

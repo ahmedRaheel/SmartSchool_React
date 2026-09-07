@@ -19,6 +19,7 @@ const PLANS: Record<string,{color:string;bg:string}> = {
 };
 
 export function TenantManagementPage() {
+  const PAGE_SIZE = 25;
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");

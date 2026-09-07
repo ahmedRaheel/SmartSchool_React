@@ -16,6 +16,7 @@ const AWD_TYPES = ["ACADEMIC","SPORTS","CULTURAL","ATTENDANCE","LEADERSHIP","COM
 const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning", COMPLETED:"success", CANCELLED:"danger" };
 
 export function ActivitiesPage() {
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const updActivity = useUpdateActivity();
   const delActivity = useDeleteActivity();

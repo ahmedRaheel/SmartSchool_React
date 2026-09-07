@@ -298,7 +298,7 @@ function StudentDashboard() {
       {risks.length > 0 && (
         <div style={{marginBottom:16,display:"flex",flexDirection:"column",gap:8}}>
           {risks.map((r:any,i:number) => (
-            <AIAlert key={i} message={`⚠️ AI Alert: ${r.outcome}. Factors: ${Array.isArray(r.factors) ? r.factors.slice(0,2).join(", ") : "See AI panel"}`} level="danger"/>
+            <span key={i} style={{display:"contents"}}><AIAlert message={`⚠️ AI Alert: ${r.outcome}. Factors: ${Array.isArray(r.factors) ? r.factors.slice(0,2).join(", ") : "See AI panel"}`} level="danger"/></span>
           ))}
         </div>
       )}

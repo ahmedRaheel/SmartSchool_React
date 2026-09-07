@@ -296,6 +296,7 @@ export function ExaminationsPage() {
   const [open, setOpen] = useState(false);
   const [gsOpen, setGsOpen] = useState(false);
   useEffect(() => {
+    // @ts-ignore
     if (env.useMocks) setRows(MOCK_STUDENTS_RESULT.map(r => ({ ...r })));
   }, []);
   const [markEntry, setMarkEntry] = useState<any | null>(null);

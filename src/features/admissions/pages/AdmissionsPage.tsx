@@ -86,6 +86,7 @@ const WORKFLOW_RULES = [
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function AdmissionsPage() {
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const updApplication = useUpdateApplication();
   const delApplication = useDeleteApplication();

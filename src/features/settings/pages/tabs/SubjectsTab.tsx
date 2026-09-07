@@ -5,7 +5,7 @@ import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { useSubjects, useCreateSubject, useCampuses , useDeleteSubject} from "../../../../core/api/queries";
+import { useSubjects, useCreateSubject, useCampuses, useDeleteSubject } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
