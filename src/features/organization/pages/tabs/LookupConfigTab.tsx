@@ -1,3 +1,8 @@
+import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
+import { RowActions } from "../../../../components/ui/RowActions";
+import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
+import { EditModal } from "../../../../components/ui/EditModal";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { useLookupTypes, useLookupValues, useCreateLookup, useDeleteLookup } from "../../../../core/api/queries";
@@ -7,6 +12,11 @@ import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 const SYSTEM_TYPES = ["GENDER","BLOOD_GROUP","EMPLOYMENT_TYPE","LEAVE_TYPE","NATIONALITY","RELIGION","MARITAL_STATUS","GRADE_SYSTEM","FEE_FREQUENCY"];
 
 export function LookupConfigTab() {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
+  const [viewItem, setViewItem] = useState<any|null>(null);
+  const [editItem, setEditItem] = useState<any|null>(null);
+  const filteredItems: any[] = toItems(undefined); // populated below
   const { user } = useAuth();
   const tid = effectiveTenantId(user);
   const { data: types, isLoading: tLoad } = useLookupTypes();
@@ -110,6 +120,7 @@ export function LookupConfigTab() {
           </div>
         </div>
       )}
+      <Pagination page={page} pageSize={PAGE_SIZE} total={filteredItems?.length ?? 0} onPage={setPage} label="lookup values"/>
     </>
   );
 }

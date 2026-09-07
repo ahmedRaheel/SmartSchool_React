@@ -5,12 +5,17 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import { useTenants, useModelConfigs, useExecLogs, useAuditLogs } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
+import { Pagination } from "../../../components/ui/Pagination";
 import { RowActions } from "../../../components/ui/RowActions";
+import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 
 export function PlatformAdminPage() {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const [viewItem, setViewItem] = useState<any|null>(null);
+  const [editItem, setEditItem] = useState<any|null>(null);
   const [tab, setTab] = useState<"overview"|"tenants"|"ai"|"logs">("overview");
 
   const { data: tenantsData } = useTenants();
@@ -182,6 +187,21 @@ export function PlatformAdminPage() {
             { key: "studentCount", label: "Students" },
             { key: "status", label: "Status" },
             { key: "createdAt", label: "Created", wide: true },
+          ]}
+        />
+      )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={tenants.length} onPage={setPage} label="tenants"/>
+
+      {editItem && (
+        <EditModal title="Tenant" item={editItem}
+          onClose={() => setEditItem(null)}
+          onSave={async data => { setEditItem(null); }}
+          fields={[
+            { key:"organizationName", label:"Organisation",  required:true, wide:true },
+            { key:"adminEmail",       label:"Admin email",   type:"pk-email",wide:true},
+            { key:"contactPhone",     label:"Contact phone", type:"pk-phone"          },
+            { key:"status",           label:"Status",        type:"select", options:[{value:"ACTIVE",label:"Active"},{value:"SUSPENDED",label:"Suspended"},{value:"TRIAL",label:"Trial"}] },
           ]}
         />
       )}

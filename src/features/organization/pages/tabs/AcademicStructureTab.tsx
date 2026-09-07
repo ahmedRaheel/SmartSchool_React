@@ -17,6 +17,7 @@ import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 type SubTab = "years"|"grades"|"sections"|"subjects";
 
 export function AcademicStructureTab() {
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const tid = effectiveTenantId(user);
   const [viewAcad, setViewAcad] = useState<any|null>(null);
@@ -73,20 +74,20 @@ export function AcademicStructureTab() {
     } catch(e: any) { setError(e?.message ?? "Failed"); }
   }
 
-  const TAB_LABELS: Record<SubTab,string> = { years:"📅 Academic Years", grades:"📚 Grade Levels", sections:"🏷️ Class Sections", subjects:"📖 Subjects" };
+  const TAB_LABELS: Record<string, string> = { years:"📅 Academic Years", grades:"📚 Grade Levels", sections:"🏷️ Class Sections", subjects:"📖 Subjects" };
 
   return (
     <>
       <div className="section-tabs" style={{ marginBottom:14 }}>
         {(["years","grades","sections","subjects"] as SubTab[]).map(t => (
-          <button key={t} className={sub===t?"active":""} onClick={()=>setSub(t)}>{TAB_LABELS[t]}</button>
+          <button key={t} className={sub===t?"active":""} onClick={()=>setSub(t)}>{(TAB_LABELS as any)[t]}</button>
         ))}
       </div>
 
       <div className="surface">
         <div className="surface-head">
           <div>
-            <h3>{TAB_LABELS[sub]}</h3>
+            <h3>{(TAB_LABELS as any)[sub]}</h3>
             <p>{sub==="years"?"Academic years per campus":sub==="grades"?"Grade levels (Grade 7, 8, ...)":sub==="sections"?"Class sections (9-A, 10-B, ...)":"Subjects offered"}</p>
           </div>
           <button className="primary" onClick={() => { setModal(true); setForm({}); setError(""); }}><Plus size={14}/> Add</button>
@@ -98,7 +99,9 @@ export function AcademicStructureTab() {
               <thead><tr><th>Name</th><th>Code</th>{sub==="years"&&<th>Details</th>}<th/><th style={{textAlign:"right"}}>Actions</th></tr></thead>
               <tbody>
                 {items.length===0
-                  ? <tr><td colSpan={4} style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>None yet. Click "Add" to create one.</td></tr>
+                  ? <tr><td colSpan={4} style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>None yet. Click "Add" to create one.</td>
+                    
+                  </tr>
                   : items.map((item: any) => {
                     let meta: any = {};
                     try { meta = JSON.parse(item.metadataJson ?? "{}"); } catch {}
@@ -208,6 +211,8 @@ export function AcademicStructureTab() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={items.length} onPage={setPage} label="sections"/>
     </>
   );
 }

@@ -16,6 +16,7 @@ const AWD_TYPES = ["ACADEMIC","SPORTS","CULTURAL","ATTENDANCE","LEADERSHIP","COM
 const STATUS_PILL: Record<string,string> = { UPCOMING:"info", ONGOING:"warning", COMPLETED:"success", CANCELLED:"danger" };
 
 export function ActivitiesPage() {
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const updActivity = useUpdateActivity();
   const delActivity = useDeleteActivity();
@@ -199,11 +200,13 @@ export function ActivitiesPage() {
           item={viewActivityItem}
           onClose={() => setViewActivityId(null)}
           fields={[
-            { key: "name", label: "Activity", wide: true },
-            { key: "activityType", label: "Type" },
-            { key: "venue", label: "Venue" },
-            { key: "startDate", label: "Start" },
-            { key: "endDate", label: "End" },
+            { key:"name",            label:"Activity name",   wide:true },
+            { key:"activityType",    label:"Type"                       },
+            { key:"activityDate",    label:"Date"                       },
+            { key:"venue",           label:"Venue"                      },
+            { key:"maxParticipants", label:"Max participants"           },
+            { key:"status",          label:"Status"                     },
+            { key:"description",     label:"Description",    wide:true  },
           ]}
         
           onEdit={() => { setEditActivityId(viewActivityId!); setViewActivityId(null); }}/>
@@ -219,14 +222,18 @@ export function ActivitiesPage() {
             setEditActivityId(null);
           }}
           fields={[
-            { key:"name",         label:"Activity name", required:true, wide:true },
-            { key:"activityType", label:"Type", type:"select", options:[{value:"SPORTS",label:"Sports"},{value:"CULTURAL",label:"Cultural"},{value:"ACADEMIC",label:"Academic"},{value:"TRIP",label:"Trip"}] },
-            { key:"venue",        label:"Venue" },
-            { key:"startDate",    label:"Start date", type:"date" },
-            { key:"endDate",      label:"End date",   type:"date" },
+            { key:"name",            label:"Activity name",    required:true, wide:true                                                                          },
+            { key:"activityType",    label:"Type",             type:"select", options:[{value:"SPORTS",label:"Sports"},{value:"CULTURAL",label:"Cultural"},{value:"ACADEMIC",label:"Academic"},{value:"TRIP",label:"Trip"},{value:"OTHER",label:"Other"}] },
+            { key:"activityDate",    label:"Date",             type:"date"                                                                                       },
+            { key:"venue",           label:"Venue"                                                                                                               },
+            { key:"maxParticipants", label:"Max participants", type:"number"                                                                                     },
+            { key:"status",          label:"Status",           type:"select", options:[{value:"UPCOMING",label:"Upcoming"},{value:"ONGOING",label:"Ongoing"},{value:"COMPLETED",label:"Completed"},{value:"CANCELLED",label:"Cancelled"}] },
+            { key:"description",     label:"Description",      wide:true                                                                                         },
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={activities.length} onPage={setPage} label="activities"/>
     </>
   );
 }

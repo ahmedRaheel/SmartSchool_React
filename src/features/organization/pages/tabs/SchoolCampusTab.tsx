@@ -482,11 +482,13 @@ export function SchoolCampusTab() {
           fields={[
             { key:"name",               label:"School name",    wide:true },
             { key:"registrationNumber", label:"Reg #"                    },
+            { key:"website",            label:"Website",        wide:true },
+            { key:"phone",              label:"Phone"                    },
+            { key:"email",              label:"Email",          wide:true },
+            { key:"address",            label:"Address",        wide:true },
             { key:"city",               label:"City"                     },
             { key:"province",           label:"Province"                 },
             { key:"country",            label:"Country"                  },
-            { key:"phone",              label:"Phone"                    },
-            { key:"email",              label:"Email",          wide:true },
           ]}
         />
       )}
@@ -496,12 +498,16 @@ export function SchoolCampusTab() {
           onClose={() => setViewCampusId(null)}
           onEdit={() => { setEditCampusId(viewCampusId!); setViewCampusId(null); }}
           fields={[
-            { key:"name",      label:"Campus name", wide:true },
-            { key:"branchType",label:"Type"                   },
-            { key:"city",      label:"City"                   },
-            { key:"province",  label:"Province"               },
-            { key:"phone",     label:"Phone"                  },
-            { key:"email",     label:"Email",       wide:true },
+            { key:"name",               label:"Campus name",     wide:true },
+            { key:"branchType",         label:"Branch type"               },
+            { key:"branchGenderTypeId", label:"Gender policy"             },
+            { key:"academicSystemId",   label:"Academic system"           },
+            { key:"phone",              label:"Phone"                     },
+            { key:"email",              label:"Email",           wide:true },
+            { key:"address",            label:"Address",         wide:true },
+            { key:"city",               label:"City"                      },
+            { key:"province",           label:"Province"                  },
+            { key:"country",            label:"Country"                   },
           ]}
         />
       )}
@@ -511,10 +517,11 @@ export function SchoolCampusTab() {
           onClose={() => setViewDept(null)}
           onEdit={() => { setEditDept(viewDept); setViewDept(null); }}
           fields={[
-            { key:"name",      label:"Name",  wide:true },
-            { key:"code",      label:"Code"             },
-            { key:"email",     label:"Email"            },
-            { key:"telephone", label:"Phone"            },
+            { key:"name",      label:"Department name", wide:true },
+            { key:"code",      label:"Code"                       },
+            { key:"campusId",  label:"Campus"                     },
+            { key:"email",     label:"Email"                       },
+            { key:"telephone", label:"Phone"                       },
           ]}
         />
       )}
@@ -531,10 +538,13 @@ export function SchoolCampusTab() {
           fields={[
             { key:"name",               label:"School name",  required:true, wide:true },
             { key:"registrationNumber", label:"Reg #"                                  },
+            { key:"website",            label:"Website",      wide:true                },
+            { key:"phone",              label:"Phone",        type:"pk-phone"          },
+            { key:"email",              label:"Email",        type:"pk-email",wide:true },
+            { key:"address",            label:"Address",      wide:true                },
             { key:"city",               label:"City",         type:"pk-city"           },
             { key:"province",           label:"Province",     type:"pk-province"       },
-            { key:"phone",              label:"Phone",        type:"pk-phone"          },
-            { key:"email",              label:"Email",        type:"pk-email", wide:true},
+            { key:"country",            label:"Country"                                },
           ]}
         />
       )}
@@ -548,10 +558,12 @@ export function SchoolCampusTab() {
           }}
           fields={[
             { key:"name",    label:"Campus name", required:true, wide:true },
-            { key:"city",    label:"City",        type:"pk-city"           },
-            { key:"province",label:"Province",    type:"pk-province"       },
             { key:"phone",   label:"Phone",       type:"pk-phone"          },
             { key:"email",   label:"Email",       type:"pk-email"          },
+            { key:"address", label:"Address",     wide:true                },
+            { key:"city",    label:"City",        type:"pk-city"           },
+            { key:"province",label:"Province",    type:"pk-province"       },
+            { key:"country", label:"Country"                               },
           ]}
         />
       )}
@@ -564,9 +576,9 @@ export function SchoolCampusTab() {
             setEditDept(null);
           }}
           fields={[
-            { key:"name",      label:"Name",  required:true, wide:true },
-            { key:"email",     label:"Email", type:"pk-email"          },
-            { key:"telephone", label:"Phone", type:"pk-phone"          },
+            { key:"name",      label:"Department name", required:true, wide:true },
+            { key:"email",     label:"Email",           type:"pk-email"          },
+            { key:"telephone", label:"Phone",           type:"pk-phone"          },
           ]}
         />
       )}

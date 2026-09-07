@@ -9,7 +9,7 @@ import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
 type EntityType = "STUDENT" | "TEACHER" | "DRIVER" | "EMPLOYEE" | "ADMIN_OFFICER";
-const ACTOR_LABELS: Record<EntityType, string> = {
+const ACTOR_LABELS: Record<string, string> = {
   STUDENT:"Student", TEACHER:"Teacher", DRIVER:"Driver", EMPLOYEE:"Employee", ADMIN_OFFICER:"Admin Officer"
 };
 

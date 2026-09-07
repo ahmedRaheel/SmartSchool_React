@@ -86,6 +86,7 @@ const WORKFLOW_RULES = [
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function AdmissionsPage() {
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const updApplication = useUpdateApplication();
   const delApplication = useDeleteApplication();
@@ -736,6 +737,8 @@ export function AdmissionsPage() {
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={apps.length} onPage={setPage} label="applications"/>
     </>
   );
 }

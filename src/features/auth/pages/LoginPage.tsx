@@ -255,11 +255,11 @@ export function LoginPage() {
             <div style={{ fontSize:11, fontWeight:700, color:"#475569", marginBottom:8, textTransform:"uppercase", letterSpacing:.8 }}>API mode</div>
             <div style={{ fontSize:11, color:"#64748B", lineHeight:1.6 }}>
               Currently in <code style={{ background:"#E2E8F0", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>
-                {import.meta.env.VITE_USE_MOCKS === "true" ? "MOCK" : "REAL API"}
+                {(import.meta as any).env?.VITE_USE_MOCKS === "true" ? "MOCK" : "REAL API"}
               </code> mode.{" "}
-              {import.meta.env.VITE_USE_MOCKS === "true"
+              {(import.meta as any).env?.VITE_USE_MOCKS === "true"
                 ? "Set VITE_USE_MOCKS=false in .env for real backend."
-                : `API: ${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:7001"}`}
+                : `API: ${(import.meta as any).env?.VITE_API_BASE_URL ?? "http://localhost:7001"}`}
             </div>
           </div>
 

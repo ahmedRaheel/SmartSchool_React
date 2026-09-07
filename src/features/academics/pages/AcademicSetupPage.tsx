@@ -8,9 +8,9 @@ import { useAuth } from "../../auth/auth";
 import { Campus, LookupItem, organizationApi, School } from "../../organization/api/organizationApi";
 
 type SetupType = "years" | "classes" | "sections";
-const setupLabels: Record<SetupType, string> = { years: "academic year", classes: "class", sections: "section" };
+const setupLabels: Record<string, string> = { years: "academic year", classes: "class", sections: "section" };
 
-const setupRoutes: Record<SetupType, string> = {
+const setupRoutes: Record<string, string> = {
   years: "/api/academics/academic-year",
   classes: "/api/academics/grade-level",
   sections: "/api/academics/class-section",

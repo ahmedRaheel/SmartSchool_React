@@ -5,11 +5,12 @@ import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { useSubjects, useCreateSubject, useCampuses } from "../../../../core/api/queries";
+import { useSubjects, useCreateSubject, useCampuses, useDeleteSubject } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
 export function SubjectsTab() {
+  const delSubject = useDeleteSubject();
   const { user } = useAuth();
   const tid = effectiveTenantId(user);
   const { data: subjects, isLoading } = useSubjects();

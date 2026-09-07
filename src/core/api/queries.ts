@@ -325,3 +325,4 @@ export const useUpdateModelConfig = () => { const qc=useQueryClient(); const tid
 export const useCreateModelConfig  = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(body:object)=>A.createModelConfig(body), onSuccess:()=>qc.invalidateQueries({queryKey:["model-configs",tid]}) }); };
 export const useAiSettings = () => { const tid=useTid(); return useQuery({ queryKey:["ai-settings",tid], queryFn:()=>A.getAiSettings(tid) }); };
 export const useUpdateAiSettings = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(body:object)=>A.updateAiSettings(body), onSuccess:()=>qc.invalidateQueries({queryKey:["ai-settings",tid]}) }); };
+export const useDeleteRoom = () => { const qc = useQueryClient(); const tid = useTid(); return useMutation({ mutationFn: (id: string) => A.deleteInventoryItem(id, tid), onSuccess: () => qc.invalidateQueries({ queryKey: ["rooms", tid] }) }); };

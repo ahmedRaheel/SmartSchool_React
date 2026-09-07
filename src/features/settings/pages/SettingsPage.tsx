@@ -248,7 +248,7 @@ export function SettingsPage() {
           <div style={{ padding:"4px 0" }}>
             {TOGGLES.filter(t => t.group===group).map(toggle => (
               <Toggle
-                key={toggle.key}
+                
                 toggle={toggle}
                 enabled={toggles[toggle.key] ?? toggle.default}
                 onChange={v => { setToggles(p => ({...p, [toggle.key]: v})); setSaved(false); }}

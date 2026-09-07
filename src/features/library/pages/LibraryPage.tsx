@@ -267,12 +267,14 @@ export function LibraryPage() {
           item={viewBookItem}
           onClose={() => setViewBookId(null)}
           fields={[
-            { key: "name", label: "Title", wide: true },
-            { key: "isbn", label: "ISBN" },
-            { key: "author", label: "Author" },
-            { key: "publisher", label: "Publisher" },
-            { key: "copies", label: "Total copies" },
-            { key: "available", label: "Available" },
+            { key:"name",            label:"Title",          wide:true },
+            { key:"author",          label:"Author"                    },
+            { key:"isbn",            label:"ISBN"                      },
+            { key:"publisher",       label:"Publisher"                 },
+            { key:"category",        label:"Category"                  },
+            { key:"publicationYear", label:"Published"                 },
+            { key:"totalCopies",     label:"Total copies"              },
+            { key:"availableCopies", label:"Available"                 },
           ]}
         
           onEdit={() => { setEditBookId(viewBookId!); setViewBookId(null); }}/>
@@ -288,11 +290,13 @@ export function LibraryPage() {
             setEditBookId(null);
           }}
           fields={[
-            { key:"name",      label:"Title",     required:true, wide:true },
-            { key:"isbn",      label:"ISBN" },
-            { key:"author",    label:"Author",    required:true },
-            { key:"publisher", label:"Publisher" },
-            { key:"copies",    label:"Total copies", type:"number" },
+            { key:"name",            label:"Title",       required:true, wide:true },
+            { key:"author",          label:"Author",      required:true             },
+            { key:"isbn",            label:"ISBN"                                  },
+            { key:"publisher",       label:"Publisher"                             },
+            { key:"category",        label:"Category"                              },
+            { key:"publicationYear", label:"Pub. year",   type:"number"            },
+            { key:"totalCopies",     label:"Total copies",type:"number"            },
           ]}
         />
       )}

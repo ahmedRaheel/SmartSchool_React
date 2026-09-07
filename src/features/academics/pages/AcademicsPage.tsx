@@ -20,7 +20,6 @@ export function AcademicsPage() {
       <nav className="workspace-tabs" aria-label="Academic workspaces">
         {workspaces.map((item) => (
           <button
-            key={item.key}
             type="button"
             className={workspace === item.key ? "active" : ""}
             onClick={() => setWorkspace(item.key)}
@@ -36,7 +35,6 @@ export function AcademicsPage() {
         <RealModulePage
           module="academics"
           initialResource={workspace}
-          key={workspace}
           title={workspaces.find((item) => item.key === workspace)?.label ?? "Academics"}
           subtitle="School academic setup and timetable management"
         />

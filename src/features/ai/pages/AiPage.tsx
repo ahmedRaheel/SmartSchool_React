@@ -146,7 +146,7 @@ function AssistantTab() {
         <button className="secondary" style={{ fontSize: 11, height: 30 }} onClick={() => setMessages(prev => [prev[0]])}>Clear</button>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-        {messages.map(m => <Bubble key={m.id} m={m} />)}
+        {messages.map(m => <Bubble m={m} />)}
         {loading && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0" }}>
             <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,var(--indigo),#818CF8)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -270,7 +270,7 @@ function TutorTab() {
       ) : (
         <>
           <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-            {messages.map(m => <Bubble key={m.id} m={m} />)}
+            {messages.map(m => <Bubble m={m} />)}
             {loading && (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#A78BFA)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -789,7 +789,7 @@ function AgentTab() {
         <button className="secondary" style={{ fontSize: 11, height: 30 }} onClick={() => setMessages(prev => [prev[0]])}>Clear</button>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-        {messages.map(m => <Bubble key={m.id} m={m} />)}
+        {messages.map(m => <Bubble m={m} />)}
         {loading && (
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#059669,#34D399)", display: "flex", alignItems: "center", justifyContent: "center" }}>

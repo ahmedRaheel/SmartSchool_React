@@ -262,7 +262,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                     <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--indigo-soft)", color: "var(--indigo)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
-                          {sub.studentName.split(" ").map(n => n[0]).join("")}
+                          {sub.studentName.split(" ").map((n:any) => n[0]).join("")}
                         </div>
                         <b style={{ fontSize: 12 }}>{sub.studentName}</b>
                       </div>
@@ -576,12 +576,13 @@ export function LearningPage() {
                             {isStudent && isSubmitted && (
                               <span style={{ fontSize: 11, color: "var(--success)", fontWeight: 700 }}>✓ Submitted</span>
                             )}
+                            
                           </div>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
+                );
+              })}
+              </tbody>
               </table>
             </div>
           )}
@@ -725,13 +726,14 @@ export function LearningPage() {
           onClose={() => setViewAsgnId(null)}
           onEdit={() => { setEditAsgnId(viewAsgnId!); setViewAsgnId(null); }}
           fields={[
-            { key: "name", label: "Title", wide: true },
-            { key: "type", label: "Type" },
-            { key: "subject", label: "Subject" },
-            { key: "dueDate", label: "Due date" },
-            { key: "totalMarks", label: "Total marks" },
-            { key: "status", label: "Status" },
-            { key: "description", label: "Instructions", wide: true },
+            { key:"name",           label:"Title",           wide:true },
+            { key:"assignmentType", label:"Type"                       },
+            { key:"dueDate",        label:"Due date"                   },
+            { key:"dueTime",        label:"Due time"                   },
+            { key:"totalMarks",     label:"Total marks"                },
+            { key:"passingMarks",   label:"Passing marks"              },
+            { key:"status",         label:"Status"                     },
+            { key:"description",    label:"Instructions",    wide:true },
           ]}
         />
       )}
@@ -742,10 +744,13 @@ export function LearningPage() {
           onClose={() => setEditAsgnId(null)}
           onSave={async data => { await updAssignment.mutateAsync({id: editAsgnId!, body: data}); setEditAsgnId(null); }}
           fields={[
-            { key: "name", label: "Title", type: "text", required: true, wide: true },
-            { key: "dueDate", label: "Due date", type: "date" },
-            { key: "totalMarks", label: "Total marks", type: "number" },
-            { key: "description", label: "Instructions", type: "textarea", wide: true },
+            { key:"name",           label:"Title",            required:true, wide:true                                                                              },
+            { key:"assignmentType", label:"Type",             type:"select", options:[{value:"HOMEWORK",label:"Homework"},{value:"CLASSWORK",label:"Classwork"},{value:"PROJECT",label:"Project"},{value:"QUIZ",label:"Quiz"},{value:"ESSAY",label:"Essay"}] },
+            { key:"dueDate",        label:"Due date",         type:"date"                                                                                           },
+            { key:"dueTime",        label:"Due time",         type:"text"                                                                                           },
+            { key:"totalMarks",     label:"Total marks",      type:"number"                                                                                        },
+            { key:"passingMarks",   label:"Passing marks",    type:"number"                                                                                        },
+            { key:"description",    label:"Instructions",     wide:true                                                                                             },
           ]}
         />
       )}

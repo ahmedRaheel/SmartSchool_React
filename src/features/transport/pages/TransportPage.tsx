@@ -13,6 +13,7 @@ import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
 export function TransportPage() {
+  const PAGE_SIZE = 25;
   const { user } = useAuth();
   const updVehicle = useUpdateVehicle();
   const delVehicle = useDeleteVehicle();
@@ -200,10 +201,14 @@ export function TransportPage() {
           item={viewVehicleItem}
           onClose={() => setViewVehicleId(null)}
           fields={[
-            { key: "name", label: "Registration #", wide: true },
-            { key: "vehicleType", label: "Type" },
-            { key: "seatingCapacity", label: "Capacity" },
-            { key: "status", label: "Status" },
+            { key:"name",           label:"Registration #"                      },
+            { key:"vehicleType",    label:"Type"                                },
+            { key:"make",           label:"Make"                                },
+            { key:"model",          label:"Model"                               },
+            { key:"seatingCapacity",label:"Seating capacity"                    },
+            { key:"driverName",     label:"Driver"                              },
+            { key:"driverPhone",    label:"Driver phone"                        },
+            { key:"status",         label:"Status"                              },
           ]}
         
           onEdit={() => { setEditVehicleId(viewVehicleId!); setViewVehicleId(null); }}/>
@@ -219,12 +224,19 @@ export function TransportPage() {
             setEditVehicleId(null);
           }}
           fields={[
-            { key:"name",            label:"Registration #", required:true },
-            { key:"vehicleType",     label:"Type", type:"select", options:[{value:"BUS",label:"Bus"},{value:"VAN",label:"Van"},{value:"MINIBUS",label:"Minibus"},{value:"CAR",label:"Car"}] },
-            { key:"seatingCapacity", label:"Seats", type:"number" },
+            { key:"name",           label:"Registration #",  required:true                                                                              },
+            { key:"vehicleType",    label:"Type",            type:"select", options:[{value:"BUS",label:"Bus"},{value:"VAN",label:"Van"},{value:"MINIBUS",label:"Minibus"},{value:"CAR",label:"Car"}] },
+            { key:"make",           label:"Make"                                                                                                        },
+            { key:"model",          label:"Model"                                                                                                       },
+            { key:"seatingCapacity",label:"Capacity",        type:"number"                                                                              },
+            { key:"driverName",     label:"Driver name"                                                                                                 },
+            { key:"driverPhone",    label:"Driver phone",    type:"pk-phone"                                                                            },
+            { key:"status",         label:"Status",          type:"select", options:[{value:"ACTIVE",label:"Active"},{value:"MAINTENANCE",label:"Maintenance"},{value:"INACTIVE",label:"Inactive"}] },
           ]}
         />
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={vehicles.length} onPage={setPage} label="vehicles"/>
     </>
   );
 }
