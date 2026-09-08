@@ -2155,3 +2155,36 @@ html, body, #root { background: #F3F6FB; color: #0F172A; }
 :root[data-theme="dark"] .human-field select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238BA0BB' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
+
+/* ── Pakistani phone field flag prefix ──────────────────────────────────── */
+.pk-phone-wrap { position: relative; display: flex; align-items: center; }
+.pk-phone-wrap input { padding-left: 30px !important; }
+.pk-phone-flag {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  pointer-events: none;
+  line-height: 1;
+  z-index: 1;
+}
+
+/* ── CNIC format example ────────────────────────────────────────────────── */
+.cnic-format-hint {
+  font-size: 10px;
+  color: var(--muted-2);
+  font-family: monospace;
+  letter-spacing: .05em;
+  margin-top: 2px;
+}
+
+/* ── Valid field green checkmark ────────────────────────────────────────── */
+.field-valid-mark {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--success);
+  pointer-events: none;
+}

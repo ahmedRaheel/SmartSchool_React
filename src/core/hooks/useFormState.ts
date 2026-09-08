@@ -121,15 +121,61 @@ export function useFormState<T extends Record<string, any>>(
 }
 
 // ── Built-in validators ──────────────────────────────────────────────────────
+// Phone + CNIC use the canonical validators from PakistanFields for format consistency.
+import {
+  validatePkPhone as _phone,
+  validateEmail   as _email,
+  validateCnic    as _cnic,
+  validateUrl     as _url,
+} from "../../components/ui/PakistanFields";
+
 export const Validators = {
-  required:    (label = "This field") => (v: any) => !v || !String(v).trim() ? `${label} is required` : null,
-  minLen:      (n: number, label = "Value") => (v: any) => String(v ?? "").length < n ? `${label} must be at least ${n} characters` : null,
-  maxLen:      (n: number, label = "Value") => (v: any) => String(v ?? "").length > n ? `${label} cannot exceed ${n} characters` : null,
-  email:       (label = "Email") => (v: any) => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? `${label} is not a valid email address` : null,
-  pkPhone:     (label = "Phone") => (v: any) => v && !/^(\+92|0)?[0-9\-\s]{9,14}$/.test(String(v).replace(/\s/g,"")) ? `${label} is not a valid Pakistani phone number` : null,
-  pkCnic:      (label = "CNIC") => (v: any) => v && !/^\d{5}-\d{7}-\d$/.test(v) ? `${label} must be in format 00000-0000000-0` : null,
-  numeric:     (label = "Value") => (v: any) => v && isNaN(Number(v)) ? `${label} must be a number` : null,
-  positiveNum: (label = "Value") => (v: any) => v && (isNaN(Number(v)) || Number(v) <= 0) ? `${label} must be a positive number` : null,
-  dateNotPast: (label = "Date")  => (v: any) => v && new Date(v) < new Date(new Date().toDateString()) ? `${label} cannot be in the past` : null,
-  url:         (label = "URL")   => (v: any) => v && !/^https?:\/\/.+\..+/.test(v) ? `${label} must be a valid URL starting with http/https` : null,
+  required:    (label = "This field") => (v: any) =>
+    !v || !String(v).trim() ? `${label} is required` : null,
+
+  minLen: (n: number, label = "Value") => (v: any) =>
+    String(v ?? "").length < n ? `${label} must be at least ${n} characters` : null,
+
+  maxLen: (n: number, label = "Value") => (v: any) =>
+    String(v ?? "").length > n ? `${label} cannot exceed ${n} characters` : null,
+
+  /** Pakistani phone — landline (0XX-XXXXXXXX) or mobile (03XX-XXXXXXX) */
+  pkPhone: (label = "Phone") => (v: any) => {
+    if (!v || !String(v).trim()) return null;
+    return _phone(String(v)) || null;
+  },
+
+  /** Pakistani mobile only (03XX-XXXXXXX) */
+  pkMobile: (label = "Mobile") => (v: any) => {
+    if (!v || !String(v).trim()) return null;
+    const err = _phone(String(v));
+    if (err) return err;
+    const digits = String(v).replace(/\D/g, "");
+    return !digits.startsWith("03") ? `${label} must be a mobile number starting with 03` : null;
+  },
+
+  /** Pakistani CNIC — 13 digits, format 00000-0000000-0 */
+  pkCnic: (label = "CNIC") => (v: any) => {
+    if (!v || !String(v).trim()) return null;
+    return _cnic(String(v)) || null;
+  },
+
+  email: (label = "Email") => (v: any) => {
+    if (!v || !String(v).trim()) return null;
+    return _email(String(v)) || null;
+  },
+
+  url: (label = "URL") => (v: any) => {
+    if (!v || !String(v).trim()) return null;
+    return _url(String(v)) || null;
+  },
+
+  numeric: (label = "Value") => (v: any) =>
+    v && isNaN(Number(v)) ? `${label} must be a number` : null,
+
+  positiveNum: (label = "Value") => (v: any) =>
+    v && (isNaN(Number(v)) || Number(v) <= 0) ? `${label} must be a positive number` : null,
+
+  dateNotPast: (label = "Date") => (v: any) =>
+    v && new Date(v) < new Date(new Date().toDateString()) ? `${label} cannot be in the past` : null,
 };

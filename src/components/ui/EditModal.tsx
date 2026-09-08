@@ -1,16 +1,22 @@
 /**
  * EditModal — generic edit form with field-level validation.
- * Supports all field types. Shows inline error messages per field.
+ * Pakistani phone, mobile, CNIC, email all validated with proper format rules.
+ * Shows inline error messages per field, touched-on-blur, touch-all-on-submit.
  */
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { X, Save, Loader2, AlertTriangle } from "lucide-react";
+import {
+  validatePkPhone, validateEmail, validateCnic, validateUrl,
+  formatPkPhone, formatCnic,
+} from "./PakistanFields";
 
+// ── Field descriptor ──────────────────────────────────────────────────────────
 export interface EditField {
   key:          string;
   label:        string;
   type?:        "text" | "email" | "number" | "date" | "select" | "textarea" | "tel"
               | "pk-phone" | "pk-mobile" | "pk-email" | "pk-website" | "pk-cnic"
-              | "pk-city" | "pk-province" | "pk-country";
+              | "pk-city"  | "pk-province" | "pk-country";
   options?:     { value: string; label: string }[];
   required?:    boolean;
   wide?:        boolean;
@@ -21,109 +27,187 @@ export interface EditField {
 }
 
 interface Props {
-  title:    string;
-  item:     Record<string, any>;
-  fields:   readonly EditField[] | EditField[];
-  onSave:   (data: Record<string, any>) => Promise<void>;
-  onClose:  () => void;
+  title:     string;
+  item:      Record<string, any>;
+  fields:    readonly EditField[] | EditField[];
+  onSave:    (data: Record<string, any>) => Promise<void>;
+  onClose:   () => void;
   isCreate?: boolean;
 }
 
-const PK_CITIES    = ["Karachi","Lahore","Islamabad","Rawalpindi","Faisalabad","Multan","Hyderabad","Peshawar","Quetta","Sialkot","Gujranwala","Bahawalpur","Sargodha","Sukkur","Sheikhupura","Sahiwal","Gujrat","Kasur","Okara","Chiniot","Dera Ghazi Khan","Mirpur Khas","Mardan","Abbottabad","Hafizabad","Rahim Yar Khan"];
-const PK_PROVINCES = ["Punjab","Sindh","Khyber Pakhtunkhwa","Balochistan","Gilgit-Baltistan","Azad Kashmir","Islamabad Capital Territory"];
+// ── City / Province lists (must match PakistanFields.tsx) ────────────────────
+const PK_CITIES = [
+  "Lahore","Karachi","Islamabad","Rawalpindi","Faisalabad","Multan",
+  "Gujranwala","Sialkot","Peshawar","Quetta","Hyderabad","Abbottabad",
+  "Bahawalpur","Sargodha","Gujrat","Mardan","Muzaffarabad","Gilgit",
+  "Mirpur Khas","Sukkur","Larkana","Sheikhupura","Sahiwal","Okara",
+  "Rahim Yar Khan","Jhang","Chiniot","Kasur","Hafizabad","Dera Ghazi Khan",
+];
+const PK_PROVINCES = [
+  "Punjab","Sindh","Khyber Pakhtunkhwa (KPK)","Balochistan",
+  "Islamabad Capital Territory","Azad Jammu & Kashmir","Gilgit-Baltistan",
+];
 
-type FieldErrors = Record<string, string>;
+// ── Per-field validator ───────────────────────────────────────────────────────
+function getFieldError(f: EditField, val: any): string | null {
+  const v  = val !== undefined && val !== null ? String(val).trim() : "";
+  const empty = v === "";
 
-function validate(fields: readonly EditField[], form: Record<string, any>): FieldErrors {
-  const errs: FieldErrors = {};
-  for (const f of fields as EditField[]) {
-    const val = form[f.key];
-    const empty = val === undefined || val === null || String(val).trim() === "";
+  // Required check first
+  if (f.required && empty) return `${f.label} is required`;
 
-    if (f.required && empty) {
-      errs[f.key] = `${f.label} is required`;
-      continue;
+  // Format checks only when field has a value
+  if (!empty) {
+    switch (f.type) {
+      case "pk-phone":   return validatePkPhone(v) || null;
+      case "pk-mobile":  return validatePkPhone(v) || null;
+      case "tel":        return validatePkPhone(v) || null;
+      case "pk-email":
+      case "email":      return validateEmail(v) || null;
+      case "pk-cnic":    return validateCnic(v) || null;
+      case "pk-website": return validateUrl(v) || null;
+      case "number":
+        if (isNaN(Number(v))) return `${f.label} must be a valid number`;
+        break;
     }
-    if (!empty) {
-      if ((f.type === "email" || f.type === "pk-email") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-        errs[f.key] = "Enter a valid email address";
-      } else if ((f.type === "pk-phone" || f.type === "pk-mobile" || f.type === "tel") && !/^(\+92|0)?[0-9\-\s]{9,14}$/.test(String(val).replace(/\s/g, ""))) {
-        errs[f.key] = "Enter a valid phone number";
-      } else if (f.type === "pk-cnic" && !/^\d{5}-\d{7}-\d$/.test(val)) {
-        errs[f.key] = "CNIC must be in format 00000-0000000-0";
-      } else if (f.type === "number" && isNaN(Number(val))) {
-        errs[f.key] = "Must be a valid number";
-      } else if (f.maxLength && String(val).length > f.maxLength) {
-        errs[f.key] = `Cannot exceed ${f.maxLength} characters`;
-      }
-    }
+    if (f.maxLength && v.length > f.maxLength)
+      return `${f.label} cannot exceed ${f.maxLength} characters`;
   }
-  return errs;
+  return null;
 }
 
-function FieldInput({ f, val, onChange, onBlur, error, touched }:
-  { f: EditField; val: any; onChange: (v: any) => void; onBlur: () => void; error?: string; touched: boolean }) {
+// ── Placeholder + hint per type ───────────────────────────────────────────────
+const PLACEHOLDERS: Record<string, string> = {
+  "pk-phone":   "03XX-XXXXXXX or 0XX-XXXXXXXX",
+  "pk-mobile":  "03XX-XXXXXXX",
+  "pk-email":   "name@school.edu.pk",
+  "pk-cnic":    "35202-1234567-8",
+  "pk-website": "https://school.edu.pk",
+};
+const HINTS: Record<string, string> = {
+  "pk-phone":  "Mobile: 03XX-XXXXXXX · Landline: 0XX-XXXXXXXX",
+  "pk-mobile": "Format: 03XX-XXXXXXX (11 digits)",
+  "pk-cnic":   "Format: 35202-1234567-8 (13 digits, auto-formatted)",
+};
 
-  const base = {
-    value: val ?? "",
-    onChange: (e: React.ChangeEvent<any>) => onChange(e.target.value),
-    onBlur,
-    disabled: f.readOnly,
-    placeholder: f.placeholder,
-  };
+// ── Input renderer ────────────────────────────────────────────────────────────
+function FieldInput({ f, val, onChange, onBlur }: {
+  f: EditField; val: any;
+  onChange: (v: any) => void;
+  onBlur: () => void;
+}) {
+  const strVal = val ?? "";
 
+  // Select with options
   if (f.type === "select" && f.options) {
     return (
-      <select {...base}>
+      <select value={strVal} onChange={e => onChange(e.target.value)} onBlur={onBlur} disabled={f.readOnly}>
         <option value="">— Select {f.label.toLowerCase()} —</option>
         {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     );
   }
+
+  // City select
   if (f.type === "pk-city") {
     return (
-      <select {...base}>
+      <select value={strVal} onChange={e => onChange(e.target.value)} onBlur={onBlur} disabled={f.readOnly}>
         <option value="">— Select city —</option>
         {PK_CITIES.map(c => <option key={c}>{c}</option>)}
       </select>
     );
   }
+
+  // Province select
   if (f.type === "pk-province") {
     return (
-      <select {...base}>
+      <select value={strVal} onChange={e => onChange(e.target.value)} onBlur={onBlur} disabled={f.readOnly}>
         <option value="">— Select province —</option>
         {PK_PROVINCES.map(p => <option key={p}>{p}</option>)}
       </select>
     );
   }
+
+  // Country (fixed)
   if (f.type === "pk-country") {
-    return <input {...base} value="Pakistan" readOnly style={{ color: "var(--muted)", cursor: "default" }}/>;
-  }
-  if (f.type === "textarea") {
-    return <textarea {...base} rows={3} maxLength={f.maxLength}/>;
+    return <input type="text" value="Pakistan" readOnly style={{ color: "var(--muted)", cursor: "default", borderStyle: "dashed" }}/>;
   }
 
+  // Textarea
+  if (f.type === "textarea") {
+    return (
+      <textarea
+        value={strVal}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
+        rows={3}
+        maxLength={f.maxLength}
+        placeholder={f.placeholder}
+        readOnly={f.readOnly}
+      />
+    );
+  }
+
+  // Pakistani phone — auto-format on change
+  if (f.type === "pk-phone" || f.type === "pk-mobile") {
+    return (
+      <div style={{ position: "relative" }}>
+        <span style={{
+          position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+          fontSize: 14, pointerEvents: "none", lineHeight: 1,
+        }}>🇵🇰</span>
+        <input
+          type="tel"
+          inputMode="numeric"
+          value={strVal}
+          onChange={e => onChange(formatPkPhone(e.target.value))}
+          onBlur={onBlur}
+          placeholder={f.placeholder ?? PLACEHOLDERS[f.type]}
+          maxLength={12}
+          readOnly={f.readOnly}
+          style={{ paddingLeft: 30 }}
+        />
+      </div>
+    );
+  }
+
+  // CNIC — auto-format on change
+  if (f.type === "pk-cnic") {
+    return (
+      <input
+        type="text"
+        inputMode="numeric"
+        value={strVal}
+        onChange={e => onChange(formatCnic(e.target.value))}
+        onBlur={onBlur}
+        placeholder={f.placeholder ?? "35202-1234567-8"}
+        maxLength={15}
+        readOnly={f.readOnly}
+      />
+    );
+  }
+
+  // Generic input
   const typeMap: Record<string, string> = {
-    "pk-phone": "tel", "pk-mobile": "tel", "pk-email": "email",
-    "pk-cnic": "text", "pk-website": "url",
-    date: "date", number: "number", email: "email", tel: "tel",
-  };
-  const phMap: Record<string, string> = {
-    "pk-phone": "e.g. 042-12345678", "pk-mobile": "e.g. 0300-1234567",
-    "pk-email": "name@school.edu.pk", "pk-cnic": "00000-0000000-0",
-    "pk-website": "https://school.edu.pk",
+    "pk-email": "email", email: "email",
+    "pk-website": "url", url: "url",
+    date: "date", number: "number", tel: "tel",
   };
 
   return (
     <input
-      {...base}
       type={typeMap[f.type ?? "text"] ?? "text"}
-      placeholder={f.placeholder ?? phMap[f.type ?? ""] ?? ""}
+      value={strVal}
+      onChange={e => onChange(e.target.value)}
+      onBlur={onBlur}
+      placeholder={f.placeholder ?? PLACEHOLDERS[f.type ?? ""] ?? ""}
       maxLength={f.maxLength}
+      readOnly={f.readOnly}
     />
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
 export function EditModal({ title, item, fields, onSave, onClose, isCreate }: Props) {
   const [form, setForm] = useState<Record<string, any>>(() => {
     const init: Record<string, any> = {};
@@ -144,21 +228,26 @@ export function EditModal({ title, item, fields, onSave, onClose, isCreate }: Pr
     setTouched(p => ({ ...p, [key]: true }));
   }
 
-  const errors = validate(fields, form);
-  const fieldErrs: FieldErrors = {};
-  for (const [k, v] of Object.entries(errors)) {
-    if (touched[k]) fieldErrs[k] = v;
+  // Compute errors — only show for touched fields
+  const allErrors: Record<string, string> = {};
+  for (const f of fields as EditField[]) {
+    const err = getFieldError(f, form[f.key]);
+    if (err) allErrors[f.key] = err;
+  }
+
+  const visibleErrors: Record<string, string> = {};
+  for (const [k, v] of Object.entries(allErrors)) {
+    if (touched[k]) visibleErrors[k] = v;
   }
 
   async function handleSave() {
-    // Touch all fields to reveal errors
+    // Touch all fields at once
     const allTouched: Record<string, boolean> = {};
     (fields as EditField[]).forEach(f => { allTouched[f.key] = true; });
     setTouched(allTouched);
 
-    if (Object.keys(errors).length > 0) {
-      setFormErr("Please fix the errors below before saving.");
-      // Scroll to first error
+    if (Object.keys(allErrors).length > 0) {
+      setFormErr("Please correct the highlighted fields before saving.");
       return;
     }
 
@@ -167,42 +256,44 @@ export function EditModal({ title, item, fields, onSave, onClose, isCreate }: Pr
     try {
       await onSave(form);
     } catch (e: any) {
-      setFormErr(e?.response?.data?.message ?? e?.message ?? "Failed to save. Please try again.");
+      setFormErr(e?.response?.data?.message ?? e?.message ?? "Save failed. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
+  const errorCount = Object.keys(allErrors).length;
+
   return (
     <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-card" style={{ width: "min(600px, 96vw)" }}>
 
-        {/* Header */}
+        {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="modal-head">
           <div>
             <h2>{isCreate ? `Add ${title}` : `Edit ${title}`}</h2>
             <p style={{ fontSize: 11, color: "var(--muted)", margin: "4px 0 0" }}>
-              Fields marked with <span style={{ color: "var(--danger)", fontWeight: 800 }}>*</span> are required
+              Fields marked <span style={{ color: "var(--danger)", fontWeight: 800 }}>*</span> are required
             </p>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Close"><X size={16}/></button>
         </div>
 
-        {/* Form */}
+        {/* ── Fields ─────────────────────────────────────────────────────── */}
         <div className="human-form">
-          {/* Form-level error */}
           {formErr && (
             <div className="form-error-banner">
               <AlertTriangle size={15}/>
-              {formErr}
+              <span>{formErr}</span>
             </div>
           )}
 
           <div className="human-form-grid">
             {(fields as EditField[]).map(f => {
-              const err      = fieldErrs[f.key];
-              const isFilled = !!form[f.key] && String(form[f.key]).trim() !== "";
-              const isInvalid = !!err;
+              const err     = visibleErrors[f.key];
+              const val     = form[f.key];
+              const filled  = val !== undefined && val !== null && String(val).trim() !== "";
+              const invalid = !!err;
 
               return (
                 <label
@@ -210,35 +301,41 @@ export function EditModal({ title, item, fields, onSave, onClose, isCreate }: Pr
                   className={[
                     "human-field",
                     f.wide ? "field-wide" : "",
-                    isInvalid ? "field-invalid" : "",
-                    isFilled && !isInvalid ? "field-filled" : "",
+                    invalid          ? "field-invalid" : "",
+                    filled && !invalid ? "field-filled" : "",
                   ].filter(Boolean).join(" ")}
                 >
+                  {/* Label */}
                   <span>
                     {f.label}
                     {f.required && <i className="required-mark">*</i>}
-                    {f.readOnly && <span style={{ fontSize: 9, marginLeft: 6, color: "var(--muted-2)", fontStyle: "normal", fontWeight: 400 }}>read-only</span>}
+                    {f.readOnly && (
+                      <span style={{ fontSize: 9, marginLeft: 6, color: "var(--muted-2)", fontStyle: "normal", fontWeight: 400 }}>
+                        read-only
+                      </span>
+                    )}
                   </span>
 
+                  {/* Input */}
                   <FieldInput
                     f={f}
-                    val={form[f.key]}
+                    val={val}
                     onChange={v => setField(f.key, v)}
                     onBlur={() => touchField(f.key)}
-                    error={err}
-                    touched={!!touched[f.key]}
                   />
 
                   {/* Inline error */}
                   {err && <span className="field-error-msg">{err}</span>}
 
-                  {/* Hint text */}
-                  {f.hint && !err && <span className="field-hint">{f.hint}</span>}
+                  {/* Hint (only when no error) */}
+                  {!err && (f.hint ?? HINTS[f.type ?? ""]) && (
+                    <span className="field-hint">{f.hint ?? HINTS[f.type ?? ""]}</span>
+                  )}
 
-                  {/* Char counter for maxLength fields */}
-                  {f.maxLength && isFilled && (
-                    <span className={`field-char-counter ${String(form[f.key]).length > f.maxLength ? "over" : ""}`}>
-                      {String(form[f.key]).length}/{f.maxLength}
+                  {/* Char counter */}
+                  {f.maxLength && filled && (
+                    <span className={`field-char-counter${String(val).length > f.maxLength ? " over" : ""}`}>
+                      {String(val).length}/{f.maxLength}
                     </span>
                   )}
                 </label>
@@ -247,8 +344,14 @@ export function EditModal({ title, item, fields, onSave, onClose, isCreate }: Pr
           </div>
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ─────────────────────────────────────────────────────── */}
         <div className="modal-actions">
+          {errorCount > 0 && Object.keys(touched).length > 0 && (
+            <span style={{ fontSize: 11, color: "var(--danger)", marginRight: "auto", display: "flex", alignItems: "center", gap: 5 }}>
+              <AlertTriangle size={12}/>
+              {errorCount} field{errorCount > 1 ? "s" : ""} need{errorCount === 1 ? "s" : ""} attention
+            </span>
+          )}
           <button className="secondary" onClick={onClose} disabled={saving}>Cancel</button>
           <button
             className="primary"

@@ -18,7 +18,7 @@ import { RowActions } from "../../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
 import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
-import { PkPhoneInput, PkEmailInput, PkCitySelect, PkProvinceSelect } from "../../../../components/ui/PakistanFields";
+import { PkPhoneInput, PkEmailInput, PkCitySelect, PkProvinceSelect, PkCnicInput} from "../../../../components/ui/PakistanFields";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const items     = (d: unknown) => toItems(d);

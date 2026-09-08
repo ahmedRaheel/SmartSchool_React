@@ -1,3 +1,4 @@
+import { PkPhoneInput, PkMobileInput, PkCnicInput, PkEmailInput } from "../../../components/ui/PakistanFields";
 import { useState } from "react";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";

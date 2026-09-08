@@ -1,4 +1,4 @@
-import { PkPhoneInput, PkEmailInput, PkCitySelect, PkProvinceSelect } from "../../../components/ui/PakistanFields";
+import { PkPhoneInput, PkEmailInput, validatePkPhone, validateEmail, formatPkPhone } from "../../../components/ui/PakistanFields";
 import { Pagination } from "../../../components/ui/Pagination";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
@@ -30,6 +30,8 @@ export function TenantManagementPage() {
     organizationName:"", adminFirstName:"", adminLastName:"", adminEmail:"", adminPhoneNumber:"",
     contactName:"", contactEmail:"", contactPhone:"", contactAddress:"",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({});
+  const [touched,     setTouched]     = useState<Record<string,boolean>>({});
 
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(25);
@@ -51,16 +53,41 @@ export function TenantManagementPage() {
   const total   = (data as any)?.totalCount ?? (data as any)?.total ?? tenants.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  function sf(k:string){ return (e:React.ChangeEvent<HTMLInputElement>)=>setForm(p=>({...p,[k]:e.target.value})); }
+  function sf(k: string) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm(p => ({ ...p, [k]: e.target.value }));
+      setFieldErrors(p => { const n = {...p}; delete n[k]; return n; });
+    };
+  }
+
+  function fcls(k: string) {
+    const err = fieldErrors[k];
+    const val = (form as any)[k];
+    return ["human-field", err ? "field-invalid" : "", val && !err ? "field-filled" : ""].filter(Boolean).join(" ");
+  }
 
   async function save() {
-    if (!form.organizationName||!form.adminEmail||!form.adminFirstName||!form.contactName||!form.contactEmail||!form.contactPhone||!form.contactAddress) {
-      setError("All required fields must be filled"); return;
+    const reqs = ["organizationName","adminFirstName","adminEmail","contactName","contactEmail","contactPhone","contactAddress"] as const;
+    const errs: Record<string, string> = {};
+    for (const k of reqs) {
+      const v = ((form as any)[k] ?? "").trim();
+      if (!v) { errs[k] = "This field is required"; continue; }
+      if (k === "adminEmail"  || k === "contactEmail")  { const e = validateEmail(v);    if (e) errs[k] = e; }
+      if (k === "contactPhone")                          { const e = validatePkPhone(v);  if (e) errs[k] = e; }
     }
+    if (form.adminPhoneNumber.trim()) {
+      const e = validatePkPhone(form.adminPhoneNumber); if (e) errs["adminPhoneNumber"] = e;
+    }
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      setError("Please fix the highlighted fields.");
+      return;
+    }
+    setFieldErrors({}); setError("");
     try {
       const result = await createTenant.mutateAsync(form);
-      setSuccess(result); setError("");
-    } catch(e:any) { setError(e?.response?.data?.message??e?.message??"Failed"); }
+      setSuccess(result);
+    } catch (e: any) { setError(e?.response?.data?.message ?? e?.message ?? "Failed"); }
   }
 
   async function doImpersonate(tenantId: string) {
@@ -195,23 +222,61 @@ export function TenantManagementPage() {
                 <div className="human-form">
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>School info</div>
                   <div className="human-form-grid">
-                    <label className="human-field field-wide"><span>School name *</span><input value={form.organizationName} onChange={sf("organizationName")} placeholder="e.g. Al-Noor Academy"/></label>
+                    <label className={`${fcls("organizationName")} field-wide`}>
+                      <span>School name <i className="required-mark">*</i></span>
+                      <input value={form.organizationName} onChange={sf("organizationName")} placeholder="e.g. Al-Noor Academy"/>
+                      {fieldErrors.organizationName && <span className="field-error-msg">{fieldErrors.organizationName}</span>}
+                    </label>
                   </div>
+
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Admin account</div>
                   <div className="human-form-grid">
-                    <label className="human-field"><span>First name *</span><input value={form.adminFirstName} onChange={sf("adminFirstName")}/></label>
-                    <label className="human-field"><span>Last name *</span><input value={form.adminLastName} onChange={sf("adminLastName")}/></label>
-                    <PkEmailInput label="Admin email *" value={form.adminEmail} onChange={(v) => sf("adminEmail")({target:{value:v}} as any)} required />
-                    <label className="human-field"><span>Phone</span><input value={form.adminPhoneNumber} onChange={sf("adminPhoneNumber")} placeholder="0300-1234567"/></label>
+                    <label className={fcls("adminFirstName")}>
+                      <span>First name <i className="required-mark">*</i></span>
+                      <input value={form.adminFirstName} onChange={sf("adminFirstName")}/>
+                      {fieldErrors.adminFirstName && <span className="field-error-msg">{fieldErrors.adminFirstName}</span>}
+                    </label>
+                    <label className="human-field">
+                      <span>Last name</span>
+                      <input value={form.adminLastName} onChange={sf("adminLastName")}/>
+                    </label>
+                    <PkEmailInput label="Admin email" required
+                      value={form.adminEmail}
+                      onChange={v => { setForm(p=>({...p,adminEmail:v})); setFieldErrors(p=>{const n={...p};delete n.adminEmail;return n;}); }}
+                    />
+                    <PkPhoneInput label="Phone"
+                      value={form.adminPhoneNumber}
+                      onChange={v => { setForm(p=>({...p,adminPhoneNumber:v})); setFieldErrors(p=>{const n={...p};delete n.adminPhoneNumber;return n;}); }}
+                    />
                   </div>
+
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Contact info</div>
                   <div className="human-form-grid">
-                    <label className="human-field"><span>Contact name *</span><input value={form.contactName} onChange={sf("contactName")}/></label>
-                    <label className="human-field"><span>Contact email *</span><input type="email" value={form.contactEmail} onChange={sf("contactEmail")} placeholder="admin@school.edu.pk"/></label>
-                    <label className="human-field"><span>Contact phone *</span><input value={form.contactPhone} onChange={sf("contactPhone")} placeholder="021-12345678"/></label>
-                    <label className="human-field field-wide"><span>Contact address *</span><input value={form.contactAddress} onChange={sf("contactAddress")}/></label>
+                    <label className={fcls("contactName")}>
+                      <span>Contact name <i className="required-mark">*</i></span>
+                      <input value={form.contactName} onChange={sf("contactName")}/>
+                      {fieldErrors.contactName && <span className="field-error-msg">{fieldErrors.contactName}</span>}
+                    </label>
+                    <PkEmailInput label="Contact email" required
+                      value={form.contactEmail}
+                      onChange={v => { setForm(p=>({...p,contactEmail:v})); setFieldErrors(p=>{const n={...p};delete n.contactEmail;return n;}); }}
+                    />
+                    <PkPhoneInput label="Contact phone" required
+                      value={form.contactPhone}
+                      onChange={v => { setForm(p=>({...p,contactPhone:v})); setFieldErrors(p=>{const n={...p};delete n.contactPhone;return n;}); }}
+                    />
+                    <label className={`${fcls("contactAddress")} field-wide`}>
+                      <span>Contact address <i className="required-mark">*</i></span>
+                      <input value={form.contactAddress} onChange={sf("contactAddress")}/>
+                      {fieldErrors.contactAddress && <span className="field-error-msg">{fieldErrors.contactAddress}</span>}
+                    </label>
                   </div>
-                  {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
+
+                  {error && (
+                    <div className="form-error-banner" style={{marginTop:4}}>
+                      <span>{error}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
                   <button className="secondary" onClick={()=>setOpen(false)}>Cancel</button>
