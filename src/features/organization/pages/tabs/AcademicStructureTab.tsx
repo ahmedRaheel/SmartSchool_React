@@ -9,6 +9,7 @@ import {
   useAcademicYears, useCreateAcademicYear, useDeleteAcademicYear,
   useGradeLevels, useCreateGradeLevel,
   useClassSections, useCreateClassSection,
+  useAcademicYearsByCampus, useGradeLevelsByCampus,
   useSubjects, useCreateSubject,
    useCampuses} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
@@ -34,6 +35,9 @@ export function AcademicStructureTab() {
   const { data: grades, isLoading: gLoad }   = useGradeLevels();
   const { data: sections, isLoading: sLoad } = useClassSections();
   const { data: subjects, isLoading: subLoad }= useSubjects();
+  const selectedCampusId = form.campusId as string | undefined;
+  const { data: campusYears, isFetching: campusYearsLoading } = useAcademicYearsByCampus(selectedCampusId);
+  const { data: campusGrades, isFetching: campusGradesLoading } = useGradeLevelsByCampus(selectedCampusId);
   const campusItems = toItems(campuses);
 
   const createYear    = useCreateAcademicYear();
@@ -52,19 +56,19 @@ export function AcademicStructureTab() {
         await createYear.mutateAsync({ tenantId:tid, campusId:form.campusId, name:form.name, startDate:form.startDate, endDate:form.endDate, isCurrent:form.isCurrent==="true" });
       } else if (sub==="grades") {
         if (!form.name) { setError("Name required"); return; }
-        await createGrade.mutateAsync({ tenantId:tid, name:form.name });
+        await createGrade.mutateAsync({ tenantId:tid, name:form.name, campusId:form.campusId||undefined });
       } else if (sub==="sections") {
-        if (!form.name) { setError("Name required"); return; }
+        if (!form.campusId || !form.academicYearId || !form.gradeLevelId || !form.name) {
+          setError("Campus, academic year, grade level and name are required"); return;
+        }
         await createSection.mutateAsync({
           tenantId: tid,
+          campusId: form.campusId,
+          academicYearId: form.academicYearId,
+          gradeLevelId: form.gradeLevelId,
           name: form.name,
-          metadataJson: JSON.stringify({
-            gradeId:     form.gradeId     || undefined,
-            campusId:    form.campusId    || undefined,
-            capacity:    form.capacity    ? Number(form.capacity) : undefined,
-            teacherId:   form.teacherId   || undefined,
-            academicYearId: form.academicYearId || undefined,
-          }),
+          capacity: form.capacity ? Number(form.capacity) : undefined,
+          roomNo: form.roomNo || undefined,
         });
       } else {
         if (!form.name||!form.branchId) { setError("Campus and name required"); return; }
@@ -112,8 +116,13 @@ export function AcademicStructureTab() {
                         {sub==="years" && <td style={{fontSize:11, color:"var(--muted)"}}>
                           {meta.startDate} → {meta.endDate} {meta.isCurrent && <span className="status-pill success" style={{fontSize:9}}>Current</span>}
                         </td>}
-                        <td>
-                          {sub==="years" && <button className="table-action danger-button" style={{fontSize:10}} onClick={() => deleteYear.mutate(item.id)}><Trash2 size={11}/></button>}
+                        <td style={{textAlign:"right"}}>
+                          <RowActions
+                            onView={() => setViewAcad(item)}
+                            onEdit={() => setEditAcad(item)}
+                            onDelete={() => sub==="years" ? deleteYear.mutate(item.id) : undefined}
+                            deleteLabel={sub.slice(0,-1)}
+                          />
                         </td>
                       </tr>
                     );
@@ -146,36 +155,43 @@ export function AcademicStructureTab() {
                   </select>
                 </label>
               </>}
-              {sub==="subjects" && (
-                <label className="human-field field-wide"><span>Campus *</span>
-                  <select value={form.branchId??""} onChange={e=>setForm(p=>({...p,branchId:e.target.value}))}>
+
+              {(sub==="grades"||sub==="subjects") && (
+                <label className="human-field field-wide"><span>Campus {sub==="subjects"?"*":""}</span>
+                  <select
+                    value={sub==="grades" ? (form.campusId??"") : (form.branchId??"")}
+                    onChange={e => setForm(p => sub==="grades" ? {...p, campusId:e.target.value} : {...p, branchId:e.target.value})}
+                  >
                     <option value="">— Select campus —</option>
-                    {campusItems.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+                    {campusItems.map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
               )}
               <label className="human-field field-wide"><span>Name *</span><input value={form.name??""} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder={sub==="grades"?"e.g. Grade 9":sub==="sections"?"e.g. Grade 9-A  /  10-B  /  Primary Red":"e.g. Mathematics"}/></label>
               {sub==="sections" && <>
-                <label className="human-field"><span>Campus</span>
-                  <select value={form.campusId??""} onChange={e=>setForm(p=>({...p,campusId:e.target.value}))}>
+                <label className="human-field field-wide"><span>Campus *</span>
+                  <select value={form.campusId??""} onChange={e=>setForm(p=>({...p,campusId:e.target.value,academicYearId:"",gradeLevelId:""}))}>
                     <option value="">— Select campus —</option>
                     {campusItems.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
-                <label className="human-field"><span>Grade level</span>
-                  <select value={form.gradeId??""} onChange={e=>setForm(p=>({...p,gradeId:e.target.value}))}>
-                    <option value="">— Select grade —</option>
-                    {(toItems(grades)).map((g:any)=><option key={g.id} value={g.id}>{g.name}</option>)}
+                <label className="human-field"><span>Academic year *</span>
+                  <select disabled={!form.campusId || campusYearsLoading} value={form.academicYearId??""} onChange={e=>setForm(p=>({...p,academicYearId:e.target.value}))}>
+                    <option value="">{!form.campusId ? "— Select campus first —" : campusYearsLoading ? "Loading…" : "— Select year —"}</option>
+                    {toItems(campusYears).map((y:any)=><option key={y.id} value={y.id}>{y.name}</option>)}
                   </select>
                 </label>
-                <label className="human-field"><span>Capacity (students)</span>
-                  <input type="number" value={form.capacity??""} onChange={e=>setForm(p=>({...p,capacity:e.target.value}))} placeholder="e.g. 35"/>
-                </label>
-                <label className="human-field"><span>Academic year</span>
-                  <select value={form.academicYearId??""} onChange={e=>setForm(p=>({...p,academicYearId:e.target.value}))}>
-                    <option value="">— Select year —</option>
-                    {(toItems(years)).map((y:any)=><option key={y.id} value={y.id}>{y.name}</option>)}
+                <label className="human-field"><span>Grade level *</span>
+                  <select disabled={!form.campusId || campusGradesLoading} value={form.gradeLevelId??""} onChange={e=>setForm(p=>({...p,gradeLevelId:e.target.value}))}>
+                    <option value="">{!form.campusId ? "— Select campus first —" : campusGradesLoading ? "Loading…" : "— Select grade —"}</option>
+                    {toItems(campusGrades).map((g:any)=><option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
+                </label>
+                <label className="human-field"><span>Capacity</span>
+                  <input type="number" min="1" value={form.capacity??""} onChange={e=>setForm(p=>({...p,capacity:e.target.value}))} placeholder="e.g. 35"/>
+                </label>
+                <label className="human-field"><span>Room no.</span>
+                  <input value={form.roomNo??""} onChange={e=>setForm(p=>({...p,roomNo:e.target.value}))} placeholder="e.g. A-12"/>
                 </label>
               </>}
             </div>

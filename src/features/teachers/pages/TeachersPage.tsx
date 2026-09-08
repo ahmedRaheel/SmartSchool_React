@@ -1,3 +1,4 @@
+import { PkPhoneInput, PkMobileInput, PkCnicInput, PkEmailInput } from "../../../components/ui/PakistanFields";
 import { Pagination } from "../../../components/ui/Pagination";
 import { RowActions } from "../../../components/ui/RowActions";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";

@@ -616,7 +616,7 @@ export function AdmissionsPage() {
                   </select>
                 </label>
                 <label className="human-field"><span>Student email</span><input type="email" value={appForm.email} onChange={afsf("email")} placeholder="student@email.com"/></label>
-                <label className="human-field"><span>Phone</span><input value={appForm.phone} onChange={afsf("phone")} placeholder="0300-1234567"/></label>
+                <PkPhoneInput label="Phone" value={appForm.phone} onChange={v => afsf("phone")({target:{value:v}} as any)}/>
               </div>
 
               <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,marginTop:8}}>Enrollment target</div>
@@ -654,7 +654,7 @@ export function AdmissionsPage() {
                 </label>
                 <PkCnicInput label="Guardian CNIC" value={appForm.guardianCnic} onChange={(v) => setAppForm(p=>({...p,guardianCnic:v}))} />
                 <label className="human-field"><span>Guardian email *</span><input type="email" value={appForm.guardianEmail} onChange={afsf("guardianEmail")} placeholder="student@email.com"/></label>
-                <label className="human-field"><span>Guardian phone</span><input value={appForm.guardianPhone} onChange={afsf("guardianPhone")}/></label>
+                <PkPhoneInput label="Guardian phone" value={appForm.guardianPhone} onChange={v => afsf("guardianPhone")({target:{value:v}} as any)}/>
               </div>
 
               {/* Document upload */}
@@ -694,7 +694,7 @@ export function AdmissionsPage() {
                 </select>
               </label>
               <label className="human-field"><span>Guardian name *</span><input value={inqForm.guardianName} onChange={ifsf("guardianName")}/></label>
-              <label className="human-field"><span>Guardian phone *</span><input value={inqForm.guardianPhone} onChange={ifsf("guardianPhone")} placeholder="+92 300 0000000"/></label>
+              <PkPhoneInput label="Guardian phone" required value={inqForm.guardianPhone} onChange={v => ifsf("guardianPhone")({target:{value:v}} as any)}/>
             </div></div>
             <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
               <button className="secondary" onClick={()=>setNewInq(false)}>Cancel</button>

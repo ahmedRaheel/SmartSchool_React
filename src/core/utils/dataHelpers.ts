@@ -11,7 +11,8 @@ export const parseMeta = (j?: string | null): Record<string, any> => {
 export const toItems = <T = any>(data: unknown): T[] => {
   if (!data) return [];
   const d = data as any;
-  return (d?.items ?? (Array.isArray(d) ? d : [])) as T[];
+  const value = d?.value ?? d?.data ?? d;
+  return (value?.items ?? (Array.isArray(value) ? value : [])) as T[];
 };
 
 /** Format a date string for display */

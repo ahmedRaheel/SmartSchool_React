@@ -110,6 +110,9 @@ export const getAcademicYears  = (tenantId: string, campusId?: string) => M ? ms
 export const createAcademicYear= (body: object)                   => M ? ms({...MOCK_ACADEMIC_YEARS[0], id:uid()}) : api.post("/api/academics/academic-year", body).then(r=>r.data);
 export const deleteAcademicYear= (id: string, tenantId: string)   => M ? ms({}) : api.delete(`/api/academics/academic-year/${id}`, { params:{tenantId} }).then(r=>r.data);
 export const getGradeLevels    = (tenantId: string)               => M ? ms(pg(MOCK_GRADE_LEVELS)) : api.get("/api/academics/grade-level",   { params:{tenantId,page:1,pageSize:100} }).then(r=>r.data);
+export const getAcademicYearsByCampus = (tenantId: string, campusId: string) => M ? ms(MOCK_ACADEMIC_YEARS) : api.get(`/api/academics/campuses/${campusId}/academic-years`, { params:{tenantId} }).then(r=>r.data);
+export const getGradeLevelsByCampus = (tenantId: string, campusId: string) => M ? ms(MOCK_GRADE_LEVELS) : api.get(`/api/academics/campuses/${campusId}/grade-levels`, { params:{tenantId} }).then(r=>r.data);
+export const getSections = (tenantId: string) => M ? ms([]) : api.get("/api/academics/sections", { params:{tenantId} }).then(r=>r.data);
 export const createGradeLevel  = (body: object)                   => M ? ms({...MOCK_GRADE_LEVELS[0], id:uid()}) : api.post("/api/academics/grade-level", body).then(r=>r.data);
 export const getClassSections  = (tenantId: string)               => M ? ms(pg(MOCK_CLASS_SECTIONS)) : api.get("/api/academics/class-section",  { params:{tenantId,page:1,pageSize:100} }).then(r=>r.data);
 export const createClassSection= (body: object)                   => M ? ms({...MOCK_CLASS_SECTIONS[0], id:uid()}) : api.post("/api/academics/class-section", body).then(r=>r.data);
@@ -260,7 +263,12 @@ export const getLookupValues   = (typeCode: string)               => M ? ms(MOCK
 export const createLookup      = (body: object)                   => M ? ms({...MOCK_LOOKUP_VALUES[0], id:uid()}) : api.post("/api/lookups", body).then(r=>r.data);
 export const deleteLookup      = (id: string)                     => M ? ms({}) : api.delete(`/api/lookups/${id}`).then(r=>r.data);
 export const getAllLookups      = ()                               => M ? ms(MOCK_LOOKUP_VALUES) : api.get("/api/lookups").then(r=>r.data);
-export const getGeography      = (type: "countries"|"provinces"|"cities") => M ? ms([]) : api.get(`/api/lookups/geography/${type}`).then(r=>r.data);
+export interface GeographyLookupItem { id: number; code: string; name: string; }
+export const getCountries = (): Promise<any> => M ? ms([]) : api.get("/api/lookups/geography/countries").then(r=>r.data);
+export const getProvinces = (countryId: number): Promise<any> => M ? ms([]) : api.get("/api/lookups/geography/provinces", { params: { countryId } }).then(r=>r.data);
+export const getCities = (provinceId: number): Promise<any> => M ? ms([]) : api.get("/api/lookups/geography/cities", { params: { provinceId } }).then(r=>r.data);
+// Compatibility wrapper retained for callers that only need the country list.
+export const getGeography = (type: "countries"|"provinces"|"cities") => type === "countries" ? getCountries() : Promise.resolve([]);
 
 // ── Teachers ──────────────────────────────────────────────────────────────────
 export const getTeacherMe      = ()                               => M ? ms(MOCK_EMPLOYEES[0]) : api.get("/api/teachers/me").then(r=>r.data);

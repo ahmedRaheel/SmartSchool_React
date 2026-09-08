@@ -1,49 +1,31 @@
-import { ReactNode, useEffect } from "react";
 import { X } from "lucide-react";
+import type { ReactNode } from "react";
 
-interface ModalProps {
-  open: boolean;
-  title: string;
-  children: ReactNode;
+interface Props {
+  open:    boolean;
+  title:   string;
   onClose: () => void;
+  children: ReactNode;
+  width?:  string;
+  subtitle?: string;
 }
 
-/** Shared application modal. Keeps feature pages focused on business workflows. */
-export function Modal({ open, title, children, onClose }: ModalProps) {
-  useEffect(() => {
-    if (!open) return;
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    document.addEventListener("keydown", closeOnEscape);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-      document.body.style.overflow = "";
-    };
-  }, [open, onClose]);
-
+export function Modal({ open, title, onClose, children, width = "min(540px,96vw)", subtitle }: Props) {
   if (!open) return null;
-
   return (
-    <div className="workflow-overlay" role="presentation" onMouseDown={event => {
-      if (event.currentTarget === event.target) onClose();
-    }}>
-      <section className="workflow-dialog" role="dialog" aria-modal="true" aria-labelledby="shared-modal-title">
-        <header className="workflow-header">
+    <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-card" style={{ width }}>
+        <div className="modal-head">
           <div>
-            <small>SMARTSCHOOL</small>
-            <h2 id="shared-modal-title">{title}</h2>
+            <h2>{title}</h2>
+            {subtitle && <p style={{ fontSize:11, color:"var(--muted)", margin:"3px 0 0" }}>{subtitle}</p>}
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close dialog">
-            <X size={20} />
+          <button className="icon-button" onClick={onClose} aria-label="Close">
+            <X size={16}/>
           </button>
-        </header>
-        <div className="workflow-body">{children}</div>
-      </section>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

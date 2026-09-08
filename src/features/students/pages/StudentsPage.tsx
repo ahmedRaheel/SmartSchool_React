@@ -50,7 +50,7 @@ const EDIT_FIELDS = [
   { key: "address",     label: "Address",      wide: true                                                                                        },
   { key: "city",        label: "City",         type: "pk-city" as const                                                                         },
   { key: "province",    label: "Province",     type: "pk-province" as const                                                                     },
-  { key: "country",     label: "Country"                                                                                                         },
+  { key: "country",     label: "Country",      type: "pk-country" as const                                                                    },
   { key: "status",      label: "Status",       type: "select" as const, options: [{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }, { value: "ALUMNI", label: "Alumni" }] },
 ];
 

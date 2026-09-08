@@ -293,10 +293,9 @@ export function HrPage() {
                             )}
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewEmpId(viewEmpId!)}
-                                onEdit={() => setEditEmpId(leave.id)}
-                                onDelete={() => delEmployee.mutate(leave.id)}
-                                deleteLabel="staff member"
+                                onView={() => setViewEmpId(leave.employeeId ?? leave.id)}
+                                onEdit={() => setEditEmpId(leave.employeeId ?? leave.id)}
+                                deleteLabel="leave request"
                               />
                             </td>
                           </tr>
@@ -415,6 +414,12 @@ export function HrPage() {
                                   ✗
                                 </button>
                               )}
+                              <RowActions
+                                onView={() => setViewEmpId(e.id)}
+                                onEdit={() => setEditEmpId(e.id)}
+                                onDelete={() => delEmployee.mutate(e.id)}
+                                deleteLabel="staff member"
+                              />
                             </div>
                           </td>
                         </tr>
@@ -481,7 +486,7 @@ export function HrPage() {
                 <div className="human-form-grid">
                   <label className="human-field"><span>First name *</span><input value={form.firstName} onChange={sf("firstName")}/></label>
                   <label className="human-field"><span>Last name</span><input value={form.lastName} onChange={sf("lastName")}/></label>
-                  <label className="human-field"><span>CNIC</span><input value={form.cnicNumber} onChange={sf("cnicNumber")} placeholder="35202-0000000-0"/></label>
+                  <PkCnicInput label="CNIC" value={form.cnicNumber} onChange={v => sf("cnicNumber")({target:{value:v}} as any)}/>
                   <label className="human-field"><span>Date of birth</span><input type="date" value={form.dateOfBirth} onChange={sf("dateOfBirth")}/></label>
                   <label className="human-field"><span>Gender</span>
                     <select value={form.gender} onChange={sf("gender")}>

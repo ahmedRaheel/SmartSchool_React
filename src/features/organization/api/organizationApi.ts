@@ -34,6 +34,8 @@ export interface Campus {
   id: string;
   tenantId: string;
   schoolId: string;
+  schoolCode?: string;
+  schoolName?: string;
   code: string;
   name: string;
   branchType: 1 | 2 | 3;

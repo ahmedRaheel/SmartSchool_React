@@ -7,7 +7,7 @@ import { RowActions } from "../../../../components/ui/RowActions";
 import { ViewDrawer } from "../../../../components/ui/ViewDrawer";
 import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
-import { PkEmailInput, PkPhoneInput } from "../../../../components/ui/PakistanFields";
+import { PkEmailInput, PkPhoneInput, PkCnicInput} from "../../../../components/ui/PakistanFields";
 
 const parseMeta = (j?: string|null) => { try { return JSON.parse(j??"{}"); } catch { return {}; } };
 
