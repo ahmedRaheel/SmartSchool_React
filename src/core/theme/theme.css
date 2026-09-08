@@ -1934,3 +1934,224 @@ html, body, #root { background: #F3F6FB; color: #0F172A; }
   .stat-value { font-size: 18px; }
   .page-head h1 { font-size: 17px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   UNIVERSAL FORM VALIDATION STYLES
+   Applied to .human-field automatically — zero per-page CSS needed.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Invalid state ───────────────────────────────────────────────────── */
+.human-field.field-invalid input,
+.human-field.field-invalid select,
+.human-field.field-invalid textarea {
+  border-color: var(--danger) !important;
+  background: var(--danger-bg) !important;
+  box-shadow: 0 0 0 3px rgba(220,38,38,.1) !important;
+}
+.human-field.field-invalid > span {
+  color: var(--danger);
+}
+
+/* ── Valid/filled state ──────────────────────────────────────────────── */
+.human-field.field-filled input:not(:focus),
+.human-field.field-filled select:not(:focus),
+.human-field.field-filled textarea:not(:focus) {
+  border-color: var(--success-border);
+}
+
+/* ── Field-level error message ───────────────────────────────────────── */
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--danger);
+  font-weight: 600;
+  margin-top: 2px;
+  animation: field-err-in .15s ease;
+}
+.field-error-msg::before {
+  content: "⚠";
+  font-size: 10px;
+  flex-shrink: 0;
+}
+@keyframes field-err-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Required mark ───────────────────────────────────────────────────── */
+.required-mark {
+  color: var(--danger);
+  font-style: normal;
+  margin-left: 2px;
+  font-size: 12px;
+}
+
+/* ── Focus state — consistent across all inputs ──────────────────────── */
+.human-field input:focus,
+.human-field select:focus,
+.human-field textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(14,165,233,.14) !important;
+  outline: none;
+  background: var(--surface) !important;
+}
+
+/* ── Disabled state ──────────────────────────────────────────────────── */
+.human-field input:disabled,
+.human-field select:disabled,
+.human-field textarea:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  background: var(--surface-3) !important;
+}
+
+/* ── Read-only ───────────────────────────────────────────────────────── */
+.human-field input[readonly],
+.human-field textarea[readonly] {
+  background: var(--surface-2) !important;
+  cursor: default;
+  border-style: dashed;
+}
+
+/* ── Char counter ────────────────────────────────────────────────────── */
+.field-char-counter {
+  font-size: 10.5px;
+  color: var(--muted-2);
+  text-align: right;
+  margin-top: 2px;
+}
+.field-char-counter.over { color: var(--danger); font-weight: 700; }
+
+/* ── Form-level error callout ────────────────────────────────────────── */
+.form-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--r-md);
+  font-size: 12.5px;
+  color: var(--danger);
+  font-weight: 600;
+  animation: field-err-in .15s ease;
+}
+.form-error-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+/* ── Chatbot improvements ────────────────────────────────────────────── */
+.ai-launcher {
+  transition: all .2s cubic-bezier(.16,1,.3,1) !important;
+}
+.floating-ai-panel {
+  transition: height .25s cubic-bezier(.16,1,.3,1);
+}
+
+/* ── Validation hint text (below required fields) ────────────────────── */
+.field-hint {
+  font-size: 10.5px;
+  color: var(--muted-2);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ── Select arrow styling ─────────────────────────────────────────────── */
+.human-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px !important;
+}
+
+/* ── Input with icon (left icon support) ────────────────────────────── */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-with-icon input { padding-left: 34px !important; }
+.input-with-icon svg {
+  position: absolute;
+  left: 10px;
+  color: var(--muted-2);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* ── Success state after submit ──────────────────────────────────────── */
+.form-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  border-radius: var(--r-md);
+  font-size: 12.5px;
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* ── Textarea auto-resize class ──────────────────────────────────────── */
+.human-field textarea.auto-resize {
+  resize: none;
+  overflow: hidden;
+}
+
+/* ── Radio / checkbox group ──────────────────────────────────────────── */
+.radio-group, .check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.radio-option, .check-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all .12s;
+  user-select: none;
+}
+.radio-option:hover, .check-option:hover { border-color: var(--accent); background: var(--accent-soft); }
+.radio-option.selected, .check-option.checked { border-color: var(--indigo); background: var(--indigo-soft); color: var(--indigo); font-weight: 700; }
+.radio-option input, .check-option input { display: none; }
+
+/* ── Pill toggle (education levels) ─────────────────────────────────── */
+.pill-toggle {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .12s;
+}
+.pill-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.pill-toggle.active { border-color: var(--indigo); background: var(--indigo-soft); color: var(--indigo); font-weight: 700; }
+
+/* ── Dark mode overrides for form fields ─────────────────────────────── */
+:root[data-theme="dark"] .human-field input,
+:root[data-theme="dark"] .human-field select,
+:root[data-theme="dark"] .human-field textarea {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text);
+}
+:root[data-theme="dark"] .human-field.field-invalid input,
+:root[data-theme="dark"] .human-field.field-invalid select,
+:root[data-theme="dark"] .human-field.field-invalid textarea {
+  background: var(--danger-bg) !important;
+}
+:root[data-theme="dark"] .human-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238BA0BB' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
