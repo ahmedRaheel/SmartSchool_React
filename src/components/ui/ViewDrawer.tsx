@@ -1,103 +1,134 @@
 /**
- * ViewDrawer — right-side sliding drawer that renders any record's fields.
- * Used by all pages for the "View" action.
- *
- * Usage:
- *   <ViewDrawer title="Student" item={selected} fields={STUDENT_FIELDS} onClose={() => setSelected(null)} />
+ * ViewDrawer — right-side slide-in panel for viewing a record.
+ * Used by every data page. Renders field key→label pairs from the item object.
  */
-import { X, Edit3 } from "lucide-react";
-import { parseMeta, toItems } from "../../core/utils/dataHelpers";
+import { X, Edit3, Copy, Check } from "lucide-react";
+import { useState } from "react";
 
 export interface DrawerField {
-  label:   string;
-  key:     string;
-  render?: (value: any, row: any) => React.ReactNode;
-  wide?:   boolean;
+  key:    string;
+  label:  string;
+  wide?:  boolean;
+  render?: (value: any, item: any) => React.ReactNode;
 }
 
 interface Props {
   title:   string;
-  subtitle?: string;
-  item:    Record<string, any> | null;
-  fields:  DrawerField[];
+  item:    Record<string, any>;
+  fields:  readonly DrawerField[] | DrawerField[];
   onClose: () => void;
   onEdit?: () => void;
-  badge?:  React.ReactNode;
-  avatar?: React.ReactNode;
-  extra?:  React.ReactNode; // additional content below fields
+  /** Optional header accent color */
+  color?:  string;
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+  return (
+    <button
+      onClick={copy}
+      style={{ display:"flex", alignItems:"center", border:0, background:"transparent", cursor:"pointer", padding:"2px 4px", borderRadius:4, color:"var(--muted-2)", marginLeft:4 }}
+      title="Copy"
+    >
+      {copied ? <Check size={11} style={{ color:"var(--success)" }}/> : <Copy size={11}/>}
+    </button>
+  );
+}
 
-export function ViewDrawer({ title, subtitle, item, fields, onClose, onEdit, badge, avatar, extra }: Props) {
-  if (!item) return null;
-  const meta = parseMeta(item.metadataJson);
-  const merged = { ...item, ...meta };
+function fmt(val: any): string {
+  if (val === null || val === undefined || val === "") return "—";
+  if (typeof val === "boolean") return val ? "Yes" : "No";
+  // ISO date
+  if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+    try { return new Date(val).toLocaleDateString("en-PK", { day:"2-digit", month:"short", year:"numeric" }); }
+    catch { return val; }
+  }
+  return String(val);
+}
 
+export function ViewDrawer({ title, item, fields, onClose, onEdit, color = "var(--indigo)" }: Props) {
   return (
     <>
-      <button
-        style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(10,20,40,.38)", border: 0, backdropFilter: "blur(3px)", cursor: "default" }}
-        onClick={onClose}
-        aria-label="Close drawer"
-      />
-      <div
-        style={{
-          position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 201,
-          width: "min(480px, 100vw)",
-          background: "var(--surface)",
-          borderLeft: "1px solid var(--line)",
-          boxShadow: "-20px 0 60px rgba(0,0,0,.12)",
-          display: "flex", flexDirection: "column",
-          animation: "drawerIn .2s cubic-bezier(.16,1,.3,1)",
-        }}
-      >
+      <div className="drawer-backdrop" onClick={onClose} />
+      <aside className="drawer" role="dialog" aria-label={`View ${title}`}>
         {/* Header */}
-        <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "flex-start", gap: 14, flexShrink: 0 }}>
-          {avatar && <div style={{ flexShrink: 0, marginTop: 2 }}>{avatar}</div>}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--muted)", marginBottom: 4 }}>{title}</div>
-            <h2 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800, letterSpacing: "-.4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {merged.name ?? merged.firstName ? `${merged.firstName ?? ""} ${merged.lastName ?? ""}`.trim() : merged.title ?? title}
-            </h2>
-            {subtitle && <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>{subtitle}</p>}
-            {badge && <div style={{ marginTop: 6 }}>{badge}</div>}
+        <div className="drawer-head">
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:"var(--indigo-soft)", display:"grid", placeItems:"center" }}>
+              <span style={{ fontSize:13, fontWeight:800, color }}>
+                {String(item.firstName ?? item.name ?? title)?.[0]?.toUpperCase() ?? "?"}
+              </span>
+            </div>
+            <div>
+              <h2 style={{ fontSize:14, margin:0 }}>{item.firstName ? `${item.firstName} ${item.lastName ?? ""}` : (item.name ?? title)}</h2>
+              <p style={{ fontSize:11, color:"var(--muted)", margin:0 }}>{title}</p>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            {onEdit && (
-              <button className="secondary" style={{ height: 32, padding: "0 12px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }} onClick={onEdit}>
-                <Edit3 size={12} /> Edit
-              </button>
-            )}
-            <button className="icon-button" style={{ width: 32, height: 32 }} onClick={onClose}><X size={16} /></button>
-          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Close">
+            <X size={16}/>
+          </button>
         </div>
 
-        {/* Fields */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {fields.map(f => {
-              const val = merged[f.key];
-              const display = f.render ? f.render(val, merged) : (val !== undefined && val !== null && val !== "" ? String(val) : <span style={{ color: "var(--muted-2)" }}>—</span>);
+        {/* Body */}
+        <div className="drawer-body">
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            {(fields as DrawerField[]).map(f => {
+              const raw = item[f.key];
+              const display = f.render ? f.render(raw, item) : fmt(raw);
+              const isLong  = typeof display === "string" && display.length > 30;
               return (
                 <div
                   key={f.key}
-                  style={{
-                    gridColumn: f.wide ? "1 / -1" : undefined,
-                    padding: "12px 14px",
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 12,
-                  }}
+                  className="drawer-field"
+                  style={{ gridColumn: f.wide || isLong ? "1 / -1" : undefined }}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".6px", color: "var(--muted)", marginBottom: 5 }}>{f.label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", lineHeight: 1.5 }}>{display}</div>
+                  <span>{f.label}</span>
+                  <div style={{ display:"flex", alignItems:"center", gap:2 }}>
+                    <b>{display}</b>
+                    {typeof display === "string" && display !== "—" && display.length > 2 && (
+                      <CopyButton text={display}/>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-          {extra && <div style={{ marginTop: 16 }}>{extra}</div>}
+
+          {/* Metadata */}
+          {(item.createdAt || item.updatedAt) && (
+            <div style={{ marginTop:8, paddingTop:14, borderTop:"1px solid var(--line)", display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {item.createdAt && (
+                <div className="drawer-field">
+                  <span>Created</span>
+                  <b>{fmt(item.createdAt)}</b>
+                </div>
+              )}
+              {item.updatedAt && (
+                <div className="drawer-field">
+                  <span>Last updated</span>
+                  <b>{fmt(item.updatedAt)}</b>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </div>
+
+        {/* Footer */}
+        {onEdit && (
+          <div className="drawer-footer">
+            <button className="secondary" onClick={onClose} style={{ flex:1 }}>Close</button>
+            <button className="primary" onClick={onEdit} style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              <Edit3 size={13}/> Edit record
+            </button>
+          </div>
+        )}
+      </aside>
     </>
   );
 }

@@ -1,31 +1,34 @@
-/**
- * SearchBar — reusable search input used in the toolbar of every data page.
- */
 import { Search, X } from "lucide-react";
+import { useRef } from "react";
 
 interface Props {
-  value:       string;
-  onChange:    (q: string) => void;
+  value:        string;
+  onChange:     (q: string) => void;
   placeholder?: string;
-  width?:      number | string;
+  width?:       number | string;
+  autoFocus?:   boolean;
 }
 
-export function SearchBar({ value, onChange, placeholder = "Search…", width = 280 }: Props) {
+export function SearchBar({ value, onChange, placeholder = "Search…", width = 260, autoFocus }: Props) {
+  const ref = useRef<HTMLInputElement>(null);
   return (
-    <label className="search-box" style={{ maxWidth: width }}>
-      <Search size={14} />
+    <label className="search-box" style={{ maxWidth: width }} onClick={() => ref.current?.focus()}>
+      <Search size={13} style={{ flexShrink: 0 }}/>
       <input
+        ref={ref}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
+        autoFocus={autoFocus}
       />
       {value && (
         <button
-          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", color: "var(--muted)" }}
-          onClick={() => onChange("")}
-          aria-label="Clear search"
+          type="button"
+          style={{ display:"flex", border:0, background:"transparent", cursor:"pointer", padding:"2px", color:"var(--muted)", borderRadius:4 }}
+          onClick={e => { e.preventDefault(); onChange(""); ref.current?.focus(); }}
+          aria-label="Clear"
         >
-          <X size={12} />
+          <X size={12}/>
         </button>
       )}
     </label>

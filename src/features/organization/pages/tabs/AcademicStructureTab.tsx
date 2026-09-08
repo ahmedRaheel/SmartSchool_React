@@ -52,7 +52,7 @@ export function AcademicStructureTab() {
         await createYear.mutateAsync({ tenantId:tid, campusId:form.campusId, name:form.name, startDate:form.startDate, endDate:form.endDate, isCurrent:form.isCurrent==="true" });
       } else if (sub==="grades") {
         if (!form.name) { setError("Name required"); return; }
-        await createGrade.mutateAsync({ tenantId:tid, name:form.name });
+        await createGrade.mutateAsync({ tenantId:tid, name:form.name, campusId:form.campusId||undefined });
       } else if (sub==="sections") {
         if (!form.name) { setError("Name required"); return; }
         await createSection.mutateAsync({
@@ -112,8 +112,13 @@ export function AcademicStructureTab() {
                         {sub==="years" && <td style={{fontSize:11, color:"var(--muted)"}}>
                           {meta.startDate} → {meta.endDate} {meta.isCurrent && <span className="status-pill success" style={{fontSize:9}}>Current</span>}
                         </td>}
-                        <td>
-                          {sub==="years" && <button className="table-action danger-button" style={{fontSize:10}} onClick={() => deleteYear.mutate(item.id)}><Trash2 size={11}/></button>}
+                        <td style={{textAlign:"right"}}>
+                          <RowActions
+                            onView={() => setViewAcad(item)}
+                            onEdit={() => setEditAcad(item)}
+                            onDelete={() => sub==="years" ? deleteYear.mutate(item.id) : undefined}
+                            deleteLabel={sub.slice(0,-1)}
+                          />
                         </td>
                       </tr>
                     );
@@ -146,11 +151,15 @@ export function AcademicStructureTab() {
                   </select>
                 </label>
               </>}
-              {sub==="subjects" && (
-                <label className="human-field field-wide"><span>Campus *</span>
-                  <select value={form.branchId??""} onChange={e=>setForm(p=>({...p,branchId:e.target.value}))}>
+
+              {(sub==="grades"||sub==="subjects") && (
+                <label className="human-field field-wide"><span>Campus {sub==="subjects"?"*":""}</span>
+                  <select
+                    value={sub==="grades" ? (form.campusId??"") : (form.branchId??"")}
+                    onChange={e => setForm(p => sub==="grades" ? {...p, campusId:e.target.value} : {...p, branchId:e.target.value})}
+                  >
                     <option value="">— Select campus —</option>
-                    {campusItems.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+                    {campusItems.map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
               )}

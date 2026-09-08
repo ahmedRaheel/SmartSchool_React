@@ -293,10 +293,9 @@ export function HrPage() {
                             )}
                             <td style={{ textAlign: "right" }}>
                               <RowActions
-                                onView={() => setViewEmpId(viewEmpId!)}
-                                onEdit={() => setEditEmpId(leave.id)}
-                                onDelete={() => delEmployee.mutate(leave.id)}
-                                deleteLabel="staff member"
+                                onView={() => setViewEmpId(leave.employeeId ?? leave.id)}
+                                onEdit={() => setEditEmpId(leave.employeeId ?? leave.id)}
+                                deleteLabel="leave request"
                               />
                             </td>
                           </tr>
@@ -415,6 +414,12 @@ export function HrPage() {
                                   ✗
                                 </button>
                               )}
+                              <RowActions
+                                onView={() => setViewEmpId(e.id)}
+                                onEdit={() => setEditEmpId(e.id)}
+                                onDelete={() => delEmployee.mutate(e.id)}
+                                deleteLabel="staff member"
+                              />
                             </div>
                           </td>
                         </tr>
