@@ -5,7 +5,7 @@ import { EditModal  } from "../../../../components/ui/EditModal";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { useSubjects, useCreateSubject, useCampuses, useDeleteSubject } from "../../../../core/api/queries";
+import { useSubjects, useCreateSubject, useCampuses, useDeleteSubject, useDepartmentsByCampus } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 
@@ -21,17 +21,19 @@ export function SubjectsTab() {
   const [viewItem, setViewItem] = useState<any|null>(null);
   const [editItem, setEditItem] = useState<any|null>(null);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ name:"", branchId:"" });
+  const [form, setForm] = useState({ name:"", campusId:"", departmentId:"" });
+  const { data: departments } = useDepartmentsByCampus(form.campusId);
   const [error, setError] = useState("");
 
   const items = toItems(subjects);
   const campusItems = toItems(campuses);
+  const departmentItems = toItems(departments);
 
   async function save() {
-    if (!form.name||!form.branchId) { setError("Campus and name required"); return; }
+    if (!form.name||!form.campusId||!form.departmentId) { setError("Campus, department and name are required"); return; }
     try {
-      await create.mutateAsync({ tenantId:tid, branchId:form.branchId, name:form.name });
-      setModal(false); setForm({ name:"", branchId:"" }); setError("");
+      await create.mutateAsync({ tenantId:tid, departmentId:form.departmentId, name:form.name });
+      setModal(false); setForm({ name:"", campusId:"", departmentId:"" }); setError("");
     } catch(e:any) { setError(e?.message??"Failed"); }
   }
 
@@ -39,20 +41,20 @@ export function SubjectsTab() {
     <>
       <div className="surface">
         <div className="surface-head">
-          <div><h3>Subjects</h3><p>Academic subjects offered per campus</p></div>
-          <button className="primary" onClick={()=>{setModal(true);setError("");setForm({name:"",branchId:""})} }><Plus size={14}/> Add subject</button>
+          <div><h3>Subjects</h3><p>Academic subjects owned by department</p></div>
+          <button className="primary" onClick={()=>{setModal(true);setError("");setForm({name:"",campusId:"",departmentId:""})} }><Plus size={14}/> Add subject</button>
         </div>
         {isLoading ? <div style={{padding:20,color:"var(--muted)"}}>Loading…</div> : (
           <div className="table-wrap">
             <table className="premium-table">
-              <thead><tr><th>Subject</th><th>Code</th><th>Campus</th><th style={{textAlign:"right"}}>Actions</th></tr></thead>
+              <thead><tr><th>Subject</th><th>Code</th><th>Department</th><th>Campus</th><th style={{textAlign:"right"}}>Actions</th></tr></thead>
               <tbody>
                 {items.length===0 ? <tr><td colSpan={2} style={{textAlign:"center",padding:24,color:"var(--muted)"}}>No subjects yet.</td></tr>
                 : items.map((s:any)=>(
                   <tr key={s.id}>
                     <td><b>{s.name}</b></td>
                     <td><code style={{fontSize:11}}>{s.code}</code></td>
-                    <td style={{fontSize:11,color:"var(--muted)"}}>{s.campusName ?? "—"}</td>
+                    <td style={{fontSize:11,color:"var(--muted)"}}>{s.departmentName ?? "—"}</td><td style={{fontSize:11,color:"var(--muted)"}}>{s.campusName ?? "—"}</td>
                     <td style={{textAlign:"right"}}>
                       <RowActions
                         onView={() => setViewItem(s)}
@@ -75,9 +77,15 @@ export function SubjectsTab() {
             <div className="modal-head"><h2>Add subject</h2><button className="icon-button" onClick={()=>setModal(false)}><X size={18}/></button></div>
             <div className="human-form"><div className="human-form-grid">
               <label className="human-field field-wide"><span>Campus *</span>
-                <select value={form.branchId} onChange={e=>setForm(p=>({...p,branchId:e.target.value}))}>
+                <select value={form.campusId} onChange={e=>setForm(p=>({...p,campusId:e.target.value,departmentId:""}))}>
                   <option value="">— Select campus —</option>
                   {campusItems.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <label className="human-field field-wide"><span>Department *</span>
+                <select value={form.departmentId} disabled={!form.campusId} onChange={e=>setForm(p=>({...p,departmentId:e.target.value}))}>
+                  <option value="">— Select department —</option>
+                  {departmentItems.map((d:any)=><option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </label>
               <label className="human-field field-wide"><span>Subject name *</span><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Mathematics"/></label>

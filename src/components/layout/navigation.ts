@@ -80,6 +80,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
         items: [
           { path: "/finance",        label: "Finance & Fees",    icon: Wallet },
           { path: "/hr",             label: "HR & Staff",        icon: BriefcaseBusiness },
+          { path: "/academics",      label: "Teaching Assignments", icon: BookOpen },
           { path: "/payroll",        label: "Payroll",           icon: Briefcase },
           { path: "/transport",      label: "Transport",         icon: Bus },
           { path: "/library",        label: "Library",           icon: Library },
@@ -126,6 +127,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
         title: "Administration",
         items: [
           { path: "/hr",             label: "Staff",             icon: Users },
+          { path: "/academics",      label: "Teaching Assignments", icon: BookOpen },
           { path: "/communication",  label: "Communication",     icon: MessageCircle },
           { path: "/audit",          label: "Audit Logs",        icon: ShieldCheck },
         ],

@@ -39,6 +39,7 @@ import { TeachersPage }        from "../../features/teachers/pages/TeachersPage"
 import { TenantSetupPage }     from "../../features/organization/pages/TenantSetupPage";
 import { AiConfigPage }        from "../../features/organization/pages/AiConfigPage";
 import { SettingsPage }        from "../../features/settings/pages/SettingsPage";
+import { AcademicsPage }       from "../../features/academics/pages/AcademicsPage";
 
 // Platform / Super Admin
 import { TenantManagementPage } from "../../features/tenancy/pages/TenantManagementPage";
@@ -199,6 +200,11 @@ export const router = createBrowserRouter([
       {
         path: "inventory",
         element: <RoleGuard require="inventory.manage"><InventoryPage /></RoleGuard>,
+      },
+
+      {
+        path: "academics",
+        element: <RoleGuard requireAny={["school.setup.manage","hr.list"]}><AcademicsPage /></RoleGuard>,
       },
 
       // ── School Configuration (Owner / Principal / Admin) ──────────────────

@@ -48,7 +48,7 @@ export const useUpdateInquiry   = () => { const qc=useQueryClient(); const tid=u
 export const useSchools         = () => { const tid=useTid(); return useQuery({ queryKey:["schools",tid], queryFn:()=>A.getSchools(tid) }); };
 export const useCreateSchool    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createSchool(b), onSuccess:()=>qc.invalidateQueries({queryKey:["schools",tid]}) }); };
 export const useUpdateSchool    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateSchool(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["schools",tid]}) }); };
-export const useCampuses        = () => { const tid=useTid(); return useQuery({ queryKey:["campuses",tid], queryFn:()=>A.getCampuses(tid) }); };
+export const useCampuses        = () => { const { user }=useAuth(); const tid=useTid(); const role=(user?.role??"").toLowerCase(); const canSelectCampus=role==="superadmin"||role==="tenant"||role==="owner"; return useQuery({ queryKey:["campuses",tid,canSelectCampus], queryFn:()=>canSelectCampus?A.getCampuses(tid):A.getCurrentCampus() }); };
 export const useCreateCampus    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createCampus(b), onSuccess:()=>qc.invalidateQueries({queryKey:["campuses",tid]}) }); };
 export const useUpdateCampus    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateCampus(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["campuses",tid]}) }); };
 export const useDepartments     = () => { const tid=useTid(); return useQuery({ queryKey:["departments",tid], queryFn:()=>A.getDepartments(tid) }); };
@@ -332,3 +332,7 @@ export const useCreateModelConfig  = () => { const qc=useQueryClient(); const ti
 export const useAiSettings = () => { const tid=useTid(); return useQuery({ queryKey:["ai-settings",tid], queryFn:()=>A.getAiSettings(tid) }); };
 export const useUpdateAiSettings = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(body:object)=>A.updateAiSettings(body), onSuccess:()=>qc.invalidateQueries({queryKey:["ai-settings",tid]}) }); };
 export const useDeleteRoom = () => { const qc = useQueryClient(); const tid = useTid(); return useMutation({ mutationFn: (id: string) => A.deleteInventoryItem(id, tid), onSuccess: () => qc.invalidateQueries({ queryKey: ["rooms", tid] }) }); };
+
+export const useDepartmentsByCampus=(campusId?:string)=>{const tid=useTid();return useQuery({queryKey:["departments-by-campus",campusId,tid],queryFn:()=>A.getDepartmentsByCampus(campusId!,tid),enabled:!!campusId});};
+export const useStudentsByCurrentCampus=()=>useQuery({queryKey:["students-current-campus"],queryFn:()=>A.getStudentsByCurrentCampus()});
+export const useStaffByCurrentCampus=()=>useQuery({queryKey:["staff-current-campus"],queryFn:()=>A.getStaffByCurrentCampus()});
