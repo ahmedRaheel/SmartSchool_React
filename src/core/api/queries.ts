@@ -64,6 +64,9 @@ export const useAcademicYears   = (campusId?:string) => { const tid=useTid(); re
 export const useCreateAcademicYear=()=> { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createAcademicYear(b), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-years",tid]}) }); };
 export const useDeleteAcademicYear=()=> { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteAcademicYear(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["academic-years",tid]}) }); };
 export const useGradeLevels     = () => { const tid=useTid(); return useQuery({ queryKey:["grade-levels",tid], queryFn:()=>A.getGradeLevels(tid) }); };
+export const useAcademicYearsByCampus = (campusId?:string) => { const tid=useTid(); return useQuery({ queryKey:["academic-years-by-campus",tid,campusId], queryFn:()=>A.getAcademicYearsByCampus(tid,campusId!), enabled:!!campusId }); };
+export const useGradeLevelsByCampus = (campusId?:string) => { const tid=useTid(); return useQuery({ queryKey:["grade-levels-by-campus",tid,campusId], queryFn:()=>A.getGradeLevelsByCampus(tid,campusId!), enabled:!!campusId }); };
+export const useSections = () => { const tid=useTid(); return useQuery({ queryKey:["academic-sections",tid], queryFn:()=>A.getSections(tid) }); };
 export const useCreateGradeLevel= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createGradeLevel(b), onSuccess:()=>qc.invalidateQueries({queryKey:["grade-levels",tid]}) }); };
 export const useClassSections   = () => { const tid=useTid(); return useQuery({ queryKey:["sections",tid], queryFn:()=>A.getClassSections(tid) }); };
 export const useCreateClassSection=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createClassSection(b), onSuccess:()=>qc.invalidateQueries({queryKey:["sections",tid]}) }); };
@@ -165,6 +168,9 @@ export const useIndexKnowledgeMutation=()=>useMutation({ mutationFn:(b:object)=>
 export const useLookupTypes     = () => useQuery({ queryKey:["lookup-types"], queryFn:A.getLookupTypes });
 export const useLookupValues    = (typeCode:string) => useQuery({ queryKey:["lookup-values",typeCode], queryFn:()=>A.getLookupValues(typeCode), enabled:!!typeCode });
 export const useCreateLookup    = () => { const qc=useQueryClient(); return useMutation({ mutationFn:(b:object)=>A.createLookup(b), onSuccess:()=>qc.invalidateQueries({queryKey:["lookup-values"]}) }); };
+export const useCountries       = () => useQuery({ queryKey:["geography","countries"], queryFn:A.getCountries, staleTime:3_600_000 });
+export const useProvinces       = (countryId?:number) => useQuery({ queryKey:["geography","provinces",countryId], queryFn:()=>A.getProvinces(countryId!), enabled:!!countryId, staleTime:3_600_000 });
+export const useCities          = (provinceId?:number) => useQuery({ queryKey:["geography","cities",provinceId], queryFn:()=>A.getCities(provinceId!), enabled:!!provinceId, staleTime:3_600_000 });
 export const useDeleteLookup    = () => { const qc=useQueryClient(); return useMutation({ mutationFn:(id:string)=>A.deleteLookup(id), onSuccess:()=>qc.invalidateQueries({queryKey:["lookup-values"]}) }); };
 
 // ── Teachers ──────────────────────────────────────────────────────────────────

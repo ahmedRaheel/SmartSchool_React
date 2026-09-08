@@ -15,7 +15,7 @@
  *   validateUrl(v)     → "" if valid | error string if invalid
  */
 import React, { useMemo } from "react";
-import { useLookupValues } from "../../core/api/queries";
+import { useCities, useCountries, useProvinces } from "../../core/api/queries";
 
 /* ─── Fallback static data ──────────────────────────────────────────────────── */
 const FB_PROVINCES = [
@@ -236,60 +236,46 @@ export function PkCnicInput({
   );
 }
 
-/* ─── Lookup-backed selects ─────────────────────────────────────────────────── */
+/* ─── Lookup-backed geography selects ───────────────────────────────────────── */
+interface GeographyItem { id: number; code: string; name: string; }
 interface SelectProps {
   label?: string; value: string;
   onChange: (v: string) => void;
   required?: boolean; wide?: boolean;
 }
-
-export function PkProvinceSelect({ label = "Province / Territory", value, onChange, required, wide }: SelectProps) {
-  const { data } = useLookupValues("PROVINCE");
-  const opts = ((data as any)?.items ?? []).length > 0
-    ? (data as any).items.map((i: any) => i.value)
-    : FB_PROVINCES;
-  return (
-    <FieldWrapper label={label} required={required} wide={wide}>
-      <select value={value} onChange={e => onChange(e.target.value)}>
-        <option value="">— Select province —</option>
-        {opts.map((p: string) => <option key={p}>{p}</option>)}
-      </select>
-    </FieldWrapper>
-  );
-}
-
-interface CitySelectProps extends SelectProps { province?: string; }
-export function PkCitySelect({ label = "City", value, onChange, required, province, wide }: CitySelectProps) {
-  const { data } = useLookupValues("CITY");
-  const allCities = ((data as any)?.items ?? []).length > 0
-    ? (data as any).items.map((i: any) => i.value)
-    : FB_CITIES;
-  const opts = province
-    ? allCities.filter((c: string) => c.toLowerCase().includes(province.toLowerCase().slice(0, 4)) || true)
-    : allCities;
-  return (
-    <FieldWrapper label={label} required={required} wide={wide}>
-      <select value={value} onChange={e => onChange(e.target.value)}>
-        <option value="">— Select city —</option>
-        {opts.map((c: string) => <option key={c}>{c}</option>)}
-      </select>
-    </FieldWrapper>
-  );
+function unwrapGeography(payload: unknown): GeographyItem[] {
+  if (Array.isArray(payload)) return payload as GeographyItem[];
+  const envelope = payload as { value?: GeographyItem[]; items?: GeographyItem[] } | undefined;
+  return envelope?.value ?? envelope?.items ?? [];
 }
 
 export function PkCountrySelect({ label = "Country", value, onChange, required, wide }: SelectProps) {
-  const { data } = useLookupValues("COUNTRY");
-  const opts = ((data as any)?.items ?? []).length > 0
-    ? (data as any).items.map((i: any) => i.value)
-    : FB_COUNTRIES;
-  return (
-    <FieldWrapper label={label} required={required} wide={wide}>
-      <select value={value} onChange={e => onChange(e.target.value)}>
-        <option value="">— Select country —</option>
-        {opts.map((c: string) => <option key={c}>{c}</option>)}
-      </select>
-    </FieldWrapper>
-  );
+  const { data } = useCountries();
+  const items = unwrapGeography(data);
+  const opts = items.length ? items.map(x => x.name) : FB_COUNTRIES;
+  return <FieldWrapper label={label} required={required} wide={wide}><select value={value} onChange={e=>onChange(e.target.value)}><option value="">— Select country —</option>{opts.map(c=><option key={c} value={c}>{c}</option>)}</select></FieldWrapper>;
+}
+
+interface ProvinceSelectProps extends SelectProps { country?: string; }
+export function PkProvinceSelect({ label = "Province / Territory", value, onChange, required, wide, country = "Pakistan" }: ProvinceSelectProps) {
+  const countries = unwrapGeography(useCountries().data);
+  const countryId = countries.find(x => x.name === country || x.code === country)?.id;
+  const { data } = useProvinces(countryId);
+  const items = unwrapGeography(data);
+  const opts = items.length ? items.map(x => x.name) : (country === "Pakistan" ? FB_PROVINCES : []);
+  return <FieldWrapper label={label} required={required} wide={wide}><select value={value} disabled={!country} onChange={e=>onChange(e.target.value)}><option value="">— Select province —</option>{opts.map(v=><option key={v} value={v}>{v}</option>)}</select></FieldWrapper>;
+}
+
+interface CitySelectProps extends SelectProps { province?: string; country?: string; }
+export function PkCitySelect({ label = "City", value, onChange, required, province, country = "Pakistan", wide }: CitySelectProps) {
+  const countries = unwrapGeography(useCountries().data);
+  const countryId = countries.find(x => x.name === country || x.code === country)?.id;
+  const provinces = unwrapGeography(useProvinces(countryId).data);
+  const provinceId = provinces.find(x => x.name === province || x.code === province)?.id;
+  const { data } = useCities(provinceId);
+  const items = unwrapGeography(data);
+  const opts = items.length ? items.map(x => x.name) : (!province && country === "Pakistan" ? FB_CITIES : []);
+  return <FieldWrapper label={label} required={required} wide={wide}><select value={value} disabled={!province} onChange={e=>onChange(e.target.value)}><option value="">— Select city —</option>{opts.map(v=><option key={v} value={v}>{v}</option>)}</select></FieldWrapper>;
 }
 
 /* ─── PkAddressBlock ────────────────────────────────────────────────────────── */
@@ -302,11 +288,11 @@ export function PkAddressBlock({ label = "Address", value, onChange, required }:
         <span>{label}{required && <i className="required-mark">*</i>}</span>
         <input value={value.street} onChange={e => onChange({ ...value, street: e.target.value })} placeholder="Street / building / area"/>
       </label>
+      <PkCountrySelect value={value.country} onChange={country => onChange({ ...value, country, province: "", city: "" })} required={required}/>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <PkCitySelect value={value.city} onChange={city => onChange({ ...value, city })} required={required}/>
-        <PkProvinceSelect value={value.province} onChange={province => onChange({ ...value, province })} required={required}/>
+        <PkProvinceSelect country={value.country} value={value.province} onChange={province => onChange({ ...value, province, city: "" })} required={required}/>
+        <PkCitySelect country={value.country} province={value.province} value={value.city} onChange={city => onChange({ ...value, city })} required={required}/>
       </div>
-      <PkCountrySelect value={value.country} onChange={country => onChange({ ...value, country })} required={required}/>
     </div>
   );
 }

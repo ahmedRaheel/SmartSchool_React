@@ -544,7 +544,7 @@ export function SchoolCampusTab() {
             { key:"address",            label:"Address",      wide:true                },
             { key:"city",               label:"City",         type:"pk-city"           },
             { key:"province",           label:"Province",     type:"pk-province"       },
-            { key:"country",            label:"Country"                                },
+            { key:"country",            label:"Country",       type:"pk-country"       },
           ]}
         />
       )}
@@ -563,7 +563,7 @@ export function SchoolCampusTab() {
             { key:"address", label:"Address",     wide:true                },
             { key:"city",    label:"City",        type:"pk-city"           },
             { key:"province",label:"Province",    type:"pk-province"       },
-            { key:"country", label:"Country"                               },
+            { key:"country", label:"Country",     type:"pk-country"       },
           ]}
         />
       )}

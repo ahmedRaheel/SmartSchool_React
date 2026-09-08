@@ -8,6 +8,9 @@ export interface StudentSummary {
   lastName?: string;
   status: string;
   admissionDate?: string;
+  schoolId?: string | null;
+  schoolCode?: string | null;
+  schoolName?: string | null;
 }
 
 export interface PagedStudents {
