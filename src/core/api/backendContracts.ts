@@ -196,7 +196,17 @@ export interface CreateAcademicYearRequest {
 }
 export interface CreateSubjectRequest { tenantId: string; branchId: string; name: string; }
 export interface CreateGradeLevelRequest { tenantId: string; name: string; }
-export interface CreateClassSectionRequest { tenantId: string; name: string; }
+export interface CreateClassSectionRequest {
+  tenantId: string;
+  campusId: string;
+  academicYearId: string;
+  gradeLevelId: string;
+  name: string;
+  /** Backward-compatible: existing callers may still provide a reusable section id. */
+  sectionId?: string;
+  capacity?: number;
+  roomNo?: string;
+}
 
 // ─── Tenancy: /api/tenancy/* ─────────────────────────────────────────────────
 export type TenantItem = CodeNameMeta;

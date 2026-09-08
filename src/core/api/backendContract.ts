@@ -227,8 +227,15 @@ export interface CreateGradeLevelRequest {
 }
 
 export interface CreateClassSectionRequest {
-  TenantId: string;
-  Name: string;
+  tenantId: string;
+  campusId: string;
+  academicYearId: string;
+  gradeLevelId: string;
+  name: string;
+  /** Backward-compatible: existing callers may still provide a reusable section id. */
+  sectionId?: string;
+  capacity?: number;
+  roomNo?: string;
 }
 
 export interface CreateSubjectRequest {

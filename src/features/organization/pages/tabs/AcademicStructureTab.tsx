@@ -9,7 +9,7 @@ import {
   useAcademicYears, useCreateAcademicYear, useDeleteAcademicYear,
   useGradeLevels, useCreateGradeLevel,
   useClassSections, useCreateClassSection,
-  useAcademicYearsByCampus, useGradeLevelsByCampus, useSections,
+  useAcademicYearsByCampus, useGradeLevelsByCampus,
   useSubjects, useCreateSubject,
    useCampuses} from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
@@ -38,7 +38,6 @@ export function AcademicStructureTab() {
   const selectedCampusId = form.campusId as string | undefined;
   const { data: campusYears, isFetching: campusYearsLoading } = useAcademicYearsByCampus(selectedCampusId);
   const { data: campusGrades, isFetching: campusGradesLoading } = useGradeLevelsByCampus(selectedCampusId);
-  const { data: sectionLookups } = useSections();
   const campusItems = toItems(campuses);
 
   const createYear    = useCreateAcademicYear();
@@ -59,15 +58,14 @@ export function AcademicStructureTab() {
         if (!form.name) { setError("Name required"); return; }
         await createGrade.mutateAsync({ tenantId:tid, name:form.name, campusId:form.campusId||undefined });
       } else if (sub==="sections") {
-        if (!form.campusId || !form.academicYearId || !form.gradeLevelId || !form.sectionId || !form.name) {
-          setError("Campus, academic year, grade level, section and name are required"); return;
+        if (!form.campusId || !form.academicYearId || !form.gradeLevelId || !form.name) {
+          setError("Campus, academic year, grade level and name are required"); return;
         }
         await createSection.mutateAsync({
           tenantId: tid,
           campusId: form.campusId,
           academicYearId: form.academicYearId,
           gradeLevelId: form.gradeLevelId,
-          sectionId: form.sectionId,
           name: form.name,
           capacity: form.capacity ? Number(form.capacity) : undefined,
           roomNo: form.roomNo || undefined,
@@ -187,12 +185,6 @@ export function AcademicStructureTab() {
                   <select disabled={!form.campusId || campusGradesLoading} value={form.gradeLevelId??""} onChange={e=>setForm(p=>({...p,gradeLevelId:e.target.value}))}>
                     <option value="">{!form.campusId ? "— Select campus first —" : campusGradesLoading ? "Loading…" : "— Select grade —"}</option>
                     {toItems(campusGrades).map((g:any)=><option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                </label>
-                <label className="human-field"><span>Section *</span>
-                  <select value={form.sectionId??""} onChange={e=>setForm(p=>({...p,sectionId:e.target.value}))}>
-                    <option value="">— Select section —</option>
-                    {toItems(sectionLookups).map((section:any)=><option key={section.id} value={section.id}>{section.name}</option>)}
                   </select>
                 </label>
                 <label className="human-field"><span>Capacity</span>
