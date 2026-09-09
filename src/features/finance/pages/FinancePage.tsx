@@ -52,10 +52,10 @@ export function FinancePage() {
   const [paySuccess, setPaySuccess] = useState(false);
 
   const { data: invData, isLoading } = useInvoices();
-  const { data: ftData }   = useFeeTypes();
-  const { data: fsData }   = useFeeStructure();
-  const { data: gradeData }= useGradeLevels();
-  const { data: studData } = useStudents();
+  const { data: ftData }   = useFeeTypes(tab === "feetype" || tab === "structure" || fsModal);
+  const { data: fsData }   = useFeeStructure(tab === "structure");
+  const { data: gradeData }= useGradeLevels(tab === "structure" || fsModal);
+  const { data: studData } = useStudents(1, invModal);
   const createInvoice = useCreateInvoice();
   const createPayment = useCreatePayment();
   const createFeeType = useCreateFeeType();

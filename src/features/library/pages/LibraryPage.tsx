@@ -36,7 +36,7 @@ export function LibraryPage() {
 
   const { data, isLoading } = useBooks();
   const { data: loansData } = useLoans();
-  const { data: studData  } = useStudents();
+  const { data: studData  } = useStudents(1, issueModal);
   const createBook = useCreateBook();
   const createLoan = useCreateLoan();
 

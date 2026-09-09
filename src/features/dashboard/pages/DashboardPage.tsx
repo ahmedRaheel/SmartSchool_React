@@ -16,7 +16,7 @@ import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { useAuth } from "../../auth/auth";
 import { useAdminDashboard, useStudentDashboard, useTeacherDashboard,
          useParentDashboard, useDriverDashboard, useEarlyWarning,
-         useInvoices, useStudents, useEmployees, useExams, useActivities } from "../../../core/api/queries";
+         useInvoices, useEmployees, useExams, useActivities } from "../../../core/api/queries";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
 import {
@@ -119,7 +119,6 @@ function SuperAdminDashboard() {
 // ─── SCHOOL ADMIN / PRINCIPAL ──────────────────────────────────────────────────
 function AdminDashboard({ role = "SchoolAdmin" }: { role?: string }) {
   const { data: d, isLoading } = useAdminDashboard();
-  const { data: studData }     = useStudents(1);
   const { data: examsData }    = useExams();
   const { data: actData }      = useActivities();
   const nav = useNavigate();
