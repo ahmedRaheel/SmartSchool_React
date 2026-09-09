@@ -40,7 +40,14 @@ export function TenantManagementPage() {
   const [editTenantId, setEditTenantId] = React.useState<string|null>(null);
   const viewTenantOrEdit = viewTenantId ?? editTenantId;
   const { data: viewTenantData } = useTenantById(viewTenantOrEdit ?? undefined);
-  const viewTenantItem: any = viewTenantData ?? null;
+  // Unwrap from API envelope (.value / .data) and fall back to local list row
+  const viewTenantItem: any = React.useMemo(() => {
+    const raw = (viewTenantData as any);
+    const fromApi = raw?.value ?? raw?.data ?? raw;
+    if (fromApi && typeof fromApi === "object" && fromApi.id) return fromApi;
+    // Fallback: find in local list while query loads
+    return localTenants.find((t:any) => t.id === viewTenantOrEdit) ?? null;
+  }, [viewTenantData, viewTenantOrEdit, localTenants]);
   const { data, isLoading, isFetching } = useTenants(page, pageSize);
   React.useEffect(()=>{
     const rows = (data as any)?.items;

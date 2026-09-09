@@ -142,7 +142,9 @@ export function StudentsPage() {
         subtitle="Student registration with enrollment and document compliance"
         action={
           mode === "list"
-            ? <button className="primary" onClick={startNew}><Plus size={14} /> Register student</button>
+            ? (canCreate
+                ? <button className="primary" onClick={startNew}><Plus size={14}/> Register student</button>
+                : undefined)
             : <button className="secondary" onClick={backToList}>← Back to list</button>
         }
       />
@@ -339,7 +341,7 @@ export function StudentsPage() {
           item={crud.item}
           fields={VIEW_FIELDS as any}
           onClose={crud.closeView}
-          onEdit={crud.viewToEdit}
+          onEdit={canEdit ? crud.viewToEdit : undefined}
         />
       )}
 
