@@ -99,9 +99,11 @@ export const router = createBrowserRouter([
       },
 
       // ── Finance ───────────────────────────────────────────────────────────
+      // finance.own.view = student/parent viewing own fees — allowed
+      // finance.invoices.list and above = management pages — Teacher blocked
       {
         path: "finance",
-        element: <RoleGuard requireAny={["finance.invoices.list","finance.own.view","finance.invoices.manage"]}><FinancePage /></RoleGuard>,
+        element: <RoleGuard requireAny={["finance.invoices.list","finance.own.view","finance.invoices.manage","finance.fees.manage"]}><FinancePage /></RoleGuard>,
       },
 
       // ── Attendance ────────────────────────────────────────────────────────
@@ -161,17 +163,19 @@ export const router = createBrowserRouter([
       },
 
       // ── HR ────────────────────────────────────────────────────────────────
+      // hr.own.view is intentionally excluded — Teacher can view own profile
+      // via the teacher-workspace route only, not the full HR management page
       {
         path: "hr",
-        element: <RoleGuard requireAny={["hr.list","hr.own.view","hr.view"]}><HrPage /></RoleGuard>,
+        element: <RoleGuard requireAny={["hr.list","hr.view"]}><HrPage /></RoleGuard>,
       },
       {
         path: "payroll",
-        element: <RoleGuard requireAny={["payroll.view","payroll.run","payroll.own.view"]}><PayrollPage /></RoleGuard>,
+        element: <RoleGuard requireAny={["payroll.view","payroll.run"]}><PayrollPage /></RoleGuard>,
       },
       {
         path: "teachers",
-        element: <RoleGuard requireAny={["hr.list","attendance.mark"]}><TeachersPage /></RoleGuard>,
+        element: <RoleGuard require="hr.list"><TeachersPage /></RoleGuard>,
       },
 
       // ── Learning / Assignments ────────────────────────────────────────────
@@ -197,9 +201,10 @@ export const router = createBrowserRouter([
       },
 
       // ── Inventory ─────────────────────────────────────────────────────────
+      // inventory.view (Principal) allowed; inventory.manage (Admin/Tenant) for full access
       {
         path: "inventory",
-        element: <RoleGuard require="inventory.manage"><InventoryPage /></RoleGuard>,
+        element: <RoleGuard requireAny={["inventory.manage","inventory.view"]}><InventoryPage /></RoleGuard>,
       },
 
       {
@@ -259,7 +264,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "audit",
-        element: <RoleGuard require="platform.audit.view"><AuditPage /></RoleGuard>,
+        element: <RoleGuard require="audit.view"><AuditPage /></RoleGuard>,
       },
       {
         path: "modules",
