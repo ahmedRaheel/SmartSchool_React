@@ -1,3 +1,4 @@
+import { usePermissions } from "../../../core/rbac/usePermissions";
 /**
  * StudentsPage — canonical example of the standard page pattern.
  *
@@ -62,6 +63,10 @@ const INITIAL_FORM = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export function StudentsPage() {
+  const perms = usePermissions();
+  const canCreate = perms.can("students.create");
+  const canEdit   = perms.can("students.edit");
+  const canDelete = perms.can("students.delete");
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
 
@@ -185,8 +190,8 @@ export function StudentsPage() {
               actions={row => (
                 <RowActions
                   onView={() => crud.openView(row.id)}
-                  onEdit={() => crud.openEdit(row.id)}
-                  onDelete={() => delStudent.mutate(row.id)}
+                  onEdit={canEdit ? () => crud.openEdit(row.id) : undefined}
+                  onDelete={canDelete ? () => delStudent.mutate(row.id) : undefined}
                   deleteLabel="student"
                 />
               )}

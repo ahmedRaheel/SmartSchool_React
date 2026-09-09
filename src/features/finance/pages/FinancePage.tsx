@@ -1,3 +1,4 @@
+import { usePermissions } from "../../../core/rbac/usePermissions";
 /**
  * FinancePage — Fee management, invoices, payments and fee structures
  * Tabs: Invoices (with pay now) · Fee Types · Fee Structure · Payments · Reports
@@ -24,6 +25,10 @@ const STATUS_PILL: Record<string,string> = { PAID:"success", PENDING:"warning", 
 const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
 
 export function FinancePage() {
+  const perms = usePermissions();
+  const canCreate = perms.can("finance.invoices.create");
+  const canManage = perms.can("finance.invoices.manage");
+  const canWaiver = perms.can("finance.waiver.approve");
   const [localInvoices, setLocalInvoices] = useState<any[]>([]);
   const { user } = useAuth();
   const updInvoice = useUpdateInvoice();
@@ -174,8 +179,8 @@ export function FinancePage() {
                             <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                               <RowActions
                                 onView={() => setViewInvId(inv.id)}
-                                onEdit={() => setEditInvId(inv.id)}
-                                onDelete={() => delInvoice.mutate(inv.id)}
+                                onEdit={canManage ? () => setEditInvId(inv.id) : undefined}
+                                onDelete={canManage ? () => delInvoice.mutate(inv.id) : undefined}
                                 deleteLabel="invoice"
                               />
                               <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>

@@ -20,6 +20,10 @@ const STAFF_TYPES = ["TEACHER","DRIVER","PRINCIPAL","ADMIN_OFFICER","ACCOUNTANT"
 const EMPLOYMENT_TYPES = ["PERMANENT","CONTRACT","PART_TIME"];
 
 export function HrPage() {
+  const perms = usePermissions();
+  const canCreate = perms.can("hr.create");
+  const canEdit   = perms.can("hr.edit");
+  const canDelete = perms.can("hr.delete");
   const { user } = useAuth();
   const updEmployee = useUpdateEmployee();
   const delEmployee = useDeleteEmployee();
@@ -30,7 +34,6 @@ export function HrPage() {
     const viewEmpItem: any = viewEmpData ?? null;
 
   const tid = effectiveTenantId(user) ?? "";
-  const perms = usePermissions();
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [tab, setTab] = useState<"list"|"leaves"|"new">("list");
@@ -416,8 +419,8 @@ export function HrPage() {
                               )}
                               <RowActions
                                 onView={() => setViewEmpId(e.id)}
-                                onEdit={() => setEditEmpId(e.id)}
-                                onDelete={() => delEmployee.mutate(e.id)}
+                                onEdit={canEdit ? () => setEditEmpId(e.id) : undefined}
+                                onDelete={canDelete ? () => delEmployee.mutate(e.id) : undefined}
                                 deleteLabel="staff member"
                               />
                             </div>

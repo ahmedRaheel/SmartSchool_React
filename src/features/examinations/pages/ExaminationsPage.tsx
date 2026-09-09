@@ -1,3 +1,4 @@
+import { usePermissions } from "../../../core/rbac/usePermissions";
 /**
  * ExaminationsPage — Production-grade exam management
  * ─ Create and schedule exams
@@ -287,6 +288,9 @@ function MarksEntryGrid({ exam, scale, onClose }: { exam: any; scale: GradeScale
 
 // ─ Main Page ────────────────────────────────────────────────────────────────
 export function ExaminationsPage() {
+  const perms = usePermissions();
+  const canManageExams = perms.can("exams.manage");
+  const canEnterMarks  = perms.can("exams.enter.marks");
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
   const [page, setPage]         = useState(1);
