@@ -1,3 +1,4 @@
+import { usePermissions } from "../../../core/rbac/usePermissions";
 /**
  * StudentsPage — canonical example of the standard page pattern.
  *
@@ -62,6 +63,10 @@ const INITIAL_FORM = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export function StudentsPage() {
+  const perms = usePermissions();
+  const canCreate = perms.can("students.create");
+  const canEdit   = perms.can("students.edit");
+  const canDelete = perms.can("students.delete");
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
 
@@ -137,7 +142,9 @@ export function StudentsPage() {
         subtitle="Student registration with enrollment and document compliance"
         action={
           mode === "list"
-            ? <button className="primary" onClick={startNew}><Plus size={14} /> Register student</button>
+            ? (canCreate
+                ? <button className="primary" onClick={startNew}><Plus size={14}/> Register student</button>
+                : undefined)
             : <button className="secondary" onClick={backToList}>← Back to list</button>
         }
       />
@@ -185,8 +192,8 @@ export function StudentsPage() {
               actions={row => (
                 <RowActions
                   onView={() => crud.openView(row.id)}
-                  onEdit={() => crud.openEdit(row.id)}
-                  onDelete={() => delStudent.mutate(row.id)}
+                  onEdit={canEdit ? () => crud.openEdit(row.id) : undefined}
+                  onDelete={canDelete ? () => delStudent.mutate(row.id) : undefined}
                   deleteLabel="student"
                 />
               )}
@@ -334,7 +341,7 @@ export function StudentsPage() {
           item={crud.item}
           fields={VIEW_FIELDS as any}
           onClose={crud.closeView}
-          onEdit={crud.viewToEdit}
+          onEdit={canEdit ? crud.viewToEdit : undefined}
         />
       )}
 

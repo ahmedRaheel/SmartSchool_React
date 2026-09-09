@@ -1,3 +1,4 @@
+import { usePermissions } from "../../../core/rbac/usePermissions";
 /**
  * FinancePage — Fee management, invoices, payments and fee structures
  * Tabs: Invoices (with pay now) · Fee Types · Fee Structure · Payments · Reports
@@ -24,6 +25,10 @@ const STATUS_PILL: Record<string,string> = { PAID:"success", PENDING:"warning", 
 const FREQ_OPTIONS = ["Monthly","Term","Annual","OneTime"];
 
 export function FinancePage() {
+  const perms = usePermissions();
+  const canCreate = perms.can("finance.invoices.create");
+  const canManage = perms.can("finance.invoices.manage");
+  const canWaiver = perms.can("finance.waiver.approve");
   const [localInvoices, setLocalInvoices] = useState<any[]>([]);
   const { user } = useAuth();
   const updInvoice = useUpdateInvoice();
@@ -47,10 +52,10 @@ export function FinancePage() {
   const [paySuccess, setPaySuccess] = useState(false);
 
   const { data: invData, isLoading } = useInvoices();
-  const { data: ftData }   = useFeeTypes();
-  const { data: fsData }   = useFeeStructure();
-  const { data: gradeData }= useGradeLevels();
-  const { data: studData } = useStudents();
+  const { data: ftData }   = useFeeTypes(tab === "feetype" || tab === "structure" || fsModal);
+  const { data: fsData }   = useFeeStructure(tab === "structure");
+  const { data: gradeData }= useGradeLevels(tab === "structure" || fsModal);
+  const { data: studData } = useStudents(1, invModal);
   const createInvoice = useCreateInvoice();
   const createPayment = useCreatePayment();
   const createFeeType = useCreateFeeType();
@@ -174,8 +179,8 @@ export function FinancePage() {
                             <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                               <RowActions
                                 onView={() => setViewInvId(inv.id)}
-                                onEdit={() => setEditInvId(inv.id)}
-                                onDelete={() => delInvoice.mutate(inv.id)}
+                                onEdit={canManage ? () => setEditInvId(inv.id) : undefined}
+                                onDelete={canManage ? () => delInvoice.mutate(inv.id) : undefined}
                                 deleteLabel="invoice"
                               />
                               <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setPayModal(inv);setError("");setPaySuccess(false);setPayForm({amount:String(meta.amount||""),method:"CASH",reference:""});}}>

@@ -1,3 +1,4 @@
+import { usePermissions } from "../../../core/rbac/usePermissions";
 /**
  * AttendancePage — Production attendance marking
  * Real bulk save to API · click-to-cycle status · keyboard nav
@@ -32,6 +33,10 @@ const HISTORY_DEMO = [
 ];
 
 export function AttendancePage() {
+  const perms = usePermissions();
+  const canMark = perms.can("attendance.mark");
+  const canEdit = perms.can("attendance.edit");
+  const canViewAll = perms.can("attendance.view.all");
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
   const today = new Date().toISOString().slice(0, 10);
@@ -129,7 +134,7 @@ export function AttendancePage() {
       </section>
 
       <div className="section-tabs" style={{ marginBottom: 14 }}>
-        <button className={tab === "mark" ? "active" : ""} onClick={() => setTab("mark")}>✅ Mark attendance</button>
+        {canMark && (<button className={tab === "mark" ? "active" : ""} onClick={() => setTab("mark")}>✅ Mark attendance</button>)}
         <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")}>📊 History</button>
       </div>
 

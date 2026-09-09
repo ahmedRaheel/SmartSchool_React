@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
@@ -34,9 +35,10 @@ export function ActivitiesPage() {
   const [wModal, setWModal] = useState(false);
   const [error, setError] = useState("");
 
-  const { data, isLoading } = useActivities();
-  const { data: awardsData } = useAwards();
-  const { data: studData }   = useStudents();
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useActivities(tab === "activities");
+  const { data: awardsData, isLoading: awardsLoading } = useAwards(tab === "awards");
+  const { data: studData }   = useStudents(1, wModal);
   const createActivity = useCreateActivity();
   const createAward    = useCreateAward();
 
@@ -48,6 +50,25 @@ export function ActivitiesPage() {
   const [wForm, setWForm] = useState({ studentId:"", title:"", awardType:"ACADEMIC", awardDate:"", description:"" });
   const af = (k:string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setAForm(p=>({...p,[k]:e.target.value}));
   const wf = (k:string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setWForm(p=>({...p,[k]:e.target.value}));
+
+  function changeTab(nextTab: "activities" | "awards") {
+    if (nextTab === tab) {
+      return;
+    }
+
+    const queryKey = nextTab === "activities"
+      ? ["activities", tid]
+      : ["awards", tid];
+
+    // The destination query is disabled at this point. Mark it stale first;
+    // enabling it by changing the tab causes one request only.
+    void queryClient.invalidateQueries({
+      queryKey,
+      refetchType: "none",
+    });
+
+    setTab(nextTab);
+  }
 
   async function saveActivity() {
     if (!aForm.name || !aForm.activityDate) { setError("Name and date required"); return; }
@@ -85,8 +106,8 @@ export function ActivitiesPage() {
       </section>
 
       <div className="section-tabs" style={{marginBottom:14}}>
-        <button className={tab==="activities"?"active":""} onClick={()=>setTab("activities")}>🏅 Activities ({activities.length})</button>
-        <button className={tab==="awards"?"active":""} onClick={()=>setTab("awards")}>🏆 Awards ({awards.length})</button>
+        <button className={tab==="activities"?"active":""} onClick={() => changeTab("activities")}>🏅 Activities ({activities.length})</button>
+        <button className={tab==="awards"?"active":""} onClick={() => changeTab("awards")}>🏆 Awards ({awards.length})</button>
       </div>
 
       {tab==="activities" && (
@@ -125,6 +146,9 @@ export function ActivitiesPage() {
 
       {tab==="awards" && (
         <div className="surface">
+          {awardsLoading ? (
+            <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div>
+          ) : (
           <div className="table-wrap">
             <table className="premium-table">
               <thead><tr><th>Award</th><th>Student</th><th>Type</th><th>Date</th><th>Description</th></tr></thead>
@@ -142,6 +166,7 @@ export function ActivitiesPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 

@@ -1,3 +1,4 @@
+import { ShieldCheck } from "lucide-react";
 import { RowActions } from "../../../components/ui/RowActions";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
@@ -35,6 +36,7 @@ export function AuditPage() {
     <>
       <PageHeader title="Audit Log" subtitle="Complete system activity trail"/>
       <div className="surface">
+        <div style={{padding:"10px 18px",background:"var(--info-bg)",borderBottom:"1px solid var(--info-border)",fontSize:12,color:"var(--info)",display:"flex",alignItems:"center",gap:8}}><ShieldCheck size={14}/><b>Audit logs are system-generated and read-only. No records can be added, edited or deleted.</b></div>
         <div className="surface-head">
           <label className="search-box" style={{ maxWidth:300 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -60,7 +62,7 @@ export function AuditPage() {
                             <td style={{ textAlign: "right" }}>
                               <RowActions
                                 onView={() => setViewLog(meta)}
-                                deleteLabel="log entry"
+                                
                               />
                             </td>
                     </tr>

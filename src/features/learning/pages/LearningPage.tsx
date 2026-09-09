@@ -1,3 +1,4 @@
+import { usePermissions } from "../../../core/rbac/usePermissions";
 /**
  * LearningPage — Production assignment management
  * Teacher view: create, view submissions, grade inline
@@ -361,6 +362,9 @@ function computeGradeLabel(marks: number, total: number): string {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export function LearningPage() {
+  const perms = usePermissions();
+  const canCreateAssignment = perms.can("learning.assignments.create");
+  const canGrade            = perms.can("learning.submissions.grade");
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
   const isTeacher = user?.role?.toLowerCase().includes("teacher");
@@ -669,9 +673,9 @@ export function LearningPage() {
             </div>
             <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
               <button className="secondary" onClick={() => setAModal(false)}>Cancel</button>
-              <button className="primary" onClick={saveAssignment} disabled={createAssignment.isPending}>
+              {canCreateAssignment && <button className="primary" onClick={saveAssignment} disabled={createAssignment.isPending}>
                 {createAssignment.isPending ? "Creating…" : "Create assignment"}
-              </button>
+              </button>}
             </div>
           </div>
         </div>

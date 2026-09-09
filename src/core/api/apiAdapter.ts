@@ -464,3 +464,11 @@ export const getAiSettings = (tid: string) =>
 
 export const updateAiSettings = (body: object) =>
   M ? ms({}) : api.put("/api/ai/settings", body).then(r=>r.data);
+
+export const getDepartmentsByCampus=(campusId:string,tenantId:string)=>api.get(`/api/organization/department/by-campus/${campusId}`,{params:{tenantId}}).then(r=>r.data);
+export const getStudentsByCurrentCampus=()=>api.get(`/api/students/student/by-current-campus`).then(r=>r.data);
+export const getStaffByCurrentCampus=()=>api.get(`/api/hr/employee/by-current-campus`).then(r=>r.data);
+export const createTeachingAssignment=(body:object)=>api.post(`/api/hr/teaching-assignment`,body).then(r=>r.data);
+export const getTeachingAssignmentsByEmployee=(employeeId:string,tenantId:string)=>api.get(`/api/hr/teaching-assignment/by-employee/${employeeId}`,{params:{tenantId}}).then(r=>r.data);
+
+export const getCurrentCampus=()=>api.get(`/api/organization/campus/current`).then(r=>({ value:[r.data?.value ?? r.data] }));

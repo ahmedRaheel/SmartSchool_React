@@ -21,8 +21,9 @@ export function DocumentsPage() {
   const [search, setSearch]     = useState("");
   const [compModal, setCompModal] = useState<{type:EntityType;id:string;name:string}|null>(null);
 
-  const { data: studData } = useStudents();
-  const { data: empData  } = useEmployees();
+  const needsActorLookup = tab === "upload" || compModal !== null;
+  const { data: studData } = useStudents(1, needsActorLookup && entityType === "STUDENT");
+  const { data: empData  } = useEmployees(1, needsActorLookup && entityType !== "STUDENT");
   const students  = toItems(studData);
   const employees = toItems(empData);
 
@@ -35,10 +36,10 @@ export function DocumentsPage() {
 
   // Compliance overview — mock realistic data
   const COMPLIANCE_SUMMARY = [
-    { type:"STUDENT" as EntityType, total:students.length||12, compliant:Math.round((students.length||12)*0.75), pending:Math.round((students.length||12)*0.25) },
-    { type:"TEACHER" as EntityType, total:employees.filter((e:any)=>e.staffType==="TEACHER").length||6, compliant:employees.filter((e:any)=>e.staffType==="TEACHER").length||6, pending:0 },
-    { type:"DRIVER"  as EntityType, total:employees.filter((e:any)=>e.staffType==="DRIVER").length||3, compliant:employees.filter((e:any)=>e.staffType==="DRIVER").length||3, pending:0 },
-    { type:"ADMIN_OFFICER" as EntityType, total:employees.filter((e:any)=>e.staffType==="ADMIN_OFFICER").length||4, compliant:employees.filter((e:any)=>e.staffType==="ADMIN_OFFICER").length||4, pending:0 },
+    { type:"STUDENT" as EntityType, total:students.length, compliant:0, pending:0 },
+    { type:"TEACHER" as EntityType, total:employees.filter((e:any)=>e.staffType==="TEACHER").length, compliant:0, pending:0 },
+    { type:"DRIVER"  as EntityType, total:employees.filter((e:any)=>e.staffType==="DRIVER").length, compliant:0, pending:0 },
+    { type:"ADMIN_OFFICER" as EntityType, total:employees.filter((e:any)=>e.staffType==="ADMIN_OFFICER").length, compliant:0, pending:0 },
   ];
   const totalEntities  = COMPLIANCE_SUMMARY.reduce((a,c)=>a+c.total,0);
   const totalCompliant = COMPLIANCE_SUMMARY.reduce((a,c)=>a+c.compliant,0);

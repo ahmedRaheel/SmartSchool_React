@@ -3,7 +3,7 @@ import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Download, TrendingUp, Users, DollarSign, BookOpen, BarChart3 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard }   from "../../../components/ui/StatCard";
-import { useAdminDashboard, useStudents, useEmployees, useExams, useInvoices } from "../../../core/api/queries";
+import { useAdminDashboard, useExams, useInvoices } from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
@@ -44,12 +44,10 @@ export function ReportsPage() {
   const [downloading, setDownloading] = useState<string|null>(null);
 
   const { data: dash     } = useAdminDashboard();
-  const { data: stuData  } = useStudents();
-  const { data: empData  } = useEmployees();
-  const { data: invData  } = useInvoices();
+  const { data: invData  } = useInvoices(1, tab === "financial");
 
-  const students  = (stuData as any)?.totalCount ?? (dash as any)?.Students ?? 2840;
-  const employees = (empData as any)?.totalCount ?? (dash as any)?.Employees ?? 128;
+  const students  = (dash as any)?.Students ?? 0;
+  const employees = (dash as any)?.Employees ?? 0;
   const invoices  = toItems(invData);
   const collected = invoices.filter((i:any)=>parseMeta(i.metadataJson).status==="PAID").reduce((a:number,i:any)=>a+(parseMeta(i.metadataJson).amount||0),0);
   const outstanding=invoices.filter((i:any)=>!["PAID","CANCELLED"].includes(parseMeta(i.metadataJson).status||"")).reduce((a:number,i:any)=>a+(parseMeta(i.metadataJson).amount||0),0);

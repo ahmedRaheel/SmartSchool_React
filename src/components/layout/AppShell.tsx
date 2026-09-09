@@ -65,15 +65,43 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  // SignalR
+  // SignalR - one connection for the authenticated application shell.
+  // Start is deferred so React StrictMode's development probe mount cannot
+  // initiate a second negotiate request.
   useEffect(() => {
-    if (!user || !tenantId) return;
-    const hub = createNotificationConnection((n) => {
-      setToasts(t => [n, ...t].slice(0, 4));
+    if (!user || !tenantId) {
+      return;
+    }
+
+    let disposed = false;
+    const hub = createNotificationConnection((notification) => {
+      setToasts((current) => [notification, ...current].slice(0, 4));
     });
+
     hubRef.current = hub;
-    hub.start().catch(() => {});
-    return () => { if (hub.state !== "Disconnected") void hub.stop(); };
+
+    const startTimer = window.setTimeout(() => {
+      if (disposed) {
+        return;
+      }
+
+      void hub.start().catch((error) => {
+        console.error("[realtime] notification connection:", error);
+      });
+    }, 0);
+
+    return () => {
+      disposed = true;
+      window.clearTimeout(startTimer);
+
+      if (hubRef.current === hub) {
+        hubRef.current = null;
+      }
+
+      if (hub.state !== "Disconnected") {
+        void hub.stop();
+      }
+    };
   }, [user?.id, tenantId]);
 
   // Auto-dismiss toasts
