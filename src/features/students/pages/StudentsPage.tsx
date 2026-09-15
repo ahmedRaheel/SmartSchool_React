@@ -14,11 +14,11 @@ import { usePermissions } from "../../../core/rbac/usePermissions";
 import { useState, useEffect } from "react";
 import { Plus, GraduationCap, Users, CheckCircle2, AlertCircle } from "lucide-react";
 import { PageHeader, StatCard, SearchBar, DataTable, RowActions,
-         ViewDrawer, EditModal, Pagination, StatusBadge, DocumentUploader } from "../../../components/ui";
+         ViewDrawer, EditModal, Pagination, StatusBadge, DocumentUploader, Modal } from "../../../components/ui";
 import { useCrud, useSearch, useFormState } from "../../../core/hooks";
 import { toItems } from "../../../core/utils";
 import {
-  useStudents, useCreateStudent,
+  useStudents, useCreateStudent, useCreateGuardian, useLinkGuardian, useApproveStudent,
   useUpdateStudent, useDeleteStudent, useStudentById,
   useCampuses, useAcademicYears, useClassSections,
 } from "../../../core/api/queries";
@@ -59,6 +59,8 @@ const INITIAL_FORM = {
   branchId: "", academicYearId: "", classSectionId: "",
   firstName: "", lastName: "", dateOfBirth: "", gender: "",
   admissionDate: new Date().toISOString().slice(0, 10),
+  guardianName: "", guardianCnic: "", guardianEmail: "", guardianPhone: "",
+  guardianRelationship: "GUARDIAN",
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -67,6 +69,7 @@ export function StudentsPage() {
   const canCreate = perms.can("students.create");
   const canEdit   = perms.can("students.edit");
   const canDelete = perms.can("students.delete");
+  const canApprove = perms.can("admissions.manage");
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
 
@@ -76,6 +79,9 @@ export function StudentsPage() {
   const { data: yearsData }     = useAcademicYears();
   const { data: sectionsData }  = useClassSections();
   const createStudent           = useCreateStudent();
+  const createGuardian          = useCreateGuardian();
+  const linkGuardian            = useLinkGuardian();
+  const approveStudent          = useApproveStudent();
   const updStudent              = useUpdateStudent();
   const delStudent              = useDeleteStudent();
 
@@ -98,6 +104,9 @@ export function StudentsPage() {
   const [step, setStep]           = useState<1 | 2 | 3>(1);
   const [newStudentId, setNewId]  = useState("");
   const [docComplete, setDocComp] = useState(false);
+  const [approveTarget, setApproveTarget] = useState<any | null>(null);
+  const [approvalEmail, setApprovalEmail] = useState("");
+  const [approvalError, setApprovalError] = useState("");
   const { form, setField, reset, error, setError } = useFormState(INITIAL_FORM);
 
   const filteredSections = form.branchId
@@ -108,8 +117,9 @@ export function StudentsPage() {
     : sections;
 
   async function saveStep1() {
-    if (!form.firstName || !form.branchId || !form.academicYearId || !form.classSectionId) {
-      setError("Name, campus, academic year and class section are required");
+    if (!form.firstName || !form.branchId || !form.academicYearId || !form.classSectionId
+        || !form.guardianName || !form.guardianCnic || !form.guardianEmail || !form.guardianPhone) {
+      setError("Student, placement and guardian details are required before registration.");
       return;
     }
     setError("");
@@ -122,7 +132,24 @@ export function StudentsPage() {
         lastName: form.lastName || undefined, dateOfBirth: form.dateOfBirth || undefined,
         gender: form.gender || undefined, admissionDate: form.admissionDate,
       });
-      setNewId(res?.id ?? `stu-mock-${Date.now()}`);
+      const studentId = res?.id ?? `stu-mock-${Date.now()}`;
+      const guardian: any = await createGuardian.mutateAsync({
+        tenantId: tid,
+        fullName: form.guardianName.trim(),
+        cnicNumber: form.guardianCnic.trim(),
+        email: form.guardianEmail.trim(),
+        phone: form.guardianPhone.trim(),
+      });
+
+      await linkGuardian.mutateAsync({
+        tenantId: tid,
+        studentId,
+        guardianId: guardian?.id,
+        relationship: form.guardianRelationship,
+        isPrimary: true,
+      });
+
+      setNewId(studentId);
       setStep(2);
     } catch (e: any) {
       setError(e?.response?.data?.message ?? e?.message ?? "Failed to save");
@@ -155,7 +182,7 @@ export function StudentsPage() {
           <section className="metric-grid" style={{ marginBottom: 20 }}>
             <StatCard label="Total students" value={String((data as any)?.totalCount ?? students.length)} note="" color="#2563EB" bg="#EFF6FF"><GraduationCap size={20} /></StatCard>
             <StatCard label="Active"         value={String(byStatus("ACTIVE"))}   note="" color="#10B981" bg="#ECFDF5"><CheckCircle2 size={20} /></StatCard>
-            <StatCard label="Pending"        value={String(byStatus("PENDING"))}  note="" color="#D97706" bg="#FFFBEB"><AlertCircle  size={20} /></StatCard>
+            <StatCard label="Pending"        value={String(byStatus("PENDING_APPROVAL"))}  note="" color="#D97706" bg="#FFFBEB"><AlertCircle  size={20} /></StatCard>
             <StatCard label="Guardians"      value="1,890"                         note="Linked" color="#8B5CF6" bg="#F5F3FF"><Users size={20} /></StatCard>
           </section>
 
@@ -190,12 +217,26 @@ export function StudentsPage() {
                 return row[col.key] ?? "—";
               }}
               actions={row => (
-                <RowActions
-                  onView={() => crud.openView(row.id)}
-                  onEdit={canEdit ? () => crud.openEdit(row.id) : undefined}
-                  onDelete={canDelete ? () => delStudent.mutate(row.id) : undefined}
-                  deleteLabel="student"
-                />
+                <div className="row-actions">
+                  {canApprove && row.status === "PENDING_APPROVAL" && (
+                    <button
+                      className="table-action approve"
+                      onClick={() => {
+                        setApproveTarget(row);
+                        setApprovalEmail("");
+                        setApprovalError("");
+                      }}
+                    >
+                      Approve
+                    </button>
+                  )}
+                  <RowActions
+                    onView={() => crud.openView(row.id)}
+                    onEdit={canEdit ? () => crud.openEdit(row.id) : undefined}
+                    onDelete={canDelete ? () => delStudent.mutate(row.id) : undefined}
+                    deleteLabel="student"
+                  />
+                </div>
               )}
             />
 
@@ -267,6 +308,26 @@ export function StudentsPage() {
                       <option value="">—</option>
                       <option>Male</option>
                       <option>Female</option>
+                    </select>
+                  </label>
+                  <div className="field-wide" style={{ marginTop: 8, fontWeight: 700 }}>Primary guardian</div>
+                  <label className="human-field"><span>Guardian name *</span>
+                    <input value={form.guardianName} onChange={setField("guardianName")} />
+                  </label>
+                  <label className="human-field"><span>Guardian CNIC *</span>
+                    <input value={form.guardianCnic} onChange={setField("guardianCnic")} placeholder="42101-1234567-1" />
+                  </label>
+                  <label className="human-field"><span>Guardian email *</span>
+                    <input type="email" value={form.guardianEmail} onChange={setField("guardianEmail")} />
+                  </label>
+                  <label className="human-field"><span>Guardian phone *</span>
+                    <input value={form.guardianPhone} onChange={setField("guardianPhone")} placeholder="03xx-xxxxxxx" />
+                  </label>
+                  <label className="human-field"><span>Relationship *</span>
+                    <select value={form.guardianRelationship} onChange={setField("guardianRelationship")}>
+                      <option value="FATHER">Father</option>
+                      <option value="MOTHER">Mother</option>
+                      <option value="GUARDIAN">Guardian</option>
                     </select>
                   </label>
                 </div>
@@ -358,6 +419,54 @@ export function StudentsPage() {
           }}
         />
       )}
+
+      <Modal
+        open={Boolean(approveTarget)}
+        title="Approve student admission"
+        onClose={() => setApproveTarget(null)}
+      >
+        <div className="human-form">
+          <p style={{ marginTop: 0, color: "var(--muted)" }}>
+            Approval creates the student login, creates any pending parent login accounts, assigns the branch student number and enrollment number, and activates the enrollment.
+          </p>
+          <label className="human-field field-wide">
+            <span>Student login email *</span>
+            <input
+              type="email"
+              value={approvalEmail}
+              onChange={(event) => setApprovalEmail(event.target.value)}
+              placeholder="student@example.com"
+            />
+          </label>
+          {approvalError && <div style={{ color: "var(--danger)", fontSize: 12 }}>{approvalError}</div>}
+        </div>
+        <div className="modal-actions">
+          <button className="secondary" onClick={() => setApproveTarget(null)}>Cancel</button>
+          <button
+            className="primary"
+            disabled={!approvalEmail || approveStudent.isPending}
+            onClick={async () => {
+              if (!approveTarget) return;
+              setApprovalError("");
+              try {
+                await approveStudent.mutateAsync({
+                  id: approveTarget.id,
+                  body: { tenantId: tid, studentId: approveTarget.id, email: approvalEmail.trim() },
+                });
+                setStudents(current => current.map(student =>
+                  student.id === approveTarget.id
+                    ? { ...student, status: "ACTIVE" }
+                    : student));
+                setApproveTarget(null);
+              } catch (error: any) {
+                setApprovalError(error?.response?.data?.message ?? error?.message ?? "Admission approval failed.");
+              }
+            }}
+          >
+            {approveStudent.isPending ? "Approving…" : "Approve admission"}
+          </button>
+        </div>
+      </Modal>
     </>
   );
 }

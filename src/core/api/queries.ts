@@ -23,6 +23,7 @@ export const useApproveStudent  = () => useMutation({ mutationFn:({id,body}:{id:
 export const useEnrollments     = (studentId?:string) => { const tid=useTid(); return useQuery({ queryKey:["enrollments",tid,studentId], queryFn:()=>A.getEnrollments(tid,studentId), enabled:!!tid }); };
 export const useCreateEnrollment= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createEnrollment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["enrollments",tid]}) }); };
 export const useCreateGuardian  = () => useMutation({ mutationFn:(b:object)=>A.createGuardian(b) });
+export const useLinkGuardian    = () => useMutation({ mutationFn:(b:object)=>A.linkGuardian(b) });
 
 // ── HR ───────────────────────────────────────────────────────────────────────
 export const useEmployees       = (page=1, enabled=true) => { const tid=useTid(); return useQuery({ queryKey:["employees",tid,page], queryFn:()=>A.getEmployeesPage(tid,page), enabled:enabled && !!tid }); };
