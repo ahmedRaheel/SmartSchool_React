@@ -17,6 +17,9 @@ import {
   useCreateLesson, useClassSections, useSubjects, useUpdateAssignment, 
   useDeleteAssignment, useAssignmentById} from "../../../core/api/queries";
 import { env } from "../../../config/env";
+import { api } from "../../../core/api/ApiClient";
+import { getErrorMessage as errorMessage } from "../../../core/api/errorMessage";
+import { useQueryClient } from "@tanstack/react-query";
 import * as A from "../../../core/api/apiAdapter";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
@@ -55,13 +58,14 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
   const isLate = due ? due && new Date() > due : false;
 
   async function submit() {
+    if (file && (file.size === 0 || file.size > 25 * 1024 * 1024)) { setError("Choose a nonempty file up to 25 MB."); return; }
     if (!file && !comment.trim()) { setError("Attach a file or write a comment before submitting."); return; }
     setSubmitting(true);
     try {
-      await A.submitAssignment(assignment.id, file, comment, tid, user?.studentId ?? user?.id ?? "student");
+      await A.submitAssignment(assignment.id, file, comment, tid, user?.studentId ?? "");
       setDone(true);
       setTimeout(onDone, 1200);
-    } catch { setError("Submission failed. Please try again."); }
+    } catch (e) { setError(errorMessage(e)); }
     setSubmitting(false);
   }
 
@@ -80,7 +84,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
           <div style={{ padding: 40, textAlign: "center" }}>
             <CheckCircle2 size={52} style={{ color: "var(--success)", margin: "0 auto 14px", display: "block" }} />
             <b style={{ fontSize: 16, color: "var(--success)", display: "block" }}>Submitted successfully!</b>
-            <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 8 }}>Your teacher has been notified.</p>
+            <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 8 }}>Your work is saved and available to your teacher.</p>
           </div>
         ) : (
           <>
@@ -142,7 +146,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
                     <div>
                       <Upload size={24} style={{ color: "var(--muted-2)", margin: "0 auto 8px", display: "block" }} />
                       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>Drop file here or click to browse</div>
-                      <div style={{ fontSize: 11, color: "var(--muted-2)", marginTop: 4 }}>PDF, DOCX, JPG — max 50 MB</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-2)", marginTop: 4 }}>PDF, DOCX, JPG — max 25 MB</div>
                     </div>
                   )}
                   <input ref={fileRef} type="file" style={{ display: "none" }} accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.xlsx,.pptx"
@@ -176,6 +180,18 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
 
 // ─── Teacher: Grade Submissions Drawer ───────────────────────────────────────
 function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => void }) {
+  const { user } = useAuth();
+  const tid = effectiveTenantId(user) ?? "";
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  async function download(id: string, fileName: string) {
+    try {
+      const response = await api.get(`/api/learning/assignment-submission/${id}/file`, { params: { tenantId: tid }, responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a"); link.href = url; link.download = fileName; link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { setError(errorMessage(e)); }
+  }
   const [subs, setSubs]   = useState<any[]>([]);
   useEffect(() => {
     if (env.useMocks) setSubs(MOCK_SUBMISSIONS.map((s:any) => ({ ...s })));
@@ -184,18 +200,19 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
 
   useEffect(() => {
     if (env.useMocks || !assignment?.id) return;
-    A.getSubmissions(assignment.id, "").then((res: any) => {
+    setLoading(true);
+    A.getSubmissions(assignment.id, tid).then((res: any) => {
       const items = res?.items ?? res ?? [];
       setSubs(items.map((s: any) => ({
         id: s.id, studentId: s.studentId ?? "",
         studentName: s.studentName ?? s.name ?? "",
         submittedAt: s.submittedAt ?? s.createdAt,
         fileName: s.fileName ?? null, comment: s.comment ?? "",
-        grade: s.grade ?? "", feedback: s.feedback ?? "",
+        grade: s.marks === null || s.marks === undefined ? "" : String(s.marks), feedback: s.feedback ?? "",
         status: s.status ?? "SUBMITTED",
       })));
-    }).catch(() => {});
-  }, [assignment?.id]);
+    }).catch(e => setError(errorMessage(e))).finally(() => setLoading(false));
+  }, [assignment?.id, tid]);
   const [grade, setGrade]  = useState("");
   const [feedback, setFb]  = useState("");
   const [saving, setSaving] = useState(false);
@@ -211,13 +228,14 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
   };
 
   async function saveGrade() {
-    if (!selected || !grade) return;
+    if (!selected || grade === "") return;
+    if (!Number.isFinite(Number(grade)) || Number(grade) < 0 || Number(grade) > totalMarks) { setError("Enter marks within the assignment total."); return; }
     setSaving(true);
     try {
-      await A.gradeSubmission(selected.id, { grade, feedback, marks: grade, tenantId: "" });
+      await A.gradeSubmission(selected.id, { id: selected.id, feedback, marks: Number(grade), tenantId: tid });
       setSubs(prev => prev.map(s => s.id === selected.id ? { ...s, grade, feedback, status: "GRADED" } : s));
       setSel(null); setGrade(""); setFb("");
-    } catch { /* toast */ }
+    } catch (e) { setError(errorMessage(e)); }
     setSaving(false);
   }
 
@@ -234,6 +252,8 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
           <button className="icon-button" onClick={onClose}><X size={18} /></button>
         </div>
 
+        {error && <p role="alert" className="form-error">{error}</p>}
+        {loading && <p>Loading submissions…</p>}
         {/* Progress bar */}
         <div style={{ padding: "12px 20px", background: "var(--surface-2)", borderBottom: "1px solid var(--line)", display: "flex", gap: 16, alignItems: "center" }}>
           {[["Submitted", counts.submitted, "info"], ["Late", counts.late, "warning"], ["Graded", counts.graded, "success"], ["Missing", counts.missing, "danger"]].map(([l, v, t]) => (
@@ -259,7 +279,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
               </thead>
               <tbody>
                 {subs.map(sub => (
-                  <tr key={sub.id} style={{ background: selected?.id === sub.id ? "var(--indigo-soft)" : "" }}>
+                  <tr key={sub.studentId} style={{ background: selected?.id === sub.id ? "var(--indigo-soft)" : "" }}>
                     <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--indigo-soft)", color: "var(--indigo)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
@@ -314,11 +334,11 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
               </div>
               <div style={{ padding: 18, flex: 1 }}>
                 {selected.fileName && (
-                  <button style={{ width: "100%", padding: "14px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 16 }}>
+                  <button onClick={() => void download(selected.id, selected.fileName!)} style={{ width: "100%", padding: "14px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 16 }}>
                     <FileText size={20} style={{ color: "var(--accent)" }} />
                     <div style={{ textAlign: "left" }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>{selected.fileName}</div>
-                      <div style={{ fontSize: 10, color: "var(--muted)" }}>Click to preview</div>
+                      <div style={{ fontSize: 10, color: "var(--muted)" }}>Download submitted file</div>
                     </div>
                   </button>
                 )}
@@ -368,7 +388,7 @@ export function LearningPage() {
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
   const isTeacher = user?.role?.toLowerCase().includes("teacher");
-  const isStudent = !isTeacher;
+  const isStudent = user?.role?.toLowerCase() === "student";
 
   const [page, setPage]         = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -383,21 +403,38 @@ export function LearningPage() {
   const [viewAsgnId, setViewAsgnId] = useState<string|null>(null);
   const viewAsgnOrEdit = viewAsgnId ?? editAsgnId;
 
-  const { data: viewAsgnData } = useAssignmentById(viewAsgnOrEdit ?? undefined);
 
-  const viewAsgnItem: any = viewAsgnData ?? null;
+
+
     const updAssignment = useUpdateAssignment();
 
   const [error, setError]       = useState("");
 
-  const { data, isLoading } = useAssignments();
+  const { data, isLoading, error: loadError, refetch } = useAssignments();
+  const queryClient = useQueryClient();
+  const [allocations, setAllocations] = useState<any[]>([]);
+  useEffect(() => {
+    if (!canCreateAssignment || !tid) return;
+    api.get("/api/learning/assignment-options", { params: { tenantId: tid } })
+      .then(r => setAllocations(r.data.items)).catch(e => setError(errorMessage(e)));
+  }, [tid, canCreateAssignment]);
   const { data: lessonsData } = useLessons();
   const { data: sectionsData } = useClassSections();
   const { data: subjectsData } = useSubjects();
   const createAssignment = useCreateAssignment();
   const createLesson     = useCreateLesson();
 
-  const assignments = toItems(data);
+  const assignments = toItems(data).map((a: any) => {
+    if (env.useMocks) return a;
+    const due = a.dueAt ? new Date(a.dueAt) : null;
+    const localDate = due ? `${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,"0")}-${String(due.getDate()).padStart(2,"0")}` : "";
+    return { ...a, metadataJson: JSON.stringify({ subject: a.course, sectionName: a.classSection,
+      type: a.assignmentTypeCode, description: a.description, dueDate: localDate,
+      dueTime: due ? `${String(due.getHours()).padStart(2,"0")}:${String(due.getMinutes()).padStart(2,"0")}` : "",
+      totalMarks: a.totalMarks, allowLate: a.allowLateSubmission, status: a.mySubmissionStatus ?? a.status,
+      submitted: a.submissionCount, grade: a.myMarks, feedback: a.myFeedback }) };
+  });
+  const viewAsgnItem: any = assignments.find((a: any) => a.id === viewAsgnOrEdit) ?? null;
   const lessons     = toItems(lessonsData);
   const sections    = toItems(sectionsData);
   const subjects    = toItems(subjectsData);
@@ -417,31 +454,25 @@ export function LearningPage() {
   }), [assignments, search]);
 
   const now = new Date();
-  const pending   = assignments.filter((a: any) => { const m = parseMeta(a.metadataJson); return m.status !== "SUBMITTED" && !submittedIds.has(a.id); }).length;
-  const overdue   = assignments.filter((a: any) => { const m = parseMeta(a.metadataJson); return m.dueDate && new Date(m.dueDate) < now && !submittedIds.has(a.id); }).length;
+  const pending   = assignments.filter((a: any) => { const m = parseMeta(a.metadataJson); return m.status !== "SUBMITTED" && !submittedIds.has(a.id) && !a.mySubmissionId; }).length;
+  const overdue   = assignments.filter((a: any) => { const m = parseMeta(a.metadataJson); return m.dueDate && new Date(m.dueDate) < now && !submittedIds.has(a.id) && !a.mySubmissionId; }).length;
 
   async function saveAssignment() {
     if (!aForm.title || !aForm.dueDate) { setError("Title and due date are required"); return; }
-    const section = sections.find((s: any) => s.id === aForm.sectionId);
-    const subject = subjects.find((s: any) => s.id === aForm.subjectId);
+    const allocation = allocations.find((item: any) => item.id === aForm.subjectId && item.classSectionId === aForm.sectionId);
+    if (!allocation) { setError("Select a class and teaching allocation."); return; }
     try {
       await createAssignment.mutateAsync({
-        tenantId: tid, name: aForm.title,
-        metadataJson: JSON.stringify({
-          type: aForm.assignmentType, sectionId: aForm.sectionId,
-          sectionName: section?.name, subjectId: aForm.subjectId,
-          subject: subject?.name ?? aForm.subjectId,
-          dueDate: aForm.dueDate, dueTime: aForm.dueTime,
-          totalMarks: Number(aForm.totalMarks),
-          description: aForm.description,
-          allowLate: aForm.allowLate === "true",
-          status: "ACTIVE", createdAt: new Date().toISOString(),
-        }),
+        tenantId: tid, name: aForm.title, courseOfferingId: allocation.courseOfferingId,
+        classSectionId: allocation.classSectionId, teacherEmployeeId: allocation.teacherEmployeeId,
+        assignmentTypeCode: aForm.assignmentType, description: aForm.description,
+        dueAt: new Date(`${aForm.dueDate}T${aForm.dueTime}`).toISOString(),
+        totalMarks: Number(aForm.totalMarks), allowLateSubmission: aForm.allowLate === "true", maxAttempts: 1,
       });
       setAModal(false);
       setAForm({ title: "", assignmentType: "HOMEWORK", sectionId: "", subjectId: "", dueDate: "", dueTime: "23:59", totalMarks: "100", description: "", allowLate: "true" });
       setError("");
-    } catch (e: any) { setError(e?.message ?? "Failed"); }
+    } catch (e) { setError(errorMessage(e)); }
   }
 
   async function saveLesson() {
@@ -452,7 +483,7 @@ export function LearningPage() {
         metadataJson: JSON.stringify({ sectionId: lForm.sectionId, description: lForm.description, sortOrder: Number(lForm.sortOrder), resourceCount: 0 }),
       });
       setLModal(false); setLForm({ title: "", sectionId: "", description: "", sortOrder: "1" }); setError("");
-    } catch (e: any) { setError(e?.message ?? "Failed"); }
+    } catch (e) { setError(errorMessage(e)); }
   }
 
   const TYPE_COLOR: Record<string, { bg: string; color: string }> = {
@@ -467,6 +498,7 @@ export function LearningPage() {
 
   return (
     <>
+      {loadError && <p role="alert" className="form-error">{errorMessage(loadError)}</p>}
       <PageHeader
         title={isTeacher ? "Learning — Assignments" : "My Assignments"}
         subtitle={isTeacher ? "Create assignments, review submissions and grade student work" : "Your assignments, deadlines and submission status"}
@@ -527,7 +559,7 @@ export function LearningPage() {
                   ) : filtered.map((a: any) => {
                     const m = parseMeta(a.metadataJson);
                     const due = m.dueDate ? new Date(m.dueDate + "T" + (m.dueTime ?? "23:59")) : null;
-                    const isOverdue = due && due < now && !submittedIds.has(a.id);
+                    const isOverdue = due && due < now && !submittedIds.has(a.id) && !a.mySubmissionId;
                     const isSubmitted = submittedIds.has(a.id) || m.status === "SUBMITTED";
                     const typeStyle = TYPE_COLOR[m.type ?? "HOMEWORK"] ?? { bg: "#EEF2FF", color: "#6366F1" };
 
@@ -646,14 +678,14 @@ export function LearningPage() {
               </label>
               <label className="human-field"><span>Class section</span>
                 <select value={aForm.sectionId} onChange={af("sectionId")}>
-                  <option value="">All classes</option>
-                  {sections.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="">Select class</option>
+                  {Array.from(new Map(allocations.map((a: any) => [a.classSectionId, a])).values()).map((a: any) => <option key={a.classSectionId} value={a.classSectionId}>{a.classSection}</option>)}
                 </select>
               </label>
-              <label className="human-field"><span>Subject</span>
+              <label className="human-field"><span>Course and teacher</span>
                 <select value={aForm.subjectId} onChange={af("subjectId")}>
                   <option value="">— Select —</option>
-                  {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {allocations.filter((a: any) => a.classSectionId === aForm.sectionId).map((a: any) => <option key={a.id} value={a.id}>{a.course} · {a.teacher}</option>)}
                 </select>
               </label>
               <label className="human-field"><span>Due date *</span><input type="date" value={aForm.dueDate} onChange={af("dueDate")} /></label>
@@ -714,13 +746,13 @@ export function LearningPage() {
         <SubmitModal
           assignment={submitModal}
           onClose={() => setSubmit(null)}
-          onDone={() => { setSubmittedIds(prev => new Set([...prev, submitModal.id])); setSubmit(null); }}
+          onDone={() => { void refetch(); setSubmittedIds(prev => new Set([...prev, submitModal.id])); setSubmit(null); }}
         />
       )}
 
       {/* ── TEACHER GRADE DRAWER ─────────────────────────────────────────────── */}
       {gradeDrawer && (
-        <GradeDrawer assignment={gradeDrawer} onClose={() => setGrade(null)} />
+        <GradeDrawer assignment={gradeDrawer} onClose={() => { setGrade(null); void queryClient.invalidateQueries({ queryKey: ["assignments", tid] }); }} />
       )}
 
       {viewAsgnId && viewAsgnItem && (
@@ -746,7 +778,15 @@ export function LearningPage() {
           title="Assignment"
           item={viewAsgnItem}
           onClose={() => setEditAsgnId(null)}
-          onSave={async data => { await updAssignment.mutateAsync({id: editAsgnId!, body: data}); setEditAsgnId(null); }}
+          onSave={async data => {
+            const meta = parseMeta(data.metadataJson);
+            await updAssignment.mutateAsync({ id: editAsgnId!, body: {
+              tenantId: tid, id: editAsgnId, name: data.name, description: meta.description ?? data.description,
+              dueAt: meta.dueDate ? new Date(`${meta.dueDate}T${meta.dueTime || "23:59"}`).toISOString() : viewAsgnItem.dueAt,
+              totalMarks: Number(meta.totalMarks ?? data.totalMarks ?? viewAsgnItem.totalMarks),
+              allowLateSubmission: viewAsgnItem.allowLateSubmission ?? true, maxAttempts: viewAsgnItem.maxAttempts ?? 1,
+            }}); setEditAsgnId(null);
+          }}
           fields={[
             { key:"name",           label:"Title",            required:true, wide:true                                                                              },
             { key:"assignmentType", label:"Type",             type:"select", options:[{value:"HOMEWORK",label:"Homework"},{value:"CLASSWORK",label:"Classwork"},{value:"PROJECT",label:"Project"},{value:"QUIZ",label:"Quiz"},{value:"ESSAY",label:"Essay"}] },

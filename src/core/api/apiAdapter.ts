@@ -167,6 +167,10 @@ export const getLearningResources=(tenantId: string)              => M ? ms(pg([
 export const getActivities     = (tenantId: string)               => M ? ms(pg(MOCK_ACTIVITIES)) : api.get("/api/activities/activity",      { params:{tenantId,page:1,pageSize:100} }).then(r=>r.data);
 export const createActivity    = (body: object)                   => M ? ms({...MOCK_ACTIVITIES[0], id:uid()}) : api.post("/api/activities/activity", body).then(r=>r.data);
 export const getAwards         = (tenantId: string)               => M ? ms(pg([])) : api.get("/api/activities/award",          { params:{tenantId,page:1,pageSize:100} }).then(r=>r.data);
+export const getStudentActivities = (tenantId: string, activityId?: string) => M ? ms(pg([])) : api.get("/api/activities/student-activity", { params:{tenantId,activityId,page:1,pageSize:200} }).then(r=>r.data);
+export const createStudentActivity = (body: object) => M ? ms({ id:uid() }) : api.post("/api/activities/student-activity", body).then(r=>r.data);
+export const updateStudentActivity = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/activities/student-activity/${id}`, body).then(r=>r.data);
+export const deleteStudentActivity = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/activities/student-activity/${id}`, { params:{tenantId} }).then(r=>r.data);
 
 // ── Workflow ──────────────────────────────────────────────────────────────────
 export const getWorkflowDefs   = (tenantId: string)               => M ? ms(pg(MOCK_WORKFLOW_DEFS)) : api.get("/api/workflow/workflow-definition", { params:{tenantId,page:1,pageSize:50} }).then(r=>r.data);
@@ -193,14 +197,15 @@ export const markNotifRead     = (id: string, tenantId: string, uid2: string) =>
   M ? ms({}) : api.patch(`/api/communication/notification/${id}/read`, null, { params:{tenantId,recipientUserId:uid2} }).then(r=>r.data);
 export const markAllRead       = (tenantId: string, uid2: string) =>
   M ? ms({}) : api.patch("/api/communication/notification/read-all", null, { params:{tenantId,recipientUserId:uid2} }).then(r=>r.data);
-export const getConversations  = (tenantId: string)               => M ? ms(MOCK_CONVERSATIONS) : api.get("/api/communication/conversation", { params:{tenantId,page:1,pageSize:50} }).then(r=>r.data);
-export const getMessages       = (tenantId: string, conversationId: string) =>
-  M ? ms(MOCK_MESSAGES.filter(m=>{ const meta = JSON.parse(m.metadataJson??"{}"); return meta.convId === conversationId; }))
-    : api.get("/api/communication/message", { params:{tenantId,conversationId,page:1,pageSize:50} }).then(r=>r.data);
-export const sendMessage       = (tenantId: string, conversationId: string, text: string, senderUserId: string) =>
-  M ? ms({ id:uid(), code:`MSG-${Date.now()}`, name:text, tenantId, metadataJson:JSON.stringify({ convId:conversationId, sender:"Me", text, sentAt:new Date().toISOString() }) })
-    : api.post("/api/communication/message", { tenantId, conversationId, message:text, senderUserId }).then(r=>r.data);
-export const createConversation= (body: object)                   => M ? ms({ id:uid(), code:`CV-${Date.now()}`, name:(body as any).title, tenantId:"t1", metadataJson:"{}" }) : api.post("/api/communication/conversation", body).then(r=>r.data);
+export const getConversations  = (_tenantId: string) => M ? ms([]) : api.get("/api/communication/chat/conversations").then(r=>r.data);
+export const getMessages       = (_tenantId: string, conversationId: string) =>
+  M ? ms([]) : api.get(`/api/communication/chat/conversations/${conversationId}/messages`).then(r=>r.data);
+export const sendMessage       = (_tenantId: string, conversationId: string, text: string, _senderUserId: string) =>
+  M ? ms({ messageId:uid(), conversationId, senderUserId:_senderUserId, message:text, sentAt:new Date().toISOString() })
+    : api.post(`/api/communication/chat/conversations/${conversationId}/messages`, { message:text }).then(r=>r.data);
+export const createConversation= (body: object) => M ? ms({ conversationId:uid(), title:(body as any).title }) : api.post("/api/communication/chat/conversations", body).then(r=>r.data);
+export const markConversationRead = (conversationId: string) => M ? ms({}) : api.post(`/api/communication/chat/conversations/${conversationId}/read`).then(r=>r.data);
+export const getChatDirectory = (tenantId: string) => M ? ms({items:[]}) : api.get("/api/identity/users", { params:{tenantId,page:1,pageSize:100} }).then(r=>r.data);
 export const createNotification= (body: object)                   => M ? ms({}) : api.post("/api/communication/notification", body).then(r=>r.data);
 
 // ── AICore ────────────────────────────────────────────────────────────────────
@@ -294,6 +299,9 @@ export const createGradeScale  = (body: object) => M ? ms({ id:uid() }) : api.po
 export const createLesson      = (body: object) => M ? ms({ id:uid() }) : api.post("/api/learning/lesson", body).then(r=>r.data);
 export const createAward       = (body: object) => M ? ms({ id:uid() }) : api.post("/api/activities/award", body).then(r=>r.data);
 export const createWorkflowDef = (body: object) => M ? ms({ id:uid() }) : api.post("/api/workflow/workflow-definition", body).then(r=>r.data);
+export const updateWorkflowDef = (id: string, body: object) => M ? ms({}) : api.put(`/api/workflow/workflow-definition/${id}`, body).then(r=>r.data);
+export const deleteWorkflowDef = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/workflow/workflow-definition/${id}`, { params:{tenantId} }).then(r=>r.data);
+export const createWorkflowInstance = (body: object) => M ? ms({ id:uid() }) : api.post("/api/workflow/workflow-instance", body).then(r=>r.data);
 
 // ── Knowledge / RAG document upload ───────────────────────────────────────────
 export const uploadKnowledgeDoc = (collectionId: string, file: File, tenantId: string): Promise<{id:string;title:string;chunks:number;status:string}> => {
@@ -379,6 +387,8 @@ export const deleteInventoryItem = (id: string, tenantId: string) => M ? ms({}) 
 // ── CRUD: Activities ──────────────────────────────────────────────────────────
 export const updateActivity    = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/activities/activity/${id}`, body).then(r=>r.data);
 export const deleteActivity    = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/activities/activity/${id}`, { params:{tenantId} }).then(r=>r.data);
+export const updateAward       = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/activities/award/${id}`, body).then(r=>r.data);
+export const deleteAward       = (id: string, tenantId: string) => M ? ms({}) : api.delete(`/api/activities/award/${id}`, { params:{tenantId} }).then(r=>r.data);
 
 // ── CRUD: Admissions ──────────────────────────────────────────────────────────
 export const updateApplication = (id: string, body: object) => M ? ms({ id, ...body }) : api.put(`/api/admissions/application/${id}`, body).then(r=>r.data);

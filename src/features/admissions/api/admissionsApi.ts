@@ -1,11 +1,11 @@
 import { api } from "../../../core/api/ApiClient";
 export type AdmissionStatus="SUBMITTED_APPLICATION"|"ADMISSION_ACCEPTED"|"ADMISSION_REJECTED"|"WAITING_LIST";
-export interface AdmissionApplication {id:string;schoolId:string;branchId:string;academicYearId?:string;classId?:string;sectionId?:string;firstName:string;lastName?:string;dateOfBirth?:string;gender?:string;email?:string;phone?:string;guardianName:string;guardianEmail?:string;guardianPhone?:string;previousMarks?:number;status:AdmissionStatus;submittedAt:string;decisionNotes?:string;studentId?:string;}
-export interface CreateAdmissionRequest {tenantId?:string;schoolId:string;branchId:string;academicYearId?:string;classId?:string;sectionId?:string;firstName:string;lastName?:string;dateOfBirth?:string;gender?:string;email?:string;phone?:string;address?:string;guardianName:string;guardianCnic?:string;guardianEmail?:string;guardianPhone?:string;relationship?:string;previousSchool?:string;previousMarks?:number;}
+export interface AdmissionApplication {id:string;schoolId:string;branchId:string;academicYearId?:string;classId?:string;classSectionId?:string;firstName:string;lastName?:string;dateOfBirth?:string;gender?:string;email?:string;phone?:string;guardianName:string;guardianEmail?:string;guardianPhone?:string;previousMarks?:number;status:AdmissionStatus;submittedAt:string;decisionNotes?:string;studentId?:string;}
+export interface CreateAdmissionRequest {tenantId?:string;schoolId:string;branchId:string;academicYearId?:string;classId?:string;classSectionId?:string;firstName:string;lastName?:string;dateOfBirth?:string;gender?:string;email?:string;phone?:string;address?:string;guardianName:string;guardianCnic?:string;guardianEmail?:string;guardianPhone?:string;relationship?:string;previousSchool?:string;previousMarks?:number;}
 function rows<T>(data:any):T[]{const value=data?.value??data;return Array.isArray(value)?value:(value?.items??[])}
-export const admissionsApi={async list(tenantId?:string){return rows<AdmissionApplication>((await api.get("/api/admissions/workflow/applications",{params:{tenantId}})).data)},async create(request:CreateAdmissionRequest){return (await api.post("/api/admissions/workflow/applications",request)).data},async status(id:string,status:AdmissionStatus,tenantId?:string,notes?:string){return (await api.put(`/api/admissions/workflow/applications/${id}/status`,{tenantId,status,notes})).data},async criteria(tenantId?:string){return rows<any>((await api.get("/api/admissions/criteria",{params:{tenantId}})).data)},async createCriteria(request:any){return (await api.post("/api/admissions/criteria",request)).data},async academicYears(tenantId?:string){return rows<any>((await api.get("/api/academics/academic-year",{params:{tenantId,page:1,pageSize:100}})).data)},async classSections(tenantId?:string){return rows<any>((await api.get("/api/academics/class-section",{params:{tenantId,page:1,pageSize:200}})).data)}};
+export const admissionsApi={async list(tenantId?:string){return rows<AdmissionApplication>((await api.get("/api/admissions/workflow/applications",{params:{tenantId}})).data)},async create(request:CreateAdmissionRequest){return (await api.post("/api/admissions/workflow/applications",request)).data},async status(id:string,status:AdmissionStatus,tenantId?:string,notes?:string,entranceTestMarks?:number,interviewPassed?:boolean){return (await api.put(`/api/admissions/workflow/applications/${id}/status`,{tenantId,status,notes,entranceTestMarks,interviewPassed})).data},async criteria(tenantId?:string){return rows<any>((await api.get("/api/admissions/criteria",{params:{tenantId}})).data)},async createCriteria(request:any){return (await api.post("/api/admissions/criteria",request)).data},async academicYears(tenantId?:string){return rows<any>((await api.get("/api/academics/academic-year",{params:{tenantId,page:1,pageSize:100}})).data)},async classSections(tenantId?:string){return rows<any>((await api.get("/api/academics/class-section",{params:{tenantId,page:1,pageSize:200}})).data)}};
 
-export interface AcademicLookup { id:string; name:string; code?:string; parentId?:string; educationLevelId?:string; educationLevelName?:string; }
+export interface AcademicLookup { campusId?:string; id:string; name:string; code?:string; parentId?:string; educationLevelId?:string; educationLevelName?:string; }
 const academicLookupRoutes = {
   years: "/api/academics/academic-year",
   classes: "/api/academics/grade-level",
@@ -18,22 +18,24 @@ export async function getAcademicSetup(
   tenantId?: string,
 ): Promise<AcademicLookup[]> {
   const response = await api.get(academicLookupRoutes[kind], {
-    params: { tenantId, page: 1, pageSize: 200 },
+    params: { tenantId, campusId: _branchId || undefined, page: 1, pageSize: 200 },
   });
 
-  return rows<AcademicLookup>(response.data);
+  return rows<AcademicLookup>(response.data).filter(item => !_branchId || item.campusId === _branchId);
 }
 
 export async function criteria(tenantId?: string): Promise<any[]> {
-  try {
-    const { api } = await import("../../../core/api/ApiClient");
-    const r: any = await (api as any).get("/api/admissions/admission-criteria", { params: { tenantId } });
-    const d = r?.data ?? r;
-    return d?.items ?? (Array.isArray(d) ? d : []);
-  } catch { return []; }
+  return admissionsApi.criteria(tenantId);
 }
 
 export async function createCriteria(body: object): Promise<any> {
-  const { api } = await import("../../../core/api/ApiClient");
-  return (api as any).post("/api/admissions/admission-criteria", body).then((r: any) => r?.data ?? r);
+  return admissionsApi.createCriteria(body);
+}
+
+export async function updateCriteria(id: string, body: object): Promise<any> {
+  return (await api.put(`/api/admissions/criteria/${id}`, body)).data;
+}
+
+export async function deleteCriteria(id: string, tenantId?: string): Promise<void> {
+  await api.delete(`/api/admissions/criteria/${id}`, { params: { tenantId } });
 }

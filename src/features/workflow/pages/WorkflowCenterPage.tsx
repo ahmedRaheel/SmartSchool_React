@@ -1,316 +1,107 @@
-import { useState } from "react";
-import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
-import { Plus, X, Zap, Check, Clock, GitBranch } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CheckCircle2, GitBranch, Play, Plus, Trash2, XCircle } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
-import { RowActions } from "../../../components/ui/RowActions";
-import { ViewDrawer } from "../../../components/ui/ViewDrawer";
-import { EditModal }  from "../../../components/ui/EditModal";
-import { Pagination } from "../../../components/ui/Pagination";
-import { useWorkflowDefinitions, useCreateWorkflowDefinition, useApprovals, useWorkflowInstances } from "../../../core/api/queries";
+import { StatCard } from "../../../components/ui/StatCard";
+import { toItems } from "../../../core/utils/dataHelpers";
+import {
+  useApprovals,
+  useCreateWorkflowDefinition,
+  useCreateWorkflowInstance,
+  useDeleteWorkflowDefinition,
+  useProcessApproval,
+  useUpdateWorkflowDefinition,
+  useWorkflowDefinitions,
+  useWorkflowInstances,
+} from "../../../core/api/queries";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 
-const TRIGGER_TYPES = ["ADMISSION_SUBMITTED","LEAVE_REQUESTED","PAYMENT_OVERDUE","FEE_WAIVER_REQUEST","DOCUMENT_UPLOADED","ASSIGNMENT_SUBMITTED","COMPLAINT_RAISED","CUSTOM"];
-const ENTITY_TYPES  = ["Student","Employee","Invoice","Admission","Assignment","Leave","Document","Custom"];
-const STATUS_PILL: Record<string, string> = { ACTIVE:"success", INACTIVE:"gray", PENDING:"warning", APPROVED:"success", REJECTED:"danger", IN_PROGRESS:"info" };
+type StepForm = { name:string; stepType:"APPROVAL"|"ACTION"; approverRole:string; actionCode:string; isRequired:boolean };
+type DefinitionForm = { name:string; description:string; triggerType:string; entityType:string; status:"ACTIVE"|"INACTIVE"; steps:StepForm[] };
 
-interface Rule {
-  id: string;
-  name: string;
-  trigger: string;
-  action: string;
-  entity: string;
-  active: boolean;
-  condition?: string;
-  builtin?: boolean;
-}
-
-const BUILTIN_RULES: Rule[] = [
-  { id:"b1", name:"Auto-accept admission (marks ≥ 80% + docs)",    trigger:"ADMISSION_SUBMITTED",  action:"SET_STATUS:ADMISSION_ACCEPTED", entity:"Admission", active:true, condition:"marks >= 80 && documents.compliant" },
-  { id:"b2", name:"Auto-reject admission (marks < minimum)",        trigger:"ADMISSION_SUBMITTED",  action:"SET_STATUS:ADMISSION_REJECTED", entity:"Admission", active:true, condition:"marks < criteria.minimumMarks" },
-  { id:"b3", name:"Auto-waitlist if class is full",                 trigger:"ADMISSION_SUBMITTED",  action:"SET_STATUS:WAITING_LIST",       entity:"Admission", active:true, condition:"section.enrolled >= section.seats" },
-  { id:"b4", name:"Gender policy enforcement",                      trigger:"ADMISSION_SUBMITTED",  action:"SET_STATUS:ADMISSION_REJECTED", entity:"Admission", active:true, condition:"!campus.allowsGender(gender)" },
-  { id:"b5", name:"Create student + parent accounts on acceptance", trigger:"ADMISSION_ACCEPTED",   action:"PROVISION_ACCOUNTS",            entity:"Admission", active:true, condition:"always" },
-  { id:"b6", name:"Send acceptance notification to guardian",       trigger:"ADMISSION_ACCEPTED",   action:"SEND_NOTIFICATION",             entity:"Admission", active:true, condition:"guardian.email != null" },
-  { id:"b7", name:"Late fee alert after due date",                  trigger:"PAYMENT_OVERDUE",      action:"SEND_NOTIFICATION",             entity:"Invoice",   active:true, condition:"daysOverdue >= 1" },
-  { id:"b8", name:"Grade assignment automatically on submission",   trigger:"ASSIGNMENT_SUBMITTED", action:"NOTIFY_TEACHER",                entity:"Assignment",active:true, condition:"always" },
-];
+const emptyStep = ():StepForm => ({ name:"Approval", stepType:"APPROVAL", approverRole:"Admin", actionCode:"", isRequired:true });
+const emptyDefinition = ():DefinitionForm => ({ name:"", description:"", triggerType:"MANUAL", entityType:"GENERIC", status:"ACTIVE", steps:[emptyStep()] });
+const roles = ["Admin","AdminOfficer","Principal","HRManager","HR","Accountant","FinanceOfficer","Teacher","Examiner","Librarian","Tenant","TenantAdmin","Owner"];
 
 export function WorkflowCenterPage() {
   const { user } = useAuth();
-  const tid      = effectiveTenantId(user) ?? "";
+  const tenantId = effectiveTenantId(user) ?? "";
+  const [tab,setTab] = useState<"definitions"|"approvals"|"instances">("definitions");
+  const [showDefinition,setShowDefinition] = useState(false);
+  const [showStart,setShowStart] = useState(false);
+  const [editingId,setEditingId] = useState<string|undefined>();
+  const [definition,setDefinition] = useState<DefinitionForm>(emptyDefinition());
+  const [startForm,setStartForm] = useState({ workflowDefinitionId:"", name:"", entityId:"", contextJson:"" });
+  const [decisionComments,setDecisionComments] = useState<Record<string,string>>({});
+  const [error,setError] = useState("");
 
-  const [tab,      setTab]      = useState<"rules"|"approvals"|"instances">("rules");
-  const [page,     setPage]     = useState(1);
-  const [defModal, setDefModal] = useState(false);
-  const [error,    setError]    = useState("");
-  const [viewWf,   setViewWf]   = useState<any|null>(null);
-  const [editWf,   setEditWf]   = useState<any|null>(null);
-  const [form, setForm] = useState({ name:"", triggerType:"ADMISSION_SUBMITTED", entityType:"Student", description:"", status:"ACTIVE" });
-
-  const PAGE_SIZE = 25;
-
-  const { data: defsData }      = useWorkflowDefinitions();
-  const { data: approvalsData } = useApprovals();
-  const { data: instancesData } = useWorkflowInstances();
+  const defsQuery = useWorkflowDefinitions();
+  const approvalsQuery = useApprovals();
+  const instancesQuery = useWorkflowInstances();
   const createDef = useCreateWorkflowDefinition();
+  const updateDef = useUpdateWorkflowDefinition();
+  const deleteDef = useDeleteWorkflowDefinition();
+  const createInstance = useCreateWorkflowInstance();
+  const processApproval = useProcessApproval();
 
-  const defs      = toItems(defsData);
-  const approvals = toItems(approvalsData);
-  const instances = toItems(instancesData);
+  const definitions = toItems(defsQuery.data);
+  const approvals = toItems(approvalsQuery.data);
+  const instances = toItems(instancesQuery.data);
+  const pending = approvals.filter((x:any)=>x.status === "PENDING");
+  const running = instances.filter((x:any)=>x.status === "IN_PROGRESS");
+  const activeDefs = useMemo(()=>definitions.filter((x:any)=>x.status === "ACTIVE"),[definitions]);
 
-  // Merge built-in + custom rules with uniform shape
-  const allRules: Rule[] = [
-    ...BUILTIN_RULES,
-    ...defs.map((d: any): Rule => {
-      const m = parseMeta(d.metadataJson);
-      return { id: d.id, name: d.name, trigger: m.trigger ?? "", action: m.action ?? "", entity: m.entity ?? "", active: m.active ?? true, condition: m.condition, builtin: false };
-    }),
-  ];
+  const openCreate = () => { setEditingId(undefined); setDefinition(emptyDefinition()); setError(""); setShowDefinition(true); };
+  const openEdit = (item:any) => {
+    setEditingId(item.id);
+    setDefinition({
+      name:item.name ?? "", description:item.description ?? "", triggerType:item.triggerType ?? "MANUAL",
+      entityType:item.entityType ?? "GENERIC", status:item.status ?? "ACTIVE",
+      steps:(item.steps ?? []).map((s:any)=>({name:s.name,stepType:s.stepType,approverRole:s.approverRole ?? "",actionCode:s.actionCode ?? "",isRequired:s.isRequired !== false})) || [emptyStep()],
+    });
+    setError(""); setShowDefinition(true);
+  };
+  const saveDefinition = async () => {
+    setError("");
+    if (!definition.name.trim() || definition.steps.length === 0) { setError("Name and at least one step are required."); return; }
+    if (definition.steps.some(s=>!s.name.trim() || (s.stepType === "APPROVAL" && !s.approverRole))) { setError("Every step needs a name and approval steps need an approver role."); return; }
+    const body={tenantId,name:definition.name,description:definition.description||null,triggerType:definition.triggerType,entityType:definition.entityType,status:definition.status,steps:definition.steps.map(s=>({...s,actionCode:s.actionCode||null,approverRole:s.stepType==="APPROVAL"?s.approverRole:null}))};
+    try { if(editingId) await updateDef.mutateAsync({id:editingId,body}); else await createDef.mutateAsync(body); setShowDefinition(false); }
+    catch(e:any){ setError(e?.response?.data?.detail ?? e?.message ?? "Unable to save workflow."); }
+  };
+  const startWorkflow = async () => {
+    setError(""); if(!startForm.workflowDefinitionId || !startForm.name.trim()){setError("Choose a workflow and provide an instance name.");return;}
+    try { await createInstance.mutateAsync({tenantId,workflowDefinitionId:startForm.workflowDefinitionId,name:startForm.name,entityId:startForm.entityId||null,contextJson:startForm.contextJson||null}); setShowStart(false); setStartForm({workflowDefinitionId:"",name:"",entityId:"",contextJson:""}); }
+    catch(e:any){setError(e?.response?.data?.detail ?? e?.message ?? "Unable to start workflow.");}
+  };
+  const decide = async (id:string,decision:"APPROVED"|"REJECTED") => { try { await processApproval.mutateAsync({id,body:{tenantId,decision,comments:decisionComments[id]||null}}); } catch(e:any){setError(e?.response?.data?.detail ?? e?.message ?? "Unable to process approval.");} };
 
-  const activeCount      = allRules.filter(r => r.active).length;
-  const pendingApprovals = approvals.filter((a: any) => parseMeta(a.metadataJson).status === "PENDING").length;
-  const pagedRules       = allRules.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  return <div>
+    <PageHeader title="Workflow Centre" subtitle="Versioned business workflows, approvals and execution history" action={<div style={{display:"flex",gap:8}}><button className="button secondary" onClick={()=>setShowStart(true)} disabled={!activeDefs.length}><Play size={16}/> Start workflow</button><button className="button primary" onClick={openCreate}><Plus size={16}/> New definition</button></div>} />
+    {error && <div className="alert error" style={{marginBottom:12}}>{error}</div>}
+    <div className="stats-grid">
+      <StatCard label="Definitions" value={String(definitions.length)} note={`${activeDefs.length} active`}><GitBranch size={20}/></StatCard>
+      <StatCard label="Pending approvals" value={String(pending.length)} note="assigned to your role"><CheckCircle2 size={20}/></StatCard>
+      <StatCard label="Running" value={String(running.length)} note="workflow instances"><Play size={20}/></StatCard>
+    </div>
+    <div className="tabs" style={{margin:"18px 0"}}>
+      <button className={tab==="definitions"?"active":""} onClick={()=>setTab("definitions")}>Definitions</button>
+      <button className={tab==="approvals"?"active":""} onClick={()=>setTab("approvals")}>Approvals ({pending.length})</button>
+      <button className={tab==="instances"?"active":""} onClick={()=>setTab("instances")}>Instances</button>
+    </div>
 
-  const ff = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm(p => ({ ...p, [k]: e.target.value }));
+    {tab==="definitions" && <section className="surface"><div className="surface-head"><h3>Workflow definitions</h3><p>Steps execute in order. Approval steps pause until the assigned role decides.</p></div><div className="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Trigger</th><th>Entity</th><th>Version</th><th>Steps</th><th>Status</th><th/></tr></thead><tbody>{definitions.map((d:any)=><tr key={d.id}><td>{d.code}</td><td><b>{d.name}</b><small style={{display:"block"}}>{d.description}</small></td><td>{d.triggerType}</td><td>{d.entityType}</td><td>v{d.version}</td><td>{d.steps?.length ?? 0}</td><td><span className={`pill ${d.status==="ACTIVE"?"success":"gray"}`}>{d.status}</span></td><td><div style={{display:"flex",gap:6}}><button className="button secondary small" onClick={()=>openEdit(d)}>Edit</button><button className="icon-button" title="Delete" onClick={()=>deleteDef.mutate(d.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>{!definitions.length && <div className="empty-state">No workflow definitions yet.</div>}</section>}
 
-  async function saveDef() {
-    if (!form.name) { setError("Name required"); return; }
-    try {
-      await createDef.mutateAsync({
-        tenantId: tid, name: form.name,
-        metadataJson: JSON.stringify({ trigger: form.triggerType, entity: form.entityType, description: form.description, active: form.status === "ACTIVE", steps: [], builtIn: false }),
-      });
-      setDefModal(false);
-      setForm({ name:"", triggerType:"ADMISSION_SUBMITTED", entityType:"Student", description:"", status:"ACTIVE" });
-      setError("");
-    } catch (e: any) { setError(e?.message ?? "Failed"); }
-  }
+    {tab==="approvals" && <section className="surface"><div className="surface-head"><h3>Approval queue</h3><p>Only approvals assigned to your role are actionable.</p></div><div className="table-wrap"><table><thead><tr><th>Workflow</th><th>Step</th><th>Role</th><th>Requested</th><th>Status</th><th>Comments / action</th></tr></thead><tbody>{approvals.map((a:any)=><tr key={a.id}><td><b>{a.instanceName}</b><small style={{display:"block"}}>{a.code}</small></td><td>{a.stepName}</td><td>{a.assignedRole}</td><td>{a.requestedAt?new Date(a.requestedAt).toLocaleString():"—"}</td><td><span className={`pill ${a.status==="APPROVED"?"success":a.status==="REJECTED"?"danger":"warning"}`}>{a.status}</span></td><td>{a.status==="PENDING"?<div style={{display:"flex",gap:6,alignItems:"center",minWidth:320}}><input placeholder="Decision comments" value={decisionComments[a.id]??""} onChange={e=>setDecisionComments(v=>({...v,[a.id]:e.target.value}))}/><button className="button primary small" onClick={()=>decide(a.id,"APPROVED")}><CheckCircle2 size={14}/> Approve</button><button className="button danger small" onClick={()=>decide(a.id,"REJECTED")}><XCircle size={14}/> Reject</button></div>:a.comments??"—"}</td></tr>)}</tbody></table></div>{!approvals.length&&<div className="empty-state">No approvals assigned to you.</div>}</section>}
 
-  return (
-    <>
-      <PageHeader
-        title="Workflow Centre"
-        subtitle="Automation rules, approval chains and process management"
-        action={tab === "rules" ? <button className="primary" onClick={() => { setDefModal(true); setError(""); }}><Plus size={14} /> New rule</button> : undefined}
-      />
+    {tab==="instances" && <section className="surface"><div className="surface-head"><h3>Workflow execution history</h3></div><div className="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Definition</th><th>Entity</th><th>Current step</th><th>Started</th><th>Status</th></tr></thead><tbody>{instances.map((i:any)=><tr key={i.id}><td>{i.code}</td><td><b>{i.name}</b></td><td>{i.definitionName}</td><td>{i.entityType}{i.entityId?` · ${i.entityId}`:""}</td><td>{i.currentStepOrder || "—"}</td><td>{i.startedAt?new Date(i.startedAt).toLocaleString():"—"}</td><td><span className={`pill ${i.status==="COMPLETED"?"success":i.status==="REJECTED"?"danger":"info"}`}>{i.status}</span></td></tr>)}</tbody></table></div>{!instances.length&&<div className="empty-state">No workflow instances have been started.</div>}</section>}
 
-      <section className="metric-grid" style={{ marginBottom: 20 }}>
-        <StatCard label="Active rules"      value={String(activeCount)}      note="automation"  color="#10B981" bg="#ECFDF5"><Zap       size={20} /></StatCard>
-        <StatCard label="Pending approvals" value={String(pendingApprovals)} note="need action" color={pendingApprovals > 0 ? "#D97706" : "#10B981"} bg={pendingApprovals > 0 ? "#FFFBEB" : "#ECFDF5"}><Clock size={20} /></StatCard>
-        <StatCard label="Total rules"       value={String(allRules.length)}  note=""            color="#6366F1" bg="#EEF2FF"><GitBranch size={20} /></StatCard>
-        <StatCard label="Custom rules"      value={String(defs.length)}      note="user-defined"color="#8B5CF6" bg="#F5F3FF"><Plus      size={20} /></StatCard>
-      </section>
+    {showDefinition && <div className="modal-backdrop"><div className="modal" style={{maxWidth:760}}><div className="modal-head"><h3>{editingId?"Edit workflow definition":"New workflow definition"}</h3><button className="icon-button" onClick={()=>setShowDefinition(false)}>×</button></div><div className="modal-body">
+      <div className="form-grid"><label>Name<input value={definition.name} onChange={e=>setDefinition(v=>({...v,name:e.target.value}))}/></label><label>Trigger<select value={definition.triggerType} onChange={e=>setDefinition(v=>({...v,triggerType:e.target.value}))}><option>MANUAL</option><option>ADMISSION_SUBMITTED</option><option>LEAVE_REQUESTED</option><option>FEE_WAIVER_REQUEST</option><option>DOCUMENT_UPLOADED</option><option>ASSIGNMENT_SUBMITTED</option><option>CUSTOM</option></select></label><label>Entity type<input value={definition.entityType} onChange={e=>setDefinition(v=>({...v,entityType:e.target.value.toUpperCase()}))}/></label><label>Status<select value={definition.status} onChange={e=>setDefinition(v=>({...v,status:e.target.value as any}))}><option>ACTIVE</option><option>INACTIVE</option></select></label><label style={{gridColumn:"1/-1"}}>Description<textarea rows={2} value={definition.description} onChange={e=>setDefinition(v=>({...v,description:e.target.value}))}/></label></div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"14px 0 8px"}}><b>Ordered steps</b><button className="button secondary small" onClick={()=>setDefinition(v=>({...v,steps:[...v.steps,emptyStep()]}))}><Plus size={14}/> Add step</button></div>
+      {definition.steps.map((s,index)=><div key={index} className="surface" style={{padding:10,marginBottom:8}}><div className="form-grid"><label>#{index+1} Name<input value={s.name} onChange={e=>setDefinition(v=>({...v,steps:v.steps.map((x,i)=>i===index?{...x,name:e.target.value}:x)}))}/></label><label>Type<select value={s.stepType} onChange={e=>setDefinition(v=>({...v,steps:v.steps.map((x,i)=>i===index?{...x,stepType:e.target.value as any}:x)}))}><option>APPROVAL</option><option>ACTION</option></select></label>{s.stepType==="APPROVAL"?<label>Approver role<select value={s.approverRole} onChange={e=>setDefinition(v=>({...v,steps:v.steps.map((x,i)=>i===index?{...x,approverRole:e.target.value}:x)}))}>{roles.map(r=><option key={r}>{r}</option>)}</select></label>:<label>Action code<input value={s.actionCode} onChange={e=>setDefinition(v=>({...v,steps:v.steps.map((x,i)=>i===index?{...x,actionCode:e.target.value.toUpperCase()}:x)}))}/></label>}<label style={{alignSelf:"end"}}><span><input type="checkbox" checked={s.isRequired} onChange={e=>setDefinition(v=>({...v,steps:v.steps.map((x,i)=>i===index?{...x,isRequired:e.target.checked}:x)}))}/> Required</span></label><button className="icon-button" title="Remove step" onClick={()=>setDefinition(v=>({...v,steps:v.steps.filter((_,i)=>i!==index)}))}><Trash2 size={15}/></button></div></div>)}
+    </div><div className="modal-foot"><button className="button secondary" onClick={()=>setShowDefinition(false)}>Cancel</button><button className="button primary" onClick={saveDefinition} disabled={createDef.isPending||updateDef.isPending}>Save workflow</button></div></div></div>}
 
-      <div className="section-tabs" style={{ marginBottom: 14 }}>
-        <button className={tab === "rules"     ? "active" : ""} onClick={() => setTab("rules")}>⚡ Automation rules ({allRules.length})</button>
-        <button className={tab === "approvals" ? "active" : ""} onClick={() => setTab("approvals")}>✅ Approvals ({approvals.length})</button>
-        <button className={tab === "instances" ? "active" : ""} onClick={() => setTab("instances")}>🔄 Running instances ({instances.length})</button>
-      </div>
-
-      {/* ── Automation rules ─────────────────────────────────────────────── */}
-      {tab === "rules" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ padding: "12px 16px", background: "linear-gradient(135deg,#EEF2FF,#F5F3FF)", border: "1px solid #C7D2FE", borderRadius: 12, display: "flex", gap: 12, alignItems: "flex-start" }}>
-            <Zap size={20} style={{ color: "#6366F1", flexShrink: 0, marginTop: 2 }} />
-            <div>
-              <b style={{ fontSize: 13, color: "#6366F1", display: "block", marginBottom: 4 }}>AI-powered automation</b>
-              <p style={{ fontSize: 12, color: "#475569", margin: 0, lineHeight: 1.6 }}>
-                Rules run automatically on every matching event. Built-in rules handle admissions, fees and account provisioning. Add custom rules for your school's specific processes.
-              </p>
-            </div>
-          </div>
-
-          <div className="surface">
-            <div className="surface-head"><h3>All automation rules</h3><p>Evaluated in order — first matching rule wins</p></div>
-            <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-              {pagedRules.map((r, i) => (
-                <div key={r.id} style={{ padding: "13px 16px", borderRadius: 12, border: "1.5px solid var(--line)", background: r.active ? "var(--surface)" : "var(--surface-2)", display: "flex", gap: 14, alignItems: "flex-start", opacity: r.active ? 1 : 0.6 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: r.active ? "#EEF2FF" : "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: r.active ? "#6366F1" : "var(--muted)" }}>{(page - 1) * PAGE_SIZE + i + 1}</span>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{r.name}</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <code style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "#FFFBEB", color: "#D97706" }}>Trigger: {r.trigger}</code>
-                      {r.action && <code style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "#EEF2FF", color: "#6366F1" }}>→ {r.action}</code>}
-                      {r.condition && <code style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "var(--surface-2)", color: "var(--muted)" }}>if {r.condition}</code>}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    {r.builtin === false && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#F5F3FF", color: "#7C3AED", fontWeight: 700 }}>CUSTOM</span>}
-                    <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 10, fontWeight: 700, background: r.active ? "#ECFDF5" : "var(--surface-2)", color: r.active ? "#059669" : "var(--muted)" }}>
-                      {r.active ? "Active" : "Inactive"}
-                    </span>
-                    {r.builtin === false && (
-                      <RowActions
-                        onView={() => setViewWf(r)}
-                        onEdit={() => setEditWf(r)}
-                        deleteLabel="rule"
-                        compact
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Pagination page={page} pageSize={PAGE_SIZE} total={allRules.length} onPage={setPage} label="rules" />
-          </div>
-        </div>
-      )}
-
-      {/* ── Approvals ────────────────────────────────────────────────────── */}
-      {tab === "approvals" && (
-        <div className="surface">
-          <div className="surface-head"><h3>Pending approvals</h3><p>Items awaiting your decision</p></div>
-          {approvals.length === 0 ? (
-            <div style={{ padding: 48, textAlign: "center", color: "var(--muted)" }}>
-              <Check size={36} style={{ margin: "0 auto 12px", display: "block", opacity: .3 }} />
-              <b>No pending approvals</b>
-              <p style={{ fontSize: 12, margin: "8px 0 0" }}>All items have been processed.</p>
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead><tr><th>Item</th><th>Requester</th><th>Type</th><th>Submitted</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
-                <tbody>
-                  {approvals.map((a: any) => {
-                    const m = parseMeta(a.metadataJson);
-                    return (
-                      <tr key={a.id}>
-                        <td><b style={{ fontSize: 12 }}>{a.name}</b></td>
-                        <td style={{ fontSize: 11 }}>{m.requestedBy ?? "—"}</td>
-                        <td style={{ fontSize: 11 }}>{m.type ?? "—"}</td>
-                        <td style={{ fontSize: 10, color: "var(--muted)" }}>{m.submittedAt ? new Date(m.submittedAt).toLocaleString() : "—"}</td>
-                        <td><span className={`status-pill ${STATUS_PILL[m.status ?? "PENDING"] ?? "warning"}`}>{m.status ?? "PENDING"}</span></td>
-                        <td style={{ textAlign: "right" }}>
-                          <RowActions
-                            onView={() => setViewWf(a)}
-                            onEdit={() => setEditWf(a)}
-                            deleteLabel="approval"
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Instances ────────────────────────────────────────────────────── */}
-      {tab === "instances" && (
-        <div className="surface">
-          <div className="surface-head"><h3>Running workflow instances</h3></div>
-          {instances.length === 0 ? (
-            <div style={{ padding: 48, textAlign: "center", color: "var(--muted)" }}>
-              <GitBranch size={36} style={{ margin: "0 auto 12px", display: "block", opacity: .3 }} />
-              <b>No active workflow instances</b>
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead><tr><th>Workflow</th><th>Entity</th><th>Step</th><th>Started</th><th>Status</th></tr></thead>
-                <tbody>
-                  {instances.map((inst: any) => {
-                    const m = parseMeta(inst.metadataJson);
-                    return (
-                      <tr key={inst.id}>
-                        <td><b style={{ fontSize: 12 }}>{m.workflowName ?? inst.name}</b></td>
-                        <td style={{ fontSize: 11 }}>{m.entityType ?? "—"} · <code>{m.entityId?.slice(-8) ?? "—"}</code></td>
-                        <td style={{ fontSize: 11 }}>{m.currentStep ?? "—"}</td>
-                        <td style={{ fontSize: 10, color: "var(--muted)" }}>{m.startedAt ? new Date(m.startedAt).toLocaleString() : "—"}</td>
-                        <td><span className={`status-pill ${STATUS_PILL[m.status ?? "IN_PROGRESS"] ?? "info"}`}>{m.status ?? "IN_PROGRESS"}</span></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Create rule modal ─────────────────────────────────────────────── */}
-      {defModal && (
-        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setDefModal(false); }}>
-          <div className="modal-card" style={{ width: "min(520px,96vw)" }}>
-            <div className="modal-head">
-              <h2>New automation rule</h2>
-              <button className="icon-button" onClick={() => setDefModal(false)}><X size={18} /></button>
-            </div>
-            <div className="human-form"><div className="human-form-grid">
-              <label className="human-field field-wide"><span>Rule name *</span>
-                <input value={form.name} onChange={ff("name")} placeholder="e.g. Notify HOD on late fee" />
-              </label>
-              <label className="human-field"><span>Trigger event</span>
-                <select value={form.triggerType} onChange={ff("triggerType")}>
-                  {TRIGGER_TYPES.map(t => <option key={t}>{t}</option>)}
-                </select>
-              </label>
-              <label className="human-field"><span>Entity type</span>
-                <select value={form.entityType} onChange={ff("entityType")}>
-                  {ENTITY_TYPES.map(t => <option key={t}>{t}</option>)}
-                </select>
-              </label>
-              <label className="human-field"><span>Status</span>
-                <select value={form.status} onChange={ff("status")}>
-                  <option>ACTIVE</option><option>INACTIVE</option>
-                </select>
-              </label>
-              <label className="human-field field-wide"><span>Description</span>
-                <input value={form.description} onChange={ff("description")} placeholder="What does this rule do?" />
-              </label>
-            </div>
-            {error && <div style={{ color: "var(--danger)", fontSize: 12 }}>{error}</div>}
-            </div>
-            <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
-              <button className="secondary" onClick={() => setDefModal(false)}>Cancel</button>
-              <button className="primary" onClick={saveDef} disabled={createDef.isPending}>
-                {createDef.isPending ? "Saving…" : "Create rule"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── View drawer ───────────────────────────────────────────────────── */}
-      {viewWf && (
-        <ViewDrawer
-          title="Workflow Item"
-          item={viewWf}
-          onClose={() => setViewWf(null)}
-          onEdit={() => { setEditWf(viewWf); setViewWf(null); }}
-          fields={[
-            { key: "name",        label: "Name",       wide: true },
-            { key: "trigger",     label: "Trigger"               },
-            { key: "action",      label: "Action"                },
-            { key: "entity",      label: "Entity"                },
-            { key: "condition",   label: "Condition",  wide: true },
-            { key: "status",      label: "Status"                },
-          ]}
-        />
-      )}
-
-      {/* ── Edit modal ────────────────────────────────────────────────────── */}
-      {editWf && (
-        <EditModal
-          title="Workflow Rule"
-          item={editWf}
-          onClose={() => setEditWf(null)}
-          onSave={async data => { setEditWf(null); }}
-          fields={[
-            { key: "name",        label: "Name",        required: true, wide: true },
-            { key: "triggerType", label: "Trigger",     type: "select", options: TRIGGER_TYPES.map(t => ({ value: t, label: t })) },
-            { key: "status",      label: "Status",      type: "select", options: [{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }] },
-            { key: "description", label: "Description", wide: true },
-          ]}
-        />
-      )}
-    </>
-  );
+    {showStart && <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h3>Start workflow</h3><button className="icon-button" onClick={()=>setShowStart(false)}>×</button></div><div className="modal-body"><div className="form-grid"><label>Definition<select value={startForm.workflowDefinitionId} onChange={e=>setStartForm(v=>({...v,workflowDefinitionId:e.target.value}))}><option value="">Select workflow</option>{activeDefs.map((d:any)=><option value={d.id} key={d.id}>{d.name}</option>)}</select></label><label>Instance name<input value={startForm.name} onChange={e=>setStartForm(v=>({...v,name:e.target.value}))}/></label><label>Entity ID (optional)<input value={startForm.entityId} onChange={e=>setStartForm(v=>({...v,entityId:e.target.value}))}/></label><label style={{gridColumn:"1/-1"}}>Context JSON (optional)<textarea rows={3} value={startForm.contextJson} onChange={e=>setStartForm(v=>({...v,contextJson:e.target.value}))}/></label></div></div><div className="modal-foot"><button className="button secondary" onClick={()=>setShowStart(false)}>Cancel</button><button className="button primary" onClick={startWorkflow} disabled={createInstance.isPending}>Start</button></div></div></div>}
+  </div>;
 }
