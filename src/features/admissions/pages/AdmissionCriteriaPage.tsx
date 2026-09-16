@@ -15,9 +15,7 @@ const rows = (d: any): any[] => Array.isArray(d) ? d : (d?.value?.items ?? d?.it
 
 export function AdmissionCriteriaPage() {
   const { user }  = useAuth();
-  const tenantId  = user?.roles.includes("SuperAdmin")
-    ? ((sessionStorage.getItem("selected_tenant_id") ?? undefined))
-    : user?.tenantId;
+  const tenantId = effectiveTenantId(user) ?? undefined;
 
   const [items,    setItems]    = useState<any[]>([]);
   const [years,    setYears]    = useState<any[]>([]);
@@ -37,8 +35,8 @@ export function AdmissionCriteriaPage() {
     setF((x:any) => ({ ...x, branchId, academicYearId:"", classId:"" }));
     if (!branchId) { setYears([]); setClasses([]); return; }
     const [y, cl] = await Promise.all([
-      api.get("/api/academics/academic-year", { params:{ tenantId, page:1, pageSize:200 } }),
-      api.get("/api/academics/grade-level",   { params:{ tenantId, page:1, pageSize:200 } }),
+      api.get("/api/academics/academic-year", { params:{ tenantId, campusId: branchId, page:1, pageSize:200 } }),
+      api.get("/api/academics/grade-level",   { params:{ tenantId, campusId: branchId, page:1, pageSize:200 } }),
     ]);
     setYears(rows((y as any).data));
     setClasses(rows((cl as any).data));
@@ -91,7 +89,7 @@ export function AdmissionCriteriaPage() {
                     <RowActions
                       onView={() => setViewItem(x)}
                       onEdit={() => setEditItem(x)}
-                      onDelete={() => setItems(p => p.filter((i:any) => i.id !== x.id))}
+                      onDelete={async () => { await admissionsApi.deleteCriteria(x.id, tenantId); await load(); }}
                       deleteLabel="criteria"
                     />
                   </td>
@@ -165,7 +163,18 @@ export function AdmissionCriteriaPage() {
       {editItem && (
         <EditModal title="Admission Criteria" item={editItem}
           onClose={() => setEditItem(null)}
-          onSave={async data => { setEditItem(null); }}
+          onSave={async data => {
+            await admissionsApi.updateCriteria(editItem.id, {
+              ...editItem,
+              ...data,
+              tenantId,
+              minimumMarks: Number(data.minimumMarks),
+              entranceTestMinimum: data.entranceTestMinimum === "" ? null : Number(data.entranceTestMinimum),
+              interviewRequired: data.interviewRequired === true || data.interviewRequired === "true",
+            });
+            setEditItem(null);
+            await load();
+          }}
           fields={[
             { key:"minimumMarks",        label:"Min marks %",       type:"number", required:true },
             { key:"entranceTestMinimum", label:"Entrance test %",   type:"number"               },

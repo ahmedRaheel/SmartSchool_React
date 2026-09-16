@@ -1,3 +1,6 @@
+import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { getErrorMessage } from "../../../core/api/errorMessage";
+import { TeachingAllocationsPanel } from "./TeachingAllocationsPanel";
 import { useEffect, useState } from "react";
 import { SchoolBranchSelector } from "../../../components/forms/SchoolBranchSelector";
 import { Modal } from "../../../components/ui/Modal";
@@ -32,6 +35,11 @@ interface SetupItem {
   endDate?: string;
   isCurrent?: boolean;
   academicSystemId?: string;
+  campusId?: string;
+  gradeLevelId?: string;
+  academicYearId?: string;
+  capacity?: number;
+  roomNo?: string;
 }
 
 interface SectionDraft { name: string; capacity: string; roomNo: string; }
@@ -43,6 +51,9 @@ interface SetupForm {
   endDate: string;
   isCurrent: boolean;
   academicYearId: string;
+  educationLevelId: string;
+  capacity: string;
+  roomNo: string;
   sections: SectionDraft[];
 }
 
@@ -53,6 +64,9 @@ const emptyForm: SetupForm = {
   endDate: "",
   isCurrent: false,
   academicYearId: "",
+  educationLevelId: "",
+  capacity: "30",
+  roomNo: "",
   sections: [{ name: "A", capacity: "30", roomNo: "" }],
 };
 
@@ -66,10 +80,11 @@ function unpack(payload: unknown): SetupItem[] {
 export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const { notify, confirm } = useUi();
-  const tenantId = user?.roles.includes("SuperAdmin")
-    ? sessionStorage.getItem("selected_tenant_id") ?? undefined
-    : user?.tenantId;
+  const tenantId = effectiveTenantId(user);
 
+  const [educationLevels, setEducationLevels] = useState<LookupItem[]>([]);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [schoolId, setSchoolId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [setupType, setSetupType] = useState<SetupType>("years");
@@ -95,7 +110,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
       setAcademicSystems(systems);
       setSchools(schoolRows);
       setCampuses(campusRows);
-    });
+    }).catch(e => setError(getErrorMessage(e)));
   }, [tenantId]);
 
   async function load(type = setupType, selectedBranchId = branchId): Promise<void> {
@@ -107,13 +122,13 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
     const response = await api.get(setupRoutes[type], {
       params: { tenantId, campusId: selectedBranchId, page: 1, pageSize: 200 },
     });
-    setItems(unpack(response.data));
+    setItems(unpack(response.data).filter(item => !item.campusId || item.campusId === selectedBranchId));
 
     if (type === "sections") {
       const classResponse = await api.get(setupRoutes.classes, {
         params: { tenantId, page: 1, pageSize: 200 },
       });
-      setClasses(unpack(classResponse.data));
+      setClasses(unpack(classResponse.data).filter(item => item.campusId === selectedBranchId));
     }
   }
 
@@ -132,10 +147,12 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
     const selectedCampus = campuses.find(item => item.id === selectedBranchId);
     let systemId = selectedCampus?.academicSystemId ?? "";
 
-    if (!systemId && tenantId) {
+    setEducationLevels([]);
+    if (tenantId) {
       try {
         const policy = await organizationApi.getBranchPolicy(selectedBranchId, tenantId);
-        systemId = policy.academicSystemId ?? "";
+        systemId = policy.academicSystemId ?? systemId;
+        setEducationLevels(policy.educationLevels);
       } catch {
         // The page can still load academic years when a legacy campus has no policy.
       }
@@ -148,6 +165,8 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
   }
 
   async function save(): Promise<void> {
+    setSaving(true); setError("");
+    try {
     // The modal can only be opened after a branch/campus is selected. Use the page-level
     // selection as the single source of truth; do not maintain a second modal campus state.
     const campusId = branchId;
@@ -173,6 +192,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
           name: form.name,
           ...(setupType === "classes" ? {
             academicYearId: form.academicYearId,
+            educationLevelId: form.educationLevelId,
             sections: form.sections.map((section, index) => ({
               code: `SEC-${createCode("classes", form.name).replace("CLS-", "")}-${section.name.trim().toUpperCase() || index + 1}`,
               name: section.name.trim(),
@@ -180,7 +200,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
               roomNo: section.roomNo.trim() || null,
             })),
           } : {}),
-          ...(setupType === "sections" ? { classId: form.parentId } : {}),
+          ...(setupType === "sections" ? { gradeLevelId: form.parentId, academicYearId: form.academicYearId, capacity: Number(form.capacity), roomNo: form.roomNo || null } : {}),
         };
 
     if (selectedItem) {
@@ -194,7 +214,8 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
     setModalOpen(false);
     setSelectedItem(null);
     setForm(emptyForm);
-    await load();
+    await changeBranch(branchId);
+    } catch (e) { setError(getErrorMessage(e)); } finally { setSaving(false); }
   }
 
   function selectType(type: SetupType): void {
@@ -207,7 +228,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
 
   function editItem(item: SetupItem): void {
     setSelectedItem(item);
-    setForm(p => ({ ...p, name: item.name, parentId: item.parentId ?? "", startDate: item.startDate?.slice(0, 10) ?? "", endDate: item.endDate?.slice(0, 10) ?? "", isCurrent: item.isCurrent ?? false }));
+    setForm(p => ({ ...p, name: item.name, parentId: item.gradeLevelId ?? item.parentId ?? "", academicYearId: item.academicYearId ?? "", capacity: String(item.capacity ?? 30), roomNo: item.roomNo ?? "", startDate: item.startDate?.slice(0, 10) ?? "", endDate: item.endDate?.slice(0, 10) ?? "", isCurrent: item.isCurrent ?? false }));
     setModalOpen(true);
   }
 
@@ -241,6 +262,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         )}
       />}
 
+      {error && <p className="form-error" role="alert">{error}</p>}
       <section className="surface data-surface">
         {embedded && (
           <div className="surface-head academic-setup-head">
@@ -262,11 +284,11 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
             setBranchId("");
             setItems([]);
           }}
-          onBranchChange={value => void changeBranch(value)}
+          onBranchChange={value => void changeBranch(value).catch(e => setError(getErrorMessage(e)))}
         />
         <label className="field academic-system-context">
           <span>Academic system *</span>
-          <select value={academicSystemId} onChange={event => setAcademicSystemId(event.target.value)}>
+          <select value={academicSystemId} disabled>
             <option value="">Select academic system</option>
             {academicSystems.map(item => <option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}
           </select>
@@ -286,6 +308,7 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
         </div>
       </section>
 
+      {branchId && <TeachingAllocationsPanel tenantId={tenantId} campusId={branchId}/>}
       <Modal open={modalOpen} title={`${selectedItem ? "Edit" : "Add"} ${setupLabels[setupType]}`} onClose={() => { setModalOpen(false); setSelectedItem(null); }}>
         <div className="human-form-grid">
           {setupType === "years" ? (
@@ -298,18 +321,21 @@ export function AcademicSetupPage({ embedded = false }: { embedded?: boolean }) 
           ) : (
             <>
               <label className="human-field"><span>{setupType === "classes" ? "Class name *" : "Name"}</span><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></label>
-              {setupType === "classes" && <>
+              {setupType === "classes" && !selectedItem && <>
+                <label className="human-field"><span>Education level *</span><select value={form.educationLevelId} onChange={e => setForm({ ...form, educationLevelId: e.target.value })}><option value="">Select enabled education level</option>{educationLevels.map(level => <option key={level.id} value={level.id}>{level.name}</option>)}</select></label>
                 <label className="human-field"><span>Academic year *</span><select value={form.academicYearId} onChange={event => setForm(current => ({ ...current, academicYearId: event.target.value }))}><option value="">Select academic year</option>{academicYears.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
                 <div className="class-sections-editor">
                   <div className="class-sections-head"><div><b>Sections</b><span>Add one or more sections for this class. Capacity and room belong to each section.</span></div><button type="button" className="secondary" onClick={() => setForm(current => ({...current, sections:[...current.sections,{name:"",capacity:"30",roomNo:""}]}))}>+ Add section</button></div>
                   {form.sections.map((section,index)=><div className="section-editor-row" key={index}><label><span>Section *</span><input value={section.name} placeholder="A" onChange={e=>setForm(current=>({...current,sections:current.sections.map((x,i)=>i===index?{...x,name:e.target.value}:x)}))}/></label><label><span>Capacity *</span><input type="number" min="1" value={section.capacity} onChange={e=>setForm(current=>({...current,sections:current.sections.map((x,i)=>i===index?{...x,capacity:e.target.value}:x)}))}/></label><label><span>Room No.</span><input value={section.roomNo} placeholder="Room 101" onChange={e=>setForm(current=>({...current,sections:current.sections.map((x,i)=>i===index?{...x,roomNo:e.target.value}:x)}))}/></label><button type="button" className="icon-button danger" disabled={form.sections.length===1} onClick={()=>setForm(current=>({...current,sections:current.sections.filter((_,i)=>i!==index)}))}>×</button></div>)}
                 </div>
               </>}
-              {setupType === "sections" && <label className="human-field"><span>Class *</span><select value={form.parentId} onChange={event => setForm(current => ({ ...current, parentId: event.target.value }))}><option value="">Select class</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+              {setupType === "sections" && !selectedItem && <><label className="human-field"><span>Academic year *</span><select value={form.academicYearId} onChange={e => setForm({ ...form, academicYearId: e.target.value })}><option value="">Select academic year</option>{academicYears.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}</select></label><label className="human-field"><span>Capacity *</span><input type="number" min="1" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })}/></label><label className="human-field"><span>Room</span><input value={form.roomNo} onChange={e => setForm({ ...form, roomNo: e.target.value })}/></label></>}
+              {setupType === "sections" && !selectedItem && <label className="human-field"><span>Class *</span><select value={form.parentId} onChange={event => setForm(current => ({ ...current, parentId: event.target.value }))}><option value="">Select class</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
             </>
           )}
         </div>
-        <div className="modal-actions"><button className="secondary" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary" disabled={!form.name || (setupType === "classes" && (!form.academicYearId || form.sections.length === 0 || form.sections.some(x => !x.name.trim() || Number(x.capacity) <= 0))) || (setupType === "sections" && !form.parentId)} onClick={() => void save()}>Save</button></div>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="modal-actions"><button className="secondary" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary" disabled={saving || !form.name || (!selectedItem && setupType === "classes" && (!form.educationLevelId || !form.academicYearId || form.sections.length === 0 || form.sections.some(x => !x.name.trim() || Number(x.capacity) <= 0))) || (!selectedItem && setupType === "sections" && (!form.parentId || !form.academicYearId || Number(form.capacity) <= 0))} onClick={() => void save()}>Save</button></div>
       </Modal>
       <Modal open={viewOpen} title={setupType === "years" ? "Academic year details" : `${selectedItem?.name ?? "Details"} details`} onClose={() => setViewOpen(false)}>
         {setupType === "years" ? (

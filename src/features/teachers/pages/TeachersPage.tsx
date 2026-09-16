@@ -1,589 +1,128 @@
-import { PkPhoneInput, PkMobileInput, PkCnicInput, PkEmailInput } from "../../../components/ui/PakistanFields";
-import { Pagination } from "../../../components/ui/Pagination";
-import { RowActions } from "../../../components/ui/RowActions";
-import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
-import { EditModal } from "../../../components/ui/EditModal";
-import { ViewDrawer } from "../../../components/ui/ViewDrawer";
-import { env } from "../../../config/env";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  BookOpen, Clock, Users, ClipboardCheck, GraduationCap,  
-  CalendarDays, ChevronRight, Bot, FileCheck2, Star} from "lucide-react";
+import { BookOpen, CalendarDays, Users, ClipboardCheck } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
-import { useTeacherDashboard, useTeacherStudents, useTeacherTimetable,
-        useTeacherWorkload, useTeacherClasses, useDeleteEmployee , useUpdateEmployee , useEmployeeById } from "../../../core/api/queries";
+import { StatCard } from "../../../components/ui/StatCard";
+import { Pagination } from "../../../components/ui/Pagination";
+import { useTeacherClasses, useTeacherStudents, useTeacherTimetable, useEmployees } from "../../../core/api/queries";
+import { toItems } from "../../../core/utils/dataHelpers";
+import { getErrorMessage } from "../../../core/api/errorMessage";
 import { useAuth } from "../../auth/auth";
 
-// ─── Rich mock class data — what actually matters for a teacher ───────────────
-const MOCK_MY_CLASSES = [
-  {
-    id: "ca1",
-    subject: "Mathematics",
-    subjectCode: "MATH",
-    classSection: "Grade 9-A (Boys)",
-    sectionCode: "9A-B",
-    campus: "Main Campus",
-    role: "Primary Teacher",
-    periodsPerWeek: 6,
-    totalStudents: 38,
-    schedule: [
-      { day: "Monday",    period: "P-1", time: "08:00–08:45", room: "Room 101" },
-      { day: "Wednesday", period: "P-2", time: "09:00–09:45", room: "Room 101" },
-      { day: "Friday",    period: "P-3", time: "10:00–10:45", room: "Room 101" },
-    ],
-    nextClass: { day: "Monday", time: "08:00 AM", room: "Room 101" },
-    recentActivity: "Unit Test 2 graded — avg 67%",
-    pendingAssignments: 2,
-    color: "#2563EB", bg: "#EFF6FF",
-  },
-  {
-    id: "ca2",
-    subject: "Mathematics",
-    subjectCode: "MATH",
-    classSection: "Grade 9-B (Boys)",
-    sectionCode: "9B-B",
-    campus: "Main Campus",
-    role: "Primary Teacher",
-    periodsPerWeek: 6,
-    totalStudents: 35,
-    schedule: [
-      { day: "Tuesday",  period: "P-1", time: "08:00–08:45", room: "Room 102" },
-      { day: "Thursday", period: "P-2", time: "09:00–09:45", room: "Room 102" },
-      { day: "Saturday", period: "P-1", time: "08:00–08:45", room: "Room 102" },
-    ],
-    nextClass: { day: "Tuesday", time: "08:00 AM", room: "Room 102" },
-    recentActivity: "Assignment 5 submitted — 28/35 students",
-    pendingAssignments: 1,
-    color: "#7C3AED", bg: "#F5F3FF",
-  },
-  {
-    id: "ca3",
-    subject: "Mathematics",
-    subjectCode: "MATH",
-    classSection: "Grade 10-A (Boys)",
-    sectionCode: "10A",
-    campus: "Main Campus",
-    role: "Primary Teacher",
-    periodsPerWeek: 5,
-    totalStudents: 33,
-    schedule: [
-      { day: "Monday",   period: "P-4", time: "11:00–11:45", room: "Room 103" },
-      { day: "Wednesday",period: "P-3", time: "10:00–10:45", room: "Room 103" },
-      { day: "Friday",   period: "P-5", time: "12:00–12:45", room: "Room 103" },
-    ],
-    nextClass: { day: "Monday", time: "11:00 AM", room: "Room 103" },
-    recentActivity: "Mid-term results published — 78% pass rate",
-    pendingAssignments: 0,
-    color: "#059669", bg: "#ECFDF5",
-  },
-  {
-    id: "ca4",
-    subject: "Mathematics",
-    subjectCode: "MATH",
-    classSection: "Grade 9-A (Girls)",
-    sectionCode: "9A-G",
-    campus: "Girls Branch",
-    role: "Relief Teacher",
-    periodsPerWeek: 3,
-    totalStudents: 41,
-    schedule: [
-      { day: "Tuesday",  period: "P-4", time: "11:00–11:45", room: "G-Room 205" },
-      { day: "Thursday", period: "P-4", time: "11:00–11:45", room: "G-Room 205" },
-    ],
-    nextClass: { day: "Tuesday", time: "11:00 AM", room: "G-Room 205" },
-    recentActivity: "No recent activity",
-    pendingAssignments: 0,
-    color: "#DB2777", bg: "#FDF2F8",
-  },
-];
+interface TeacherClass {
+  id: string;
+  classSectionId: string;
+  subject: string;
+  subjectCode: string;
+  classSection: string;
+  campus: string;
+  role: string;
+  periodsPerWeek: number;
+  totalStudents: number;
+  pendingAssignments: number;
+}
 
-const MOCK_MY_STUDENTS = [
-  { id:"s1", name:"Ahmed Hassan",  reg:"STU-0001", section:"Grade 9-A (Boys)",  attendance:88, lastGrade:"72%", status:"ACTIVE"  },
-  { id:"s2", name:"Omar Raza",     reg:"STU-0003", section:"Grade 9-A (Boys)",  attendance:65, lastGrade:"55%", status:"ACTIVE"  },
-  { id:"s3", name:"Hamza Sheikh",  reg:"STU-0007", section:"Grade 9-A (Boys)",  attendance:95, lastGrade:"88%", status:"ACTIVE"  },
-  { id:"s4", name:"Bilal Khan",    reg:"STU-0009", section:"Grade 9-A (Boys)",  attendance:72, lastGrade:"61%", status:"ACTIVE"  },
-  { id:"s5", name:"Zain Ali",      reg:"STU-0005", section:"Grade 9-B (Boys)",  attendance:90, lastGrade:"79%", status:"ACTIVE"  },
-  { id:"s6", name:"Usman Mahmood", reg:"STU-0011", section:"Grade 9-B (Boys)",  attendance:85, lastGrade:"83%", status:"ACTIVE"  },
-  { id:"s7", name:"Sara Malik",    reg:"STU-0002", section:"Grade 9-A (Girls)", attendance:98, lastGrade:"91%", status:"ACTIVE"  },
-  { id:"s8", name:"Fatima Khan",   reg:"STU-0004", section:"Grade 9-A (Girls)", attendance:92, lastGrade:"86%", status:"ACTIVE"  },
-  { id:"s9", name:"Hina Raza",     reg:"STU-0010", section:"Grade 10-A (Boys)", attendance:55, lastGrade:"48%", status:"PENDING" },
-];
+interface TeacherStudent {
+  id: string;
+  name: string;
+  reg: string;
+  section: string;
+  status: string;
+  classSectionId: string;
+}
 
-const MOCK_TIMETABLE = [
-  { day:"Monday",    period:"P-1", time:"08:00–08:45", subject:"Mathematics", section:"Grade 9-A (Boys)",  room:"Room 101" },
-  { day:"Monday",    period:"P-4", time:"11:00–11:45", subject:"Mathematics", section:"Grade 10-A (Boys)", room:"Room 103" },
-  { day:"Tuesday",   period:"P-1", time:"08:00–08:45", subject:"Mathematics", section:"Grade 9-B (Boys)",  room:"Room 102" },
-  { day:"Tuesday",   period:"P-4", time:"11:00–11:45", subject:"Mathematics", section:"Grade 9-A (Girls)", room:"G-Room 205" },
-  { day:"Wednesday", period:"P-2", time:"09:00–09:45", subject:"Mathematics", section:"Grade 9-A (Boys)",  room:"Room 101" },
-  { day:"Wednesday", period:"P-3", time:"10:00–10:45", subject:"Mathematics", section:"Grade 10-A (Boys)", room:"Room 103" },
-  { day:"Thursday",  period:"P-2", time:"09:00–09:45", subject:"Mathematics", section:"Grade 9-B (Boys)",  room:"Room 102" },
-  { day:"Thursday",  period:"P-4", time:"11:00–11:45", subject:"Mathematics", section:"Grade 9-A (Girls)", room:"G-Room 205" },
-  { day:"Friday",    period:"P-3", time:"10:00–10:45", subject:"Mathematics", section:"Grade 9-A (Boys)",  room:"Room 101" },
-  { day:"Friday",    period:"P-5", time:"12:00–12:45", subject:"Mathematics", section:"Grade 10-A (Boys)", room:"Room 103" },
-  { day:"Saturday",  period:"P-1", time:"08:00–08:45", subject:"Mathematics", section:"Grade 9-B (Boys)",  room:"Room 102" },
-];
+interface TeacherPeriod {
+  id: string;
+  classSectionId: string;
+  dayOfWeek: number;
+  period: string;
+  startTime: string;
+  endTime: string;
+  subject: string;
+  section: string;
+  room?: string;
+}
 
-const DAYS_ORDER = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-
-type Tab = "classes" | "timetable" | "students";
+const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function TeachersPage() {
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
-  const delTeacher = useDeleteEmployee();
-  const [editTeacherId, setEditTeacherId] = useState<string|null>(null);
-  const updEmployee = useUpdateEmployee();
-  const viewTeacherOrEdit = editTeacherId;
-  const { data: viewTeacherData } = useEmployeeById(viewTeacherOrEdit ?? undefined);
-  const viewTeacherItem: any = viewTeacherData ?? null;
   const { user } = useAuth();
-  const { data: classesData   } = useTeacherClasses?.() ?? { data: null };
-  const { data: studentsData  } = useTeacherStudents?.() ?? { data: null };
-  const myClasses  = env.useMocks
-    ? MOCK_MY_CLASSES
-    : (toItems(classesData));
-  const myStudents = env.useMocks
-    ? MOCK_MY_STUDENTS
-    : (toItems(studentsData));
-  const myTimetable = env.useMocks ? MOCK_TIMETABLE : [];
-  const [viewSt, setViewSt] = useState<any|null>(null);
-  const nav = useNavigate();
-  const eid = user?.employeeId ?? "";
+  const navigate = useNavigate();
+  const isTeacher = user?.roles.includes("Teacher") ?? false;
+  const [selectedTeacher, setSelectedTeacher] = useState("");
+  const teacherId = isTeacher ? user?.employeeId ?? "" : selectedTeacher;
+  const [tab, setTab] = useState<"classes" | "students" | "timetable">("classes");
+  const [classSectionId, setClassSectionId] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const employees = useEmployees(1, !isTeacher);
+  const classesQuery = useTeacherClasses(teacherId);
+  const studentsQuery = useTeacherStudents(teacherId);
+  const timetableQuery = useTeacherTimetable(teacherId);
+  const classes = toItems(classesQuery.data) as TeacherClass[];
+  const students = toItems(studentsQuery.data) as TeacherStudent[];
+  const timetable = toItems(timetableQuery.data) as TeacherPeriod[];
+  const pending = classes.reduce((total, item) => total + Number(item.pendingAssignments ?? 0), 0);
+  const error = classesQuery.error ?? studentsQuery.error ?? timetableQuery.error;
+  const loading = Boolean(teacherId) && (classesQuery.isLoading || studentsQuery.isLoading || timetableQuery.isLoading);
+  const visibleStudents = students.filter(student => (!classSectionId || student.classSectionId === classSectionId) &&
+    `${student.name} ${student.reg} ${student.section}`.toLowerCase().includes(search.toLowerCase()));
+  const visibleTimetable = timetable.filter(period => !classSectionId || period.classSectionId === classSectionId);
 
-  const [tab, setTab]           = useState<Tab>("classes");
-  const [activeClass, setActive]= useState<string | null>(null);
-  const [studentFilter, setStF] = useState("");
+  function selectClass(id: string) {
+    setClassSectionId(id);
+    setPage(1);
+    setTab("students");
+  }
 
-  const { data: dash }    = useTeacherDashboard(eid);
-  const { data: workload }= useTeacherWorkload(eid);
-  const wl = (workload as any) ?? {};
-
-  const totalStudents  = myClasses.reduce((a, c) => a + c.totalStudents, 0);
-  const totalPeriods   = myClasses.reduce((a, c) => a + c.periodsPerWeek, 0);
-  const pendingTotal   = myClasses.reduce((a, c) => a + c.pendingAssignments, 0);
-
-  const filteredStudents = myStudents.filter(s =>
-    !studentFilter || s.name.toLowerCase().includes(studentFilter.toLowerCase()) ||
-    s.section.toLowerCase().includes(studentFilter.toLowerCase()) ||
-    s.reg.includes(studentFilter)
-  );
-
-  const selectedClass = myClasses.find(c => c.id === activeClass);
-
-  return (
-    <>
-      <PageHeader
-        title={`${dash?.FirstName ?? user?.name ?? "Teacher"}'s Workspace`}
-        subtitle={`${dash?.EmployeeNumber ?? "—"} · Mathematics · ${myClasses.length} classes this term`}
-      />
-
-      {/* KPI strip */}
+  return <>
+    <PageHeader title="Teacher Workspace" subtitle="Teaching assignments, enrolled students and scheduled lessons" />
+    {!isTeacher && <label className="human-field" style={{ maxWidth: 420, marginBottom: 16 }}><span>Teacher</span>
+      <select value={selectedTeacher} onChange={event => { setSelectedTeacher(event.target.value); setClassSectionId(""); setPage(1); }}>
+        <option value="">Select teacher</option>
+        {toItems(employees.data).filter((employee: any) => employee.staffType === "TEACHER").map((employee: any) =>
+          <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName} — {employee.employeeNumber}</option>)}
+      </select>
+    </label>}
+    {!teacherId && <p>Select a teacher to view their workspace.</p>}
+    {loading && <p role="status">Loading teacher workspace…</p>}
+    {error && <p role="alert" style={{ color: "var(--danger)" }}>{getErrorMessage(error)}</p>}
+    {teacherId && <>
       <section className="metric-grid" style={{ marginBottom: 20 }}>
-        <StatCard label="My classes"     value={String(myClasses.length)}        note="This term"       color="#2563EB" bg="#EFF6FF"><BookOpen size={20}/></StatCard>
-        <StatCard label="Total students" value={String(totalStudents)}                 note="Across all classes" color="#10B981" bg="#ECFDF5"><Users size={20}/></StatCard>
-        <StatCard label="Periods/week"   value={String(totalPeriods)}                  note=""                color="#8B5CF6" bg="#F5F3FF"><Clock size={20}/></StatCard>
-        <StatCard label="Pending tasks"  value={String(pendingTotal)}                  note="Assignments to grade" color={pendingTotal > 0 ? "#D97706" : "#10B981"} bg={pendingTotal > 0 ? "#FFFBEB" : "#ECFDF5"}><ClipboardCheck size={20}/></StatCard>
+        <StatCard label="My classes" value={String(classes.length)} note="Current assignments" color="#2563EB" bg="#EFF6FF"><BookOpen size={20} /></StatCard>
+        <StatCard label="My students" value={String(new Set(students.map(student => student.id)).size)} note="Active enrollments" color="#059669" bg="#ECFDF5"><Users size={20} /></StatCard>
+        <StatCard label="Weekly periods" value={String(timetable.length)} note="Scheduled lessons" color="#7C3AED" bg="#F5F3FF"><CalendarDays size={20} /></StatCard>
+        <StatCard label="To grade" value={String(pending)} note="Unreviewed submissions" color="#D97706" bg="#FFFBEB"><ClipboardCheck size={20} /></StatCard>
       </section>
-
-      {/* Tabs */}
-      <div className="section-tabs" style={{ marginBottom: 14 }}>
-        <button className={tab === "classes"   ? "active" : ""} onClick={() => { setTab("classes");   setActive(null); }}>
-          📚 My Classes ({myClasses.length})
-        </button>
-        <button className={tab === "timetable" ? "active" : ""} onClick={() => setTab("timetable")}>
-          🕐 Weekly Timetable
-        </button>
-        <button className={tab === "students"  ? "active" : ""} onClick={() => setTab("students")}>
-          👩‍🎓 My Students ({myStudents.length})
-        </button>
-      </div>
-
-      {/* ── MY CLASSES ── */}
-      {tab === "classes" && !activeClass && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {myClasses.map(cls => (
-            <div key={cls.id}
-              style={{ background: "var(--surface)", border: "1.5px solid var(--line)", borderRadius: 14,
-                       overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s" }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)")}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = "")}
-              onClick={() => setActive(cls.id)}>
-
-              {/* Class header bar */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px",
-                            borderBottom: "1px solid var(--line)" }}>
-                {/* Subject badge */}
-                <div style={{ width: 52, height: 52, borderRadius: 14, background: cls.bg,
-                               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                               flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: cls.color }}>
-                    {cls.subjectCode}
-                  </span>
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
-                    <b style={{ fontSize: 15 }}>{cls.classSection}</b>
-                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20,
-                                   background: cls.role === "Primary Teacher" ? "#EEF2FF" : "#FDF2F8",
-                                   color: cls.role === "Primary Teacher" ? "#6366F1" : "#DB2777",
-                                   fontWeight: 700 }}>
-                      {cls.role}
-                    </span>
-                    {cls.pendingAssignments > 0 && (
-                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20,
-                                     background: "#FFFBEB", color: "#D97706", fontWeight: 700 }}>
-                        {cls.pendingAssignments} to grade
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                    {cls.subject} · {cls.campus} · <code style={{ fontSize: 11 }}>{cls.sectionCode}</code>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div style={{ display: "flex", gap: 20, flexShrink: 0 }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: cls.color }}>{cls.totalStudents}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted)" }}>Students</div>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: cls.color }}>{cls.periodsPerWeek}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted)" }}>Periods/wk</div>
-                  </div>
-                </div>
-                <ChevronRight size={18} style={{ color: "var(--muted)", flexShrink: 0 }}/>
-              </div>
-
-              {/* Class footer */}
-              <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "10px 20px",
-                            background: "var(--surface-2)", fontSize: 11 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#059669" }}>
-                  <CalendarDays size={12}/>
-                  <b>Next: {cls.nextClass.day} {cls.nextClass.time}</b> · {cls.nextClass.room}
-                </span>
-                <span style={{ color: "var(--muted)" }}>|</span>
-                <span style={{ color: "var(--muted)" }}>{cls.recentActivity}</span>
-                <div style={{ flex: 1 }}/>
-                {/* Schedule pills */}
-                <div style={{ display: "flex", gap: 4 }}>
-                  {cls.schedule.map((s: any, i: number) => (
-                    <span key={i} style={{ padding: "2px 8px", borderRadius: 20, background: cls.bg,
-                                           color: cls.color, fontSize: 10, fontWeight: 600 }}>
-                      {s.day.slice(0,3)} {s.period}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── CLASS DETAIL ── */}
-      {tab === "classes" && activeClass && selectedClass && (
-        <div>
-          {/* Back button */}
-          <button className="secondary" style={{ marginBottom: 14, fontSize: 12 }}
-            onClick={() => setActive(null)}>
-            ← Back to my classes
-          </button>
-
-          {/* Detail header */}
-          <div className="surface" style={{ marginBottom: 14 }}>
-            <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 16, background: selectedClass.bg,
-                             display: "flex", flexDirection: "column", alignItems: "center",
-                             justifyContent: "center" }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: selectedClass.color }}>
-                  {selectedClass.subjectCode}
-                </span>
-              </div>
-              <div style={{ flex: 1 }}>
-                <h2 style={{ margin: 0, fontSize: 18 }}>{selectedClass.classSection}</h2>
-                <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 3 }}>
-                  {selectedClass.subject} · {selectedClass.campus} · {selectedClass.role}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="primary" style={{ fontSize: 11 }} onClick={() => nav("/attendance")}>
-                  📋 Mark attendance
-                </button>
-                <button className="secondary" style={{ fontSize: 11 }} onClick={() => nav("/learning")}>
-                  📝 Add assignment
-                </button>
-                <button className="secondary" style={{ fontSize: 11 }} onClick={() => nav("/examinations")}>
-                  📊 Grade book
-                </button>
-              </div>
-            </div>
-
-            {/* Stats row */}
-            <div style={{ display: "flex", borderTop: "1px solid var(--line)" }}>
-              {[
-                { label: "Students",     value: selectedClass.totalStudents },
-                { label: "Periods/week", value: selectedClass.periodsPerWeek },
-                { label: "To grade",     value: selectedClass.pendingAssignments },
-              ].map((s: any, i: number) => (
-                <div key={i} style={{ flex: 1, padding: "14px", textAlign: "center",
-                                       borderRight: i < 2 ? "1px solid var(--line)" : "none" }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: selectedClass.color }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
+      <div className="section-tabs">{(["classes", "students", "timetable"] as const).map(name =>
+        <button key={name} className={tab === name ? "active" : ""} onClick={() => setTab(name)}>{name.charAt(0).toUpperCase() + name.slice(1)}</button>)}</div>
+      {tab === "classes" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: 16 }}>
+        {classes.map(item => <section className="surface" key={item.id} style={{ padding: 20 }}>
+          <h3>{item.subject}</h3><p>{item.classSection} · {item.campus}</p>
+          <p>{item.totalStudents} students · {item.periodsPerWeek} periods per week</p>
+          <p>{item.role} · {item.pendingAssignments} submissions to grade</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="primary" onClick={() => selectClass(item.classSectionId)}>View students</button>
+            <button className="secondary" onClick={() => navigate("/learning")}>Assignments</button>
+            <button className="secondary" onClick={() => navigate(`/attendance?classSectionId=${item.classSectionId}`)}>Attendance</button>
           </div>
-
-          {/* Schedule for this class */}
-          <div className="surface" style={{ marginBottom: 14 }}>
-            <div className="surface-head"><h3>Class schedule</h3><p>Regular periods this week</p></div>
-            <div style={{ padding: "0 20px 20px", display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {selectedClass.schedule.map((s: any, i: number) => (
-                <div key={i} style={{ padding: "12px 16px", borderRadius: 10,
-                                       background: selectedClass.bg, border: `1px solid ${selectedClass.color}30`,
-                                       minWidth: 160 }}>
-                  <div style={{ fontWeight: 700, color: selectedClass.color, fontSize: 13 }}>{s.day}</div>
-                  <div style={{ fontSize: 12, marginTop: 2 }}>{s.time}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                    {s.period} · {s.room}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Students in this class */}
-          <div className="surface">
-            <div className="surface-head">
-              <h3>Students in {selectedClass.sectionCode}</h3>
-              <p>{selectedClass.totalStudents} students enrolled</p>
-            </div>
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead>
-                  <tr><th>Name</th><th>Reg #</th><th>Attendance</th><th>Last grade</th><th>Status</th>
-                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr>
-                </thead>
-                <tbody>
-                  {myStudents
-                    .filter(s => s.section === selectedClass.classSection)
-                    .map(s => (
-                      <tr key={s.id}>
-                        <td>
-                          <div className="person-cell">
-                            <span className="row-avatar" style={{ background: selectedClass.bg, color: selectedClass.color, fontSize: 11 }}>
-                              {s.name.split(" ").map((w: string) => w[0]).join("")}
-                            </span>
-                            <b>{s.name}</b>
-                          </div>
-                        </td>
-                        <td><code style={{ fontSize: 11 }}>{s.reg}</code></td>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ width: 60, height: 6, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${s.attendance}%`,
-                                             background: s.attendance >= 75 ? "#10B981" : "#EF4444",
-                                             borderRadius: 999 }}/>
-                            </div>
-                            <span style={{ fontSize: 11, color: s.attendance < 75 ? "#EF4444" : "var(--text)", fontWeight: s.attendance < 75 ? 700 : 400 }}>
-                              {s.attendance}%
-                            </span>
-                          </div>
-                        </td>
-                        <td>
-                          <b style={{ color: parseInt(s.lastGrade) >= 50 ? "#10B981" : "#EF4444" }}>
-                            {s.lastGrade}
-                          </b>
-                        </td>
-                        <td><span className={`status-pill ${s.status === "ACTIVE" ? "success" : "warning"}`}>{s.status}</span></td>
-<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                              <RowActions onView={() => setViewSt(s)} onEdit={() => setViewSt(s)} deleteLabel="student"/>
-                            </td>
-                      </tr>
-                    ))}
-                  {myStudents.filter(s => s.section === selectedClass.classSection).length === 0 && (
-                    <tr><td colSpan={5} style={{ textAlign: "center", padding: 32, color: "var(--muted)", fontSize: 12 }}>
-                      Student data loads from /api/teachers/{`{id}`}/students
-                    </td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── WEEKLY TIMETABLE ── */}
-      {tab === "timetable" && (
-        <div className="surface">
-          <div className="surface-head"><h3>Weekly timetable</h3><p>All scheduled periods across all classes</p></div>
-          <div style={{ overflowX: "auto" }}>
-            <table className="premium-table">
-              <thead>
-                <tr>
-                  <th style={{ minWidth: 90 }}>Day</th>
-                  <th>Period</th>
-                  <th>Time</th>
-                  <th>Subject</th>
-                  <th>Class</th>
-                  <th>Room</th>
-                    <th style={{ textAlign: "right", width: 1 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DAYS_ORDER.flatMap(day =>
-                  myTimetable.filter(t => t.day === day).map((t, i) => {
-                    const cls = myClasses.find(c => c.classSection === t.section);
-                    return (
-                      <tr key={`${day}-${i}`}>
-                        {i === 0 && (
-                          <td rowSpan={myTimetable.filter(x => x.day === day).length}
-                            style={{ fontWeight: 700, verticalAlign: "middle",
-                                     background: "var(--surface-2)", fontSize: 12 }}>
-                            {day}
-                          </td>
-                        )}
-                        <td>
-                          <span style={{ padding: "2px 8px", borderRadius: 6, background: cls?.bg ?? "#EEF2FF",
-                                          color: cls?.color ?? "#6366F1", fontSize: 11, fontWeight: 600 }}>
-                            {t.period}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: 12, color: "var(--muted)" }}>{t.time}</td>
-                        <td><b style={{ fontSize: 12 }}>{t.subject}</b></td>
-                        <td>
-                          <button className="text-button" style={{ fontSize: 12 }}
-                            onClick={() => { setTab("classes"); setActive(myClasses.find(c => c.classSection === t.section)?.id ?? null); }}>
-                            {t.section}
-                          </button>
-                        </td>
-                        <td style={{ fontSize: 11 }}>{t.room}</td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ── ALL MY STUDENTS ── */}
-      {tab === "students" && (
-        <div className="surface">
-          <div className="surface-head">
-            <div><h3>All my students</h3><p>Students across all {myClasses.length} classes</p></div>
-            <label className="search-box" style={{ maxWidth: 260 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input value={studentFilter} onChange={e => setStF(e.target.value)} placeholder="Search by name, section…"/>
-            </label>
-          </div>
-
-          {/* At-risk banner */}
-          {myStudents.filter(s => s.attendance < 75).length > 0 && (
-            <div style={{ margin: "0 20px 14px",padding: "10px 14px", background: "#FFF0F1",
-                           border: "1px solid #fecdd3", borderRadius: 10, fontSize: 12, display: "flex", gap: 10 }}>
-              <span style={{ fontSize: 16 }}>⚠️</span>
-              <span>
-                <b>{myStudents.filter(s => s.attendance < 75).length} students</b> have attendance below 75% —
-                {" "}<button className="text-button" onClick={() => nav("/ai")}>run AI prediction →</button>
-              </span>
-            </div>
-          )}
-
-          <div className="table-wrap">
-            <table className="premium-table">
-              <thead>
-                <tr><th>Student</th><th>Reg #</th><th>Class</th><th>Attendance</th><th>Last grade</th><th>Status</th>
-                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr>
-              </thead>
-              <tbody>
-                {filteredStudents.map(s => {
-                  const cls = myClasses.find(c => c.classSection === s.section);
-                  return (
-                    <tr key={s.id}>
-                      <td>
-                        <div className="person-cell">
-                          <span className="row-avatar" style={{ background: cls?.bg ?? "#EEF2FF", color: cls?.color ?? "#6366F1", fontSize: 11 }}>
-                            {s.name.split(" ").map((w: string) => w[0]).join("")}
-                          </span>
-                          <b>{s.name}</b>
-                        </div>
-                      </td>
-                      <td><code style={{ fontSize: 11 }}>{s.reg}</code></td>
-                      <td>
-                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20,
-                                        background: cls?.bg ?? "#EEF2FF", color: cls?.color ?? "#6366F1" }}>
-                          {s.section}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 60, height: 6, borderRadius: 999, background: "var(--surface-2)", overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${s.attendance}%`,
-                                           background: s.attendance >= 75 ? "#10B981" : "#EF4444", borderRadius: 999 }}/>
-                          </div>
-                          <span style={{ fontSize: 11, color: s.attendance < 75 ? "#EF4444" : "var(--text)",
-                                          fontWeight: s.attendance < 75 ? 700 : 400 }}>
-                            {s.attendance}%
-                          </span>
-                          {s.attendance < 75 && <span style={{ fontSize: 10, color: "#EF4444" }}>⚠</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <b style={{ color: parseInt(s.lastGrade) >= 50 ? "#10B981" : "#EF4444" }}>{s.lastGrade}</b>
-                      </td>
-                      <td><span className={`status-pill ${s.status === "ACTIVE" ? "success" : "warning"}`}>{s.status}</span></td>
-                    </tr>
-                  );
-                })}
-                {filteredStudents.length === 0 && (
-                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>No students match "{studentFilter}"</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="table-footer"><span>{filteredStudents.length} students shown</span></div>
-        </div>
-      )}
-
-      {viewSt && (
-        <ViewDrawer title="Student" item={viewSt} onClose={() => setViewSt(null)}
-          fields={[
-            { key: "name",       label: "Name", wide: true },
-            { key: "regNo",      label: "Reg #" },
-            { key: "section",    label: "Class" },
-            { key: "attendance", label: "Attendance %" },
-            { key: "avgGrade",   label: "Avg grade" },
-            { key: "pendingAssignments", label: "Pending work" },
-          ]} />
-      )}
-
-      <Pagination page={page} pageSize={PAGE_SIZE} total={myClasses.length} onPage={setPage} label="classes"/>
-
-      {editTeacherId && viewTeacherItem && (
-        <EditModal
-          title="Teacher"
-          item={viewTeacherItem}
-          onClose={() => setEditTeacherId(null)}
-          onSave={async data => {
-            await updEmployee.mutateAsync({ id: editTeacherId!, body: data });
-            setEditTeacherId(null);
-          }}
-          fields={[
-            { key:"firstName",  label:"First name",   required:true             },
-            { key:"lastName",   label:"Last name",    required:true             },
-            { key:"jobTitle",   label:"Job title",    wide:true                 },
-            { key:"gender",     label:"Gender",       type:"select", options:[{value:"Male",label:"Male"},{value:"Female",label:"Female"}] },
-            { key:"phone",      label:"Phone",        type:"pk-phone"           },
-            { key:"email",      label:"Email",        type:"pk-email", wide:true},
-            { key:"status",     label:"Status",       type:"select", options:[{value:"ACTIVE",label:"Active"},{value:"INACTIVE",label:"Inactive"},{value:"ON_LEAVE",label:"On Leave"}] },
-          ]}
-        />
-      )}
-    </>
-  );
+        </section>)}
+        {!loading && !error && !classes.length && <p>No active teaching assignments.</p>}
+      </div>}
+      {tab !== "classes" && <section className="surface" style={{ marginTop: 16 }}>
+        <div className="surface-head"><select aria-label="Class section" value={classSectionId} onChange={event => { setClassSectionId(event.target.value); setPage(1); }}>
+          <option value="">All classes</option>
+          {Array.from(new Map(classes.map(item => [item.classSectionId, item])).values()).map(item => <option key={item.classSectionId} value={item.classSectionId}>{item.classSection}</option>)}
+        </select>{tab === "students" && <input aria-label="Search students" placeholder="Search students" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} />}</div>
+        {tab === "students" ? <>
+          <div className="table-wrap"><table><thead><tr><th>Student</th><th>Registration</th><th>Class</th><th>Status</th></tr></thead><tbody>
+            {visibleStudents.slice((page - 1) * 25, page * 25).map(student => <tr key={`${student.id}-${student.classSectionId}`}><td>{student.name}</td><td>{student.reg}</td><td>{student.section}</td><td>{student.status}</td></tr>)}
+          </tbody></table></div>
+          <Pagination page={page} pageSize={25} total={visibleStudents.length} onPage={setPage} label="students" />
+        </> : <div className="table-wrap"><table><thead><tr><th>Day</th><th>Time</th><th>Period</th><th>Subject</th><th>Class</th><th>Room</th></tr></thead><tbody>
+          {visibleTimetable.map(period => <tr key={period.id}><td>{dayNames[period.dayOfWeek % 7]}</td><td>{period.startTime.slice(0, 5)}–{period.endTime.slice(0, 5)}</td><td>{period.period}</td><td>{period.subject}</td><td>{period.section}</td><td>{period.room ?? "Unassigned"}</td></tr>)}
+        </tbody></table>{!loading && !visibleTimetable.length && <p>No lessons scheduled for this selection.</p>}</div>}
+      </section>}
+    </>}
+  </>;
 }

@@ -54,7 +54,6 @@ const wizardSteps = [
 ] as const;
 
 const genderOptions = ["", "Male", "Female", "Other"] as const;
-const statusOptions = ["ACTIVE", "APPLICANT", "INACTIVE", "ALUMNI"] as const;
 
 function createInitialForm(tenantId: string): StudentFormState {
   return {
@@ -66,7 +65,6 @@ function createInitialForm(tenantId: string): StudentFormState {
     dateOfBirth: "",
     gender: "",
     admissionDate: new Date().toISOString().slice(0, 10),
-    status: "PENDING_APPROVAL",
     academicYearId: "",
     classSectionId: "",
     guardianName: "",
@@ -304,12 +302,7 @@ function StudentInformationStep({
         value={form.admissionDate ?? ""}
         onChange={(value) => onChange("admissionDate", value)}
       />
-      <SelectField
-        label="Status"
-        value={form.status}
-        options={statusOptions}
-        onChange={(value) => onChange("status", value)}
-      />
+      <p className="field-wide">New applications remain pending until admission is approved.</p>
     </div>
   );
 }
@@ -533,7 +526,6 @@ function buildStudentRequest(form: StudentFormState): CreateStudentRequest {
     photoContentType: form.photoContentType,
     photoFileName: form.photoFileName,
     admissionDate: form.admissionDate || null,
-    status: form.status,
   };
 }
 

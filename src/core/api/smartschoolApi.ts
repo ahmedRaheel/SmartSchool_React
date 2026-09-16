@@ -87,11 +87,11 @@ export const organizationApi = {
     api.put(`/api/organization/school/${id}`, req),
 
   campuses: (tenantId: string, schoolId?: string) =>
-    api.get<PagedResult<CampusListItem>>("/api/organization/branch", {
+    api.get<PagedResult<CampusListItem>>("/api/organization/campus", {
       params: { tenantId, schoolId, page: 1, pageSize: 200 },
     }),
   createCampus: (req: CreateCampusRequest) =>
-    api.post<CampusListItem>("/api/organization/branch", req),
+    api.post<CampusListItem>("/api/organization/campus", req),
 
   departments: (tenantId: string, campusId?: string) =>
     api.get<PagedResult<DepartmentListItem>>("/api/organization/department", {
@@ -207,17 +207,17 @@ export const financeApi = {
 // ─── Admissions (MetadataJson) ────────────────────────────────────────────────
 export const admissionsApi = {
   inquiries: (tenantId: string, page = 1, pageSize = 25) =>
-    api.get<PagedResult<MetaEntity>>("/api/admissions/admission-inquiry", {
+    api.get<PagedResult<MetaEntity>>("/api/admissions/inquiry", {
       params: { tenantId, page, pageSize },
     }),
   createInquiry: (tenantId: string, meta: InquiryMeta) =>
-    api.post<MetaEntity>("/api/admissions/admission-inquiry", {
+    api.post<MetaEntity>("/api/admissions/inquiry", {
       TenantId: tenantId,
       Name: `${meta.applicantFirstName} ${meta.applicantLastName ?? ""}`.trim(),
       MetadataJson: toMetaJson(meta),
     }),
   updateInquiry: (id: string, tenantId: string, meta: Partial<InquiryMeta>) =>
-    api.put(`/api/admissions/admission-inquiry/${id}`, {
+    api.put(`/api/admissions/inquiry/${id}`, {
       TenantId: tenantId,
       Name: `${meta.applicantFirstName ?? ""} ${meta.applicantLastName ?? ""}`.trim(),
       MetadataJson: toMetaJson(meta),
@@ -227,28 +227,28 @@ export const admissionsApi = {
 // ─── Library (MetadataJson) ───────────────────────────────────────────────────
 export const libraryApi = {
   books: (tenantId: string, page = 1, pageSize = 50) =>
-    api.get<PagedResult<MetaEntity>>("/api/library/library-item", {
+    api.get<PagedResult<MetaEntity>>("/api/library/book", {
       params: { tenantId, page, pageSize },
     }),
   createBook: (tenantId: string, meta: BookMeta) =>
-    api.post<MetaEntity>("/api/library/library-item", {
+    api.post<MetaEntity>("/api/library/book", {
       TenantId: tenantId,
       Name: meta.title,
       MetadataJson: toMetaJson(meta),
     }),
 
   loans: (tenantId: string, page = 1) =>
-    api.get<PagedResult<MetaEntity>>("/api/library/item-loan", {
+    api.get<PagedResult<MetaEntity>>("/api/library/loan", {
       params: { tenantId, page, pageSize: 50 },
     }),
   createLoan: (tenantId: string, meta: LoanMeta) =>
-    api.post<MetaEntity>("/api/library/item-loan", {
+    api.post<MetaEntity>("/api/library/loan", {
       TenantId: tenantId,
       Name: `Loan — ${meta.bookTitle ?? meta.bookCopyId}`,
       MetadataJson: toMetaJson(meta),
     }),
   returnLoan: (id: string, tenantId: string) =>
-    api.put(`/api/library/item-loan/${id}/return`, { TenantId: tenantId }),
+    api.put(`/api/library/loan/${id}/return`, { TenantId: tenantId }),
 };
 
 // ─── Examinations (MetadataJson) ──────────────────────────────────────────────

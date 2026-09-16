@@ -35,7 +35,6 @@ export interface CreateStudentRequest {
   photoContentType?: string | null;
   photoFileName?: string | null;
   admissionDate?: string | null;
-  status: string;
 }
 
 export interface CreateEnrollmentRequest {

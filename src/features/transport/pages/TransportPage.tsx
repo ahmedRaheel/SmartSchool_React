@@ -1,243 +1,96 @@
-import { PkPhoneInput, PkMobileInput, PkCnicInput, PkEmailInput } from "../../../components/ui/PakistanFields";
 import { useState } from "react";
-import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
-import { EditModal } from "../../../components/ui/EditModal";
-import { ViewDrawer } from "../../../components/ui/ViewDrawer";
-import { RowActions } from "../../../components/ui/RowActions";
-import { Pagination } from "../../../components/ui/Pagination";
-import { Plus, X, Bus, Route, Users, AlertTriangle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Trash2, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
-import { DocumentUploader } from "../../../components/ui/DocumentUploader";
-import { useVehicles, useRoutes, useCreateVehicle, useCreateRoute , useUpdateVehicle, useDeleteVehicle, useVehicleById} from "../../../core/api/queries";
-import { useAuth } from "../../auth/auth";
+import { api } from "../../../core/api/ApiClient";
+import { getErrorMessage } from "../../../core/api/errorMessage";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
+import { usePermissions } from "../../../core/rbac/usePermissions";
+import { useAuth } from "../../auth/auth";
+import { DriverPortalPage } from "./DriverPortalPage";
+
+type Lookup = { id: string; name: string; campusId: string | null };
+type Vehicle = Lookup & { registrationNo: string; capacity: number | null };
+type Route = Lookup & { vehicleId: string | null; driverId: string | null; startTime: string | null; arrivalTime: string | null; dismissalTime: string | null; studentCount: number };
+type Stop = { id: string; routeId: string; name: string; sequence: number; pickupTime: string; dropoffTime: string };
+type Assignment = { id: string; studentId: string; studentName: string; routeId: string; stopId: string };
+type Notice = { id: string; routeId: string; serviceDate: string; delayMinutes: number; message: string; createdAt: string };
+type Operations = { campuses: Lookup[]; drivers: Lookup[]; students: Lookup[]; driverEmployees: Lookup[]; vehicles: Vehicle[]; routes: Route[]; stops: Stop[]; assignments: Assignment[]; notices: Notice[] };
+type StopDraft = { id?: string; name: string; pickupTime: string; dropoffTime: string };
+const emptyRoute = { id: "", name: "", campusId: "", vehicleId: "", driverId: "", startTime: "07:00", arrivalTime: "08:00", dismissalTime: "14:00" };
 
 export function TransportPage() {
-  const PAGE_SIZE = 25;
+  const permissions = usePermissions();
+  if (!permissions.can("transport.fleet.manage") && !permissions.can("transport.routes.manage")) return <DriverPortalPage/>;
+  return <TransportOperations/>;
+}
+
+function TransportOperations() {
   const { user } = useAuth();
-  const updVehicle = useUpdateVehicle();
-  const delVehicle = useDeleteVehicle();
-  const [localVehicles, setLocalVehicles] = useState<any[]>([]);
-  const [viewVehicleId, setViewVehicleId] = useState<string|null>(null);
-  const [editVehicleId, setEditVehicleId] = useState<string|null>(null);
-  const viewVehicleOrEdit = viewVehicleId ?? editVehicleId;
-  const { data: viewVehicleData } = useVehicleById(viewVehicleOrEdit ?? undefined);
-  const viewVehicleItem: any = viewVehicleData ?? null;
-
-  const tid = effectiveTenantId(user) ?? "";
-  const [page, setPage]         = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  const [tab, setTab]  = useState<"vehicles"|"routes">("vehicles");
-  const [driverModal, setDriverModal] = useState<string|null>(null); // driverId for doc upload
-  const [addVehicle, setAddVehicle] = useState(false);
-  const [form, setForm] = useState({ regNo:"", make:"", model:"", capacity:"45", type:"BUS" });
+  const tenantId = effectiveTenantId(user) ?? "";
+  const [tab, setTab] = useState("routes");
+  const [modal, setModal] = useState<"route" | "vehicle" | "driver" | "assignment" | null>(null);
   const [error, setError] = useState("");
-
-  const { data: vehiclesData, isLoading: vLoading } = useVehicles();
-  const { data: routesData, isLoading: rLoading }   = useRoutes();
-  const createVehicle = useCreateVehicle();
-  const createRoute   = useCreateRoute();
-
-  const vehicles = toItems(vehiclesData);
-  const routes   = toItems(routesData);
-
-  function sf(k: string) {
-    return (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
-      setForm(p => ({ ...p, [k]: e.target.value }));
+  const [saving, setSaving] = useState(false);
+  const [routeForm, setRouteForm] = useState(emptyRoute);
+  const [stops, setStops] = useState<StopDraft[]>([]);
+  const [vehicleForm, setVehicleForm] = useState({ campusId: "", name: "", registrationNo: "", capacity: "30" });
+  const [driverForm, setDriverForm] = useState({ employeeId: "", dateOfBirth: "", licenseNumber: "", licenseCategory: "", licenseExpiry: "" });
+  const [assignmentForm, setAssignmentForm] = useState({ studentId: "", routeId: "", stopId: "" });
+  const operations = useQuery({ queryKey: ["transport-operations", tenantId], enabled: !!tenantId,
+    queryFn: async () => (await api.get<Operations>("/api/transport/operations", { params: { tenantId } })).data });
+  const data = operations.data;
+  const lookup = (items: Lookup[] | undefined, id: string | null) => items?.find(item => item.id === id)?.name ?? "—";
+  function openRoute(route?: Route) {
+    setError(""); setModal("route");
+    setRouteForm(route ? { id: route.id, name: route.name, campusId: route.campusId ?? "", vehicleId: route.vehicleId ?? "", driverId: route.driverId ?? "", startTime: route.startTime?.slice(0, 5) ?? "07:00", arrivalTime: route.arrivalTime?.slice(0, 5) ?? "08:00", dismissalTime: route.dismissalTime?.slice(0, 5) ?? "14:00" } : emptyRoute);
+    setStops(route ? (data?.stops ?? []).filter(item => item.routeId === route.id).sort((a, b) => a.sequence - b.sequence).map(item => ({ id: item.id, name: item.name, pickupTime: item.pickupTime?.slice(0, 5) ?? "07:00", dropoffTime: item.dropoffTime?.slice(0, 5) ?? "14:00" })) : [{ name: "", pickupTime: "07:15", dropoffTime: "14:15" }]);
   }
-
-  async function saveVehicle() {
-    if (!form.regNo) { setError("Registration number required"); return; }
-    await createVehicle.mutateAsync({
-      tenantId: tid, name: `${form.make} ${form.model} (${form.regNo})`,
-      metadataJson: JSON.stringify({ regNo:form.regNo, make:form.make, model:form.model, capacity:Number(form.capacity), type:form.type, status:"ACTIVE" }),
-    });
-    setAddVehicle(false); setForm({ regNo:"", make:"", model:"", capacity:"45", type:"BUS" }); setError("");
+  async function save() {
+    setSaving(true); setError("");
+    try {
+      if (modal === "route") await api.post("/api/transport/operations/routes", { ...routeForm, id: routeForm.id || null, tenantId, stops });
+      if (modal === "vehicle") await api.post("/api/transport/vehicle", { ...vehicleForm, tenantId, capacity: Number(vehicleForm.capacity) });
+      if (modal === "driver") await api.post("/api/transport/operations/drivers", { ...driverForm, tenantId });
+      if (modal === "assignment") await api.post("/api/transport/operations/assignments", { ...assignmentForm, tenantId });
+      setModal(null); await operations.refetch();
+    } catch (e) { setError(getErrorMessage(e)); } finally { setSaving(false); }
   }
+  async function removeAssignment(id: string) {
+    setSaving(true); setError("");
+    try { await api.delete(`/api/transport/student-transport/${id}`, { params: { tenantId } }); await operations.refetch(); }
+    catch (e) { setError(getErrorMessage(e)); } finally { setSaving(false); }
+  }
+  const choose = (label: string, value: string, change: (value: string) => void, items: Lookup[]) => <label className="human-field"><span>{label}</span><select value={value} onChange={e => change(e.target.value)}><option value="">Select</option>{items.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;
+  const selectedRoute = data?.routes.find(item => item.id === assignmentForm.routeId);
 
-  const active = vehicles.filter((v: any) => parseMeta(v.metadataJson).status === "ACTIVE").length;
-  const maintenance = vehicles.filter((v: any) => parseMeta(v.metadataJson).status === "MAINTENANCE").length;
-
-  return (
-    <>
-      <PageHeader title="Transport" subtitle="Fleet, routes and driver document compliance"
-        action={<div className="page-actions">
-          {tab === "vehicles" && <button className="primary" onClick={() => setAddVehicle(true)}><Plus size={14}/> Add vehicle</button>}
-        </div>}
-      />
-      <section className="metric-grid" style={{ marginBottom:20 }}>
-        <StatCard label="Total vehicles" value={String(vehicles.length)} note="" color="#2563EB" bg="#EFF6FF"><Bus size={20}/></StatCard>
-        <StatCard label="Active"         value={String(active)}          note="" color="#10B981" bg="#ECFDF5"><Bus size={20}/></StatCard>
-        <StatCard label="In maintenance" value={String(maintenance)}     note="" color="#D97706" bg="#FFFBEB"><AlertTriangle size={20}/></StatCard>
-        <StatCard label="Routes"         value={String(routes.length)}   note="" color="#8B5CF6" bg="#F5F3FF"><Route size={20}/></StatCard>
-      </section>
-
-      <div className="section-tabs" style={{ marginBottom:14 }}>
-        <button className={tab==="vehicles"?"active":""} onClick={()=>setTab("vehicles")}>🚌 Fleet ({vehicles.length})</button>
-        <button className={tab==="routes"?"active":""} onClick={()=>setTab("routes")}>🗺 Routes ({routes.length})</button>
-      </div>
-
-      {tab === "vehicles" && (
-        <div className="surface">
-          <div className="surface-head"><h3>Fleet management</h3><p>Drivers must have valid licence + police clearance + medical certificate on file</p></div>
-          {vLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead><tr><th>Vehicle</th><th>Reg #</th><th>Make / Model</th><th>Capacity</th><th>Driver</th><th>Route</th><th>Status</th><th>Driver docs</th><th style={{ textAlign:"right" }}>Actions</th>
-                  </tr></thead>
-                <tbody>
-                  {vehicles.map((v: any) => {
-                    const meta = parseMeta(v.metadataJson);
-                    const isActive = meta.status === "ACTIVE";
-                    return (
-                      <tr key={v.id}>
-                        <td><b style={{fontSize:12}}>{v.name}</b></td>
-                        <td><code style={{fontSize:11}}>{meta.regNo ?? "—"}</code></td>
-                        <td style={{fontSize:11}}>{meta.make} {meta.model}</td>
-                        <td>{meta.capacity ?? "—"}</td>
-                        <td style={{fontSize:11}}>{meta.driver || "—"}</td>
-                        <td style={{fontSize:11}}>{meta.route || "—"}</td>
-                        <td><span className={`status-pill ${isActive?"success":"warning"}`}>{meta.status ?? "ACTIVE"}</span></td>
-                        <td>
-                          {meta.driver && (
-                            <button className="table-action" style={{fontSize:10}} onClick={() => setDriverModal(v.id)}>
-                              📋 View docs
-                            </button>
-                          )}
-                        </td>
-                            <td style={{ textAlign: "right" }}>
-                              <RowActions
-                                onView={() => setViewVehicleId(v.id)}
-                                onEdit={() => setEditVehicleId(v.id)}
-                                onDelete={() => delVehicle.mutate(v.id)}
-                                deleteLabel="vehicle"
-                              />
-                            </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "routes" && (
-        <div className="surface">
-          <div className="surface-head"><h3>Routes</h3></div>
-          {rLoading ? <div style={{padding:40,textAlign:"center",color:"var(--muted)"}}>Loading…</div> : (
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead><tr><th>Route</th><th>Code</th><th>From</th><th>To</th><th>Stops</th><th>Students</th><th>Status</th></tr></thead>
-                <tbody>
-                  {routes.map((r: any) => {
-                    const meta = parseMeta(r.metadataJson);
-                    return (
-                      <tr key={r.id}>
-                        <td><b>{r.name}</b></td>
-                        <td><code style={{fontSize:11}}>{r.code}</code></td>
-                        <td>{meta.from ?? "—"}</td>
-                        <td>{meta.to ?? "—"}</td>
-                        <td>{meta.stops ?? "—"}</td>
-                        <td>{meta.students ?? "—"}</td>
-                        <td><span className={`status-pill ${meta.isActive?"success":"gray"}`}>{meta.isActive?"Active":"Inactive"}</span></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Driver document compliance modal */}
-      {driverModal && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setDriverModal(null)}}>
-          <div className="modal-card" style={{width:"min(560px,96vw)"}}>
-            <div className="modal-head"><h2>Driver documents</h2><button className="icon-button" onClick={()=>setDriverModal(null)}><X size={18}/></button></div>
-            <div style={{padding:"16px 20px"}}>
-              <DocumentUploader
-                actorType="DRIVER"
-                entityId={driverModal}
-                tenantId={tid}
-                title="Required driver documents"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add vehicle modal */}
-      {addVehicle && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setAddVehicle(false)}}>
-          <div className="modal-card" style={{width:"min(460px,96vw)"}}>
-            <div className="modal-head"><h2>Add vehicle</h2><button className="icon-button" onClick={()=>setAddVehicle(false)}><X size={18}/></button></div>
-            <div className="human-form"><div className="human-form-grid">
-              <label className="human-field field-wide"><span>Registration number *</span><input value={form.regNo} onChange={sf("regNo")} placeholder="e.g. LSQ-441"/></label>
-              <label className="human-field"><span>Make</span><input value={form.make} onChange={sf("make")} placeholder="e.g. Hino"/></label>
-              <label className="human-field"><span>Model / Year</span><input value={form.model} onChange={sf("model")} placeholder="e.g. 2023"/></label>
-              <label className="human-field"><span>Capacity</span><input type="number" value={form.capacity} onChange={sf("capacity")}/></label>
-              <label className="human-field"><span>Type</span>
-                <select value={form.type} onChange={sf("type")}>
-                  <option>BUS</option><option>VAN</option><option>MINI_BUS</option>
-                </select>
-              </label>
-            </div>
-            {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
-            </div>
-            <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-              <button className="secondary" onClick={()=>setAddVehicle(false)}>Cancel</button>
-              <button className="primary" onClick={saveVehicle} disabled={createVehicle.isPending}>{createVehicle.isPending?"Adding…":"Add vehicle"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {viewVehicleId && viewVehicleItem && (
-        <ViewDrawer
-          title="Vehicle"
-          item={viewVehicleItem}
-          onClose={() => setViewVehicleId(null)}
-          fields={[
-            { key:"name",           label:"Registration #"                      },
-            { key:"vehicleType",    label:"Type"                                },
-            { key:"make",           label:"Make"                                },
-            { key:"model",          label:"Model"                               },
-            { key:"seatingCapacity",label:"Seating capacity"                    },
-            { key:"driverName",     label:"Driver"                              },
-            { key:"driverPhone",    label:"Driver phone"                        },
-            { key:"status",         label:"Status"                              },
-          ]}
-        
-          onEdit={() => { setEditVehicleId(viewVehicleId!); setViewVehicleId(null); }}/>
-      )}
-
-      {editVehicleId && viewVehicleItem && (
-        <EditModal
-          title="Vehicle"
-          item={viewVehicleItem}
-          onClose={() => setEditVehicleId(null)}
-          onSave={async data => {
-            await updVehicle.mutateAsync({id: editVehicleId!, body: data});
-            setEditVehicleId(null);
-          }}
-          fields={[
-            { key:"name",           label:"Registration #",  required:true                                                                              },
-            { key:"vehicleType",    label:"Type",            type:"select", options:[{value:"BUS",label:"Bus"},{value:"VAN",label:"Van"},{value:"MINIBUS",label:"Minibus"},{value:"CAR",label:"Car"}] },
-            { key:"make",           label:"Make"                                                                                                        },
-            { key:"model",          label:"Model"                                                                                                       },
-            { key:"seatingCapacity",label:"Capacity",        type:"number"                                                                              },
-            { key:"driverName",     label:"Driver name"                                                                                                 },
-            { key:"driverPhone",    label:"Driver phone",    type:"pk-phone"                                                                            },
-            { key:"status",         label:"Status",          type:"select", options:[{value:"ACTIVE",label:"Active"},{value:"MAINTENANCE",label:"Maintenance"},{value:"INACTIVE",label:"Inactive"}] },
-          ]}
-        />
-      )}
-
-      <Pagination page={page} pageSize={PAGE_SIZE} total={vehicles.length} onPage={setPage} label="vehicles"/>
-    </>
-  );
+  return <>
+    <PageHeader title="School transport" subtitle="Manage drivers, vehicles, routes, stops and student transport assignments."
+      action={<button className="primary" onClick={() => openRoute()}><Plus size={16}/> Add route</button>}/>
+    {(error || operations.error) && <p className="form-error" role="alert">{error || getErrorMessage(operations.error)}</p>}
+    <div className="tabs">{["routes", "fleet", "students", "notices"].map(item => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
+    {operations.isLoading && <p>Loading transport data…</p>}
+    {data && tab === "routes" && <section className="surface"><div className="surface-head"><h3>Routes ({data.routes.length})</h3><p>Stops, vehicles and driver allocations</p></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Route</th><th>Campus</th><th>Driver</th><th>Vehicle</th><th>Students</th><th>Stops</th><th>Action</th></tr></thead><tbody>
+      {data.routes.length === 0 && <tr><td colSpan={7}>Add a vehicle and driver profile, then create a route.</td></tr>}{data.routes.map(route => <tr key={route.id}><td><b>{route.name}</b></td><td>{lookup(data.campuses, route.campusId)}</td><td>{lookup(data.drivers, route.driverId)}</td><td>{data.vehicles.find(item => item.id === route.vehicleId)?.registrationNo ?? "—"}</td><td>{route.studentCount}</td><td>{data.stops.filter(item => item.routeId === route.id).length}</td><td><button className="secondary" onClick={() => openRoute(route)}>Edit route</button></td></tr>)}
+    </tbody></table></div></section>}
+    {data && tab === "fleet" && <>
+      <section className="surface"><div className="surface-head"><h3>Vehicles</h3><button className="secondary" onClick={() => { setVehicleForm({ campusId: "", name: "", registrationNo: "", capacity: "30" }); setError(""); setModal("vehicle"); }}>Add vehicle</button></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Name</th><th>Registration</th><th>Campus</th><th>Seats</th></tr></thead><tbody>{data.vehicles.map(vehicle => <tr key={vehicle.id}><td>{vehicle.name}</td><td>{vehicle.registrationNo}</td><td>{lookup(data.campuses, vehicle.campusId)}</td><td>{vehicle.capacity}</td></tr>)}</tbody></table></div></section>
+      <section className="surface" style={{ marginTop: 16 }}><div className="surface-head"><h3>Driver profiles</h3><button className="secondary" onClick={() => { setDriverForm({ employeeId: "", dateOfBirth: "", licenseNumber: "", licenseCategory: "", licenseExpiry: "" }); setError(""); setModal("driver"); }}>Register driver</button></div><p style={{ padding: "0 20px" }}>Create and approve the driver's employee record in HR before registering the licence here.</p><div className="table-wrap"><table className="data-table"><thead><tr><th>Driver</th><th>Campus</th><th>Assigned routes</th></tr></thead><tbody>{data.drivers.map(driver => <tr key={driver.id}><td>{driver.name}</td><td>{lookup(data.campuses, driver.campusId)}</td><td>{data.routes.filter(route => route.driverId === driver.id).map(route => route.name).join(", ") || "None"}</td></tr>)}</tbody></table></div></section>
+    </>}
+    {data && tab === "students" && <section className="surface"><div className="surface-head"><h3>Student assignments</h3><button className="secondary" onClick={() => { setAssignmentForm({ studentId: "", routeId: "", stopId: "" }); setError(""); setModal("assignment"); }}>Assign student</button></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Student</th><th>Route</th><th>Stop</th><th>Action</th></tr></thead><tbody>{data.assignments.map(assignment => <tr key={assignment.id}><td>{assignment.studentName}</td><td>{lookup(data.routes, assignment.routeId)}</td><td>{data.stops.find(item => item.id === assignment.stopId)?.name ?? "—"}</td><td><button className="secondary" onClick={() => { setAssignmentForm({ studentId: assignment.studentId, routeId: assignment.routeId, stopId: assignment.stopId }); setError(""); setModal("assignment"); }}>Move</button> <button className="icon-button" aria-label={`Remove transport for ${assignment.studentName}`} disabled={saving} onClick={() => void removeAssignment(assignment.id)}><Trash2 size={15}/></button></td></tr>)}</tbody></table></div></section>}
+    {data && tab === "notices" && <section className="surface" style={{ padding: 20 }}><h3>Service notices · last seven days</h3>{!data.notices.length && <p>No service notices.</p>}{data.notices.map(item => <div key={item.id} style={{ borderTop: "1px solid var(--line)", padding: "14px 0" }}><b>{lookup(data.routes, item.routeId)} · {item.delayMinutes} min delay</b><p>{item.message}</p><small>{item.serviceDate} · recorded {new Date(item.createdAt).toLocaleString()}</small></div>)}</section>}
+    {modal && data && <div className="modal-backdrop"><section className="modal-card" style={{ width: "min(820px,96vw)" }} role="dialog" aria-modal="true" aria-label={`Transport ${modal}`}><div className="modal-head"><h2>{modal === "assignment" ? "Assign student" : modal === "route" ? "Route and stops" : modal === "driver" ? "Register driver" : "Add vehicle"}</h2><button className="icon-button" onClick={() => setModal(null)}><X size={18}/></button></div><div className="human-form">
+      {modal === "route" && <><div className="human-form-grid">
+        <label className="human-field field-wide"><span>Route name *</span><input value={routeForm.name} onChange={e => setRouteForm({ ...routeForm, name: e.target.value })}/></label>
+        {choose("Campus *", routeForm.campusId, value => setRouteForm({ ...routeForm, campusId: value, vehicleId: "", driverId: "" }), data.campuses)}
+        {choose("Vehicle *", routeForm.vehicleId, value => setRouteForm({ ...routeForm, vehicleId: value }), data.vehicles.filter(item => item.campusId === routeForm.campusId).map(item => ({ ...item, name: `${item.registrationNo} · ${item.capacity} seats` })))}
+        {choose("Driver *", routeForm.driverId, value => setRouteForm({ ...routeForm, driverId: value }), data.drivers.filter(item => item.campusId === routeForm.campusId))}
+        {([['startTime', 'Pickup start'], ['arrivalTime', 'School arrival'], ['dismissalTime', 'School dismissal']] as const).map(([field, label]) => <label className="human-field" key={field}><span>{label}</span><input type="time" value={routeForm[field]} onChange={e => setRouteForm({ ...routeForm, [field]: e.target.value })}/></label>)}
+      </div><h3>Stops in pickup order</h3>{stops.map((stop, index) => <div className="human-form-grid" key={stop.id ?? index} style={{ marginBottom: 12 }}><label className="human-field"><span>{index + 1}. Stop name</span><input value={stop.name} onChange={e => setStops(stops.map((item, i) => i === index ? { ...item, name: e.target.value } : item))}/></label>{([['pickupTime', 'Pickup time'], ['dropoffTime', 'Return time']] as const).map(([field, label]) => <label className="human-field" key={field}><span>{label}</span><input type="time" value={stop[field]} onChange={e => setStops(stops.map((item, i) => i === index ? { ...item, [field]: e.target.value } : item))}/></label>)}<button className="secondary" onClick={() => setStops(stops.filter((_, i) => i !== index))}>Remove stop</button></div>)}<button className="secondary" onClick={() => setStops([...stops, { name: "", pickupTime: routeForm.startTime, dropoffTime: routeForm.dismissalTime }])}>Add stop</button></>}
+      {modal === "vehicle" && <div className="human-form-grid">{choose("Campus *", vehicleForm.campusId, value => setVehicleForm({ ...vehicleForm, campusId: value }), data.campuses)}{([['name', 'Vehicle name'], ['registrationNo', 'Registration number'], ['capacity', 'Passenger seats']] as const).map(([field, label]) => <label className="human-field" key={field}><span>{label} *</span><input type={field === "capacity" ? "number" : "text"} min={1} max={100} value={vehicleForm[field]} onChange={e => setVehicleForm({ ...vehicleForm, [field]: e.target.value })}/></label>)}</div>}
+      {modal === "driver" && <div className="human-form-grid">{choose("Approved driver employee *", driverForm.employeeId, value => setDriverForm({ ...driverForm, employeeId: value }), data.driverEmployees)}{([['dateOfBirth', 'Date of birth', 'date'], ['licenseNumber', 'Licence number', 'text'], ['licenseCategory', 'Licence category', 'text'], ['licenseExpiry', 'Licence expiry', 'date']] as const).map(([field, label, type]) => <label className="human-field" key={field}><span>{label} *</span><input type={type} value={driverForm[field]} onChange={e => setDriverForm({ ...driverForm, [field]: e.target.value })}/></label>)}</div>}
+      {modal === "assignment" && <div className="human-form-grid">{choose("Route *", assignmentForm.routeId, value => setAssignmentForm({ studentId: "", routeId: value, stopId: "" }), data.routes)}{choose("Student *", assignmentForm.studentId, value => setAssignmentForm({ ...assignmentForm, studentId: value }), data.students.filter(item => item.campusId === selectedRoute?.campusId))}{choose("Stop *", assignmentForm.stopId, value => setAssignmentForm({ ...assignmentForm, stopId: value }), data.stops.filter(item => item.routeId === assignmentForm.routeId).map(item => ({ ...item, campusId: null })))}</div>}
+      {error && <p className="form-error" role="alert">{error}</p>}
+    </div><div className="modal-actions"><button className="secondary" onClick={() => setModal(null)}>Cancel</button><button className="primary" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save"}</button></div></section></div>}
+  </>;
 }

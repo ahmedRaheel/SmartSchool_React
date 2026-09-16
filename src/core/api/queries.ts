@@ -23,6 +23,7 @@ export const useApproveStudent  = () => useMutation({ mutationFn:({id,body}:{id:
 export const useEnrollments     = (studentId?:string) => { const tid=useTid(); return useQuery({ queryKey:["enrollments",tid,studentId], queryFn:()=>A.getEnrollments(tid,studentId), enabled:!!tid }); };
 export const useCreateEnrollment= () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createEnrollment(b), onSuccess:()=>qc.invalidateQueries({queryKey:["enrollments",tid]}) }); };
 export const useCreateGuardian  = () => useMutation({ mutationFn:(b:object)=>A.createGuardian(b) });
+export const useLinkGuardian    = () => useMutation({ mutationFn:(b:object)=>A.linkGuardian(b) });
 
 // ── HR ───────────────────────────────────────────────────────────────────────
 export const useEmployees       = (page=1, enabled=true) => { const tid=useTid(); return useQuery({ queryKey:["employees",tid,page], queryFn:()=>A.getEmployeesPage(tid,page), enabled:enabled && !!tid }); };
@@ -136,6 +137,10 @@ export const useAwards = (enabled = true) => {
     enabled: enabled && Boolean(tenantId),
   });
 };
+export const useStudentActivities = (activityId?: string, enabled = true) => { const tid=useTid(); return useQuery({ queryKey:["student-activities",tid,activityId], queryFn:()=>A.getStudentActivities(tid,activityId), enabled:enabled && !!tid }); };
+export const useCreateStudentActivity = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createStudentActivity(b), onSuccess:()=>{ qc.invalidateQueries({queryKey:["student-activities",tid]}); qc.invalidateQueries({queryKey:["activities",tid]}); } }); };
+export const useUpdateStudentActivity = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateStudentActivity(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["student-activities",tid]}) }); };
+export const useDeleteStudentActivity = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteStudentActivity(id,tid), onSuccess:()=>{ qc.invalidateQueries({queryKey:["student-activities",tid]}); qc.invalidateQueries({queryKey:["activities",tid]}); } }); };
 
 // ── Workflow ──────────────────────────────────────────────────────────────────
 export const useWorkflowDefs    = () => { const tid=useTid(); return useQuery({ queryKey:["workflow-defs",tid], queryFn:()=>A.getWorkflowDefs(tid) }); };
@@ -154,9 +159,11 @@ export const useUnreadCount     = () => { const {user}=useAuth(); const tid=useT
 export const useMarkRead        = () => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.markNotifRead(id,tid,user!.id), onSuccess:()=>{ qc.invalidateQueries({queryKey:["notifs"]}); qc.invalidateQueries({queryKey:["unread"]}); } }); };
 export const useMarkAllRead     = () => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:()=>A.markAllRead(tid,user!.id), onSuccess:()=>{ qc.invalidateQueries({queryKey:["notifs"]}); qc.invalidateQueries({queryKey:["unread"]}); } }); };
 export const useConversations   = () => { const tid=useTid(); return useQuery({ queryKey:["convs",tid], queryFn:()=>A.getConversations(tid) }); };
-export const useMessages        = (convId?:string) => { const tid=useTid(); return useQuery({ queryKey:["msgs",tid,convId], queryFn:()=>A.getMessages(tid,convId!), enabled:!!convId }); };
+export const useMessages        = (convId?:string) => { const tid=useTid(); return useQuery({ queryKey:["msgs",tid,convId], queryFn:()=>A.getMessages(tid,convId!), enabled:!!convId, refetchInterval:10000 }); };
 export const useSendMessage     = (convId:string) => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:(msg:string)=>A.sendMessage(tid,convId,msg,user?.id??""), onSuccess:()=>qc.invalidateQueries({queryKey:["msgs",tid,convId]}) }); };
 export const useCreateConversation=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createConversation(b), onSuccess:()=>qc.invalidateQueries({queryKey:["convs",tid]}) }); };
+export const useMarkConversationRead=()=>{ const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.markConversationRead(id), onSuccess:()=>qc.invalidateQueries({queryKey:["convs",tid]}) }); };
+export const useChatDirectory=()=>{ const tid=useTid(); return useQuery({ queryKey:["chat-directory",tid], queryFn:()=>A.getChatDirectory(tid), enabled:!!tid }); };
 
 // ── AICore ────────────────────────────────────────────────────────────────────
 //export const useModelConfigs    = () => { const tid=useTid(); return useQuery({ queryKey:["model-configs",tid], queryFn:()=>A.getModelConfigs(tid) }); };
@@ -210,11 +217,16 @@ export const useExecutionLogs = useExecLogs;
 
 // ── Extended hooks (new entities, aliases) ─────────────────────────────────
 export const useCreateAward            = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createAward(b), onSuccess:()=>qc.invalidateQueries({queryKey:["awards",tid]}) }); };
+export const useUpdateAward            = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateAward(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["awards",tid]}) }); };
+export const useDeleteAward            = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteAward(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["awards",tid]}) }); };
 export const useCreateGradeScale       = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createGradeScale(b), onSuccess:()=>qc.invalidateQueries({queryKey:["grade-scales",tid]}) }); };
 export const useCreateItem             = useCreateInventoryItem;
 export const useCreateLesson           = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createLesson(b), onSuccess:()=>qc.invalidateQueries({queryKey:["lessons",tid]}) }); };
 export const useCreatePurchaseOrder    = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createPurchaseOrder(b), onSuccess:()=>qc.invalidateQueries({queryKey:["purchase-orders",tid]}) }); };
 export const useCreateWorkflowDefinition = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createWorkflowDef(b), onSuccess:()=>qc.invalidateQueries({queryKey:["workflow-defs",tid]}) }); };
+export const useUpdateWorkflowDefinition = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:({id,body}:{id:string;body:object})=>A.updateWorkflowDef(id,body), onSuccess:()=>qc.invalidateQueries({queryKey:["workflow-defs",tid]}) }); };
+export const useDeleteWorkflowDefinition = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.deleteWorkflowDef(id,tid), onSuccess:()=>qc.invalidateQueries({queryKey:["workflow-defs",tid]}) }); };
+export const useCreateWorkflowInstance = () => { const qc=useQueryClient(); const tid=useTid(); return useMutation({ mutationFn:(b:object)=>A.createWorkflowInstance(b), onSuccess:()=>{qc.invalidateQueries({queryKey:["workflow-instances",tid]});qc.invalidateQueries({queryKey:["approvals",tid]});} }); };
 export const useItems                  = useInventoryItems;
 export const useWorkflowDefinitions    = useWorkflowDefs;
 

@@ -1,3 +1,9 @@
+import { DocumentSetupPanel } from "./DocumentSetupPanel";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../../../core/api/ApiClient";
+import { documentApi } from "../api/documentApi";
+import { Pagination } from "../../../components/ui/Pagination";
+import { getErrorMessage } from "../../../core/api/errorMessage";
 import { useState, useMemo } from "react";
 import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 import { Upload, FileText, Search, Filter, CheckCircle2, AlertTriangle, X, Eye } from "lucide-react";
@@ -15,10 +21,22 @@ const ACTOR_LABELS: Record<string, string> = {
 
 export function DocumentsPage() {
   const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
-  const [tab, setTab]           = useState<"upload"|"compliance"|"all">("compliance");
+  const [tab, setTab]           = useState<"upload"|"compliance"|"all"|"setup">("compliance");
   const [entityType, setEntityType] = useState<EntityType>("STUDENT");
   const [entityId, setEntityId] = useState("");
-  const [search, setSearch]     = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [downloadError, setDownloadError] = useState("");
+  const summary = useQuery({
+    queryKey: ["document-compliance", tid, tab],
+    queryFn: async () => (await api.get<{ items: { type: string; total: number; compliant: number; pending: number }[] }>("/api/documents/compliance", { params: { tenantId: tid } })).data,
+    enabled: Boolean(tid),
+  });
+  const library = useQuery({
+    queryKey: ["document-library", tid, page],
+    queryFn: () => documentApi.list(tid, undefined, undefined, page, 25),
+    enabled: Boolean(tid) && tab === "all",
+  });
   const [compModal, setCompModal] = useState<{type:EntityType;id:string;name:string}|null>(null);
 
   const needsActorLookup = tab === "upload" || compModal !== null;
@@ -27,20 +45,16 @@ export function DocumentsPage() {
   const students  = toItems(studData);
   const employees = toItems(empData);
 
+  const drivers = useQuery({ queryKey: ["document-drivers", tid], queryFn: async () => (await api.get<{ drivers: { id: string; name: string }[] }>("/api/transport/operations", { params: { tenantId: tid } })).data.drivers, enabled: entityType === "DRIVER" && needsActorLookup });
   const entityOptions = useMemo(() => {
     if (entityType === "STUDENT") return students.map((s:any) => ({ id:s.id, name:`${s.firstName} ${s.lastName??""} (${s.studentNumber??s.id.slice(-5)})` }));
-    const staffType = entityType === "DRIVER" ? "DRIVER" : entityType === "ADMIN_OFFICER" ? "ADMIN_OFFICER" : entityType === "TEACHER" ? "TEACHER" : undefined;
+    if (entityType === "DRIVER") return drivers.data ?? [];
+    const staffType = entityType === "ADMIN_OFFICER" ? "ADMIN_OFFICER" : entityType === "TEACHER" ? "TEACHER" : undefined;
     const filtered = staffType ? employees.filter((e:any) => e.staffType === staffType) : employees;
     return filtered.map((e:any) => ({ id:e.id, name:`${e.firstName} ${e.lastName??""} (${e.employeeNumber??e.id.slice(-5)})` }));
-  }, [entityType, students, employees]);
+  }, [entityType, students, employees, drivers.data]);
 
-  // Compliance overview — mock realistic data
-  const COMPLIANCE_SUMMARY = [
-    { type:"STUDENT" as EntityType, total:students.length, compliant:0, pending:0 },
-    { type:"TEACHER" as EntityType, total:employees.filter((e:any)=>e.staffType==="TEACHER").length, compliant:0, pending:0 },
-    { type:"DRIVER"  as EntityType, total:employees.filter((e:any)=>e.staffType==="DRIVER").length, compliant:0, pending:0 },
-    { type:"ADMIN_OFFICER" as EntityType, total:employees.filter((e:any)=>e.staffType==="ADMIN_OFFICER").length, compliant:0, pending:0 },
-  ];
+  const COMPLIANCE_SUMMARY = summary.data?.items ?? [];
   const totalEntities  = COMPLIANCE_SUMMARY.reduce((a,c)=>a+c.total,0);
   const totalCompliant = COMPLIANCE_SUMMARY.reduce((a,c)=>a+c.compliant,0);
   const totalPending   = COMPLIANCE_SUMMARY.reduce((a,c)=>a+c.pending,0);
@@ -50,6 +64,8 @@ export function DocumentsPage() {
   return (
     <>
       <PageHeader title="Document Management" subtitle="Document compliance tracking and uploads for all actors"/>
+      {summary.isLoading && <p role="status">Loading document compliance…</p>}
+      {summary.error && <p role="alert">{getErrorMessage(summary.error)}</p>}
       <section className="metric-grid" style={{marginBottom:20}}>
         <StatCard label="Overall compliance" value={`${compliancePct}%`} note={`${totalCompliant}/${totalEntities} entities`} color={compliancePct>=80?"#10B981":"#EF4444"} bg={compliancePct>=80?"#ECFDF5":"#FFF0F1"}><CheckCircle2 size={20}/></StatCard>
         <StatCard label="Pending docs"       value={String(totalPending)} note="need upload"  color={totalPending>0?"#D97706":"#10B981"} bg={totalPending>0?"#FFFBEB":"#ECFDF5"}><AlertTriangle size={20}/></StatCard>
@@ -61,8 +77,10 @@ export function DocumentsPage() {
         <button className={tab==="compliance"?"active":""} onClick={()=>setTab("compliance")}>📊 Compliance overview</button>
         <button className={tab==="upload"?"active":""} onClick={()=>setTab("upload")}>📤 Upload documents</button>
         <button className={tab==="all"?"active":""} onClick={()=>setTab("all")}>🗂 All documents</button>
+        <button className={tab === "setup" ? "active" : ""} onClick={() => setTab("setup")}>Document setup</button>
       </div>
 
+      {tab === "setup" && <DocumentSetupPanel tenantId={tid}/>}
       {tab==="compliance" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {COMPLIANCE_SUMMARY.map(cs => (
@@ -71,7 +89,7 @@ export function DocumentsPage() {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                   <div>
                     <b style={{fontSize:14}}>{ACTOR_LABELS[cs.type]}</b>
-                    <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{cs.total} {ACTOR_LABELS[cs.type].toLowerCase()}s tracked</div>
+                    <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{cs.total} {(ACTOR_LABELS[cs.type] ?? cs.type).toLowerCase()}s tracked</div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:20,fontWeight:800,color:cs.pending===0?"#10B981":"#D97706"}}>{cs.total>0?Math.round((cs.compliant/cs.total)*100):0}%</div>
@@ -141,11 +159,18 @@ export function DocumentsPage() {
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search documents…"/>
             </label>
           </div>
-          <div style={{padding:48,textAlign:"center",color:"var(--muted)"}}>
-            <FileText size={36} style={{margin:"0 auto 12px",display:"block",opacity:.3}}/>
-            <b>Document library</b>
-            <p style={{fontSize:12,margin:"8px 0 0"}}>All uploaded documents appear here with full search, preview and audit trail once the backend document store is connected.</p>
-          </div>
+          {library.isLoading && <p role="status">Loading documents…</p>}
+          {library.error && <p role="alert">{getErrorMessage(library.error)}</p>}
+          {downloadError && <p role="alert">{downloadError}</p>}
+          <div className="table-wrap"><table><thead><tr><th>Document</th><th>Type</th><th>Owner</th><th>Uploaded</th><th>Action</th></tr></thead>
+            <tbody>{(library.data?.items ?? []).filter(file => `${file.fileName} ${file.title ?? ""} ${file.documentNumber}`.toLowerCase().includes(search.toLowerCase())).map(file => <tr key={file.documentId}>
+              <td>{file.title || file.fileName}<small style={{ display: "block" }}>{file.documentNumber}</small></td>
+              <td>{file.documentTypeName}</td><td>{file.ownerType.replace("Document", "")}</td>
+              <td>{new Date(file.createdAt).toLocaleDateString()}</td>
+              <td><button className="soft-button" onClick={() => documentApi.download(file, tid).catch(failure => setDownloadError(getErrorMessage(failure)))}>Download</button></td>
+            </tr>)}</tbody></table></div>
+          {!library.isLoading && !library.error && !library.data?.items.length && <p>No uploaded documents.</p>}
+          <Pagination page={page} pageSize={25} total={library.data?.totalCount ?? 0} onPage={setPage} label="documents" />
         </div>
       )}
 

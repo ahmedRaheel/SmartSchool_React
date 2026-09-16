@@ -69,6 +69,9 @@ function forceLogout(reason: "expired" | "unauthorized"): void {
 
 // ── Request interceptor ────────────────────────────────────────────────────────
 api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    config.headers.delete("Content-Type");
+  }
   const token = localStorage.getItem("access_token");
 
   if (token && !token.startsWith("mock_")) {
@@ -76,10 +79,10 @@ api.interceptors.request.use((config) => {
     if (isTokenExpired(token)) {
       forceLogout("expired");
       // Abort the request by returning a never-resolving promise
-      return new Promise(() => {});
+      return Promise.reject(new Error("Your session has expired. Please sign in again."));
     }
     config.headers.Authorization = `Bearer ${token}`;
-  } else {
+  } else if (env.useMocks) {
     // Mock-mode headers — backend reads these to simulate the actor
     try {
       const raw = localStorage.getItem("smartschool.session");
@@ -125,7 +128,7 @@ api.interceptors.response.use(
     if (status === 401) {
       // Token was rejected by the server (expired, revoked, or tampered)
       forceLogout("unauthorized");
-      return new Promise(() => {}); // swallow — page is being replaced
+      return Promise.reject(new Error("Your session has expired. Please sign in again.")); // swallow — page is being replaced
     }
 
     // Surface validation/business/server errors globally. Do not convert a

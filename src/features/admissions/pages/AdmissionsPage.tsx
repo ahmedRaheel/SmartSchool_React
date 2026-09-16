@@ -16,7 +16,7 @@ import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
  * Documents required: birth cert, photo, previous result, guardian CNIC
  * Gender policy enforced: Boys-only branch rejects female applicants
  */
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { EditModal } from "../../../components/ui/EditModal";
 import { ViewDrawer } from "../../../components/ui/ViewDrawer";
 import { RowActions } from "../../../components/ui/RowActions";
@@ -31,6 +31,11 @@ import { DocumentUploader } from "../../../components/ui/DocumentUploader";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
 import { useSchools, useCampuses, useAcademicYears, useClassSections , useUpdateApplication, useDeleteApplication, useApplicationById} from "../../../core/api/queries";
+import { admissionsApi } from "../api/admissionsApi";
+import { AdmissionCriteriaPage } from "./AdmissionCriteriaPage";
+import { api } from "../../../core/api/ApiClient";
+import * as admissionsData from "../../../core/api/apiAdapter";
+import { getErrorMessage } from "../../../core/api/errorMessage";
 import { env } from "../../../config/env";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -73,28 +78,15 @@ const MOCK_CRITERIA = [
   { Id:"cr4", BranchName:"Cambridge Centre",      ClassName:"A-Level", MinimumMarks:75, EntranceTestMinimum:70,  MinimumAge:16, MaximumAge:20, InterviewRequired:true,  GenderPolicy:"CO_EDUCATION",Seats:25, Enrolled:22 },
 ];
 
-const WORKFLOW_RULES = [
-  { id:"wr1", name:"Auto-accept if marks ≥ 80% + docs complete",     trigger:"On application submit", action:"ADMISSION_ACCEPTED",    condition:"marks >= 80 && docs.complete",  active:true  },
-  { id:"wr2", name:"Auto-reject if marks < minimum criteria",         trigger:"On application submit", action:"ADMISSION_REJECTED",    condition:"marks < criteria.minimum",       active:true  },
-  { id:"wr3", name:"Auto-waitlist if class is full",                  trigger:"On application submit", action:"WAITING_LIST",          condition:"section.enrolled >= section.seats",active:true },
-  { id:"wr4", name:"Gender policy enforcement",                       trigger:"On application submit", action:"ADMISSION_REJECTED",    condition:"!genderAllowed(branch, gender)", active:true  },
-  { id:"wr5", name:"Notify principal for manual review (50–79%)",     trigger:"On submit",             action:"NOTIFY_PRINCIPAL",      condition:"marks >= 50 && marks < 80",     active:true  },
-  { id:"wr6", name:"Auto-enroll student on acceptance",               trigger:"On ADMISSION_ACCEPTED", action:"CREATE_STUDENT_ACCOUNT",condition:"always",                        active:true  },
-  { id:"wr7", name:"Create parent portal account on acceptance",      trigger:"On ADMISSION_ACCEPTED", action:"CREATE_PARENT_ACCOUNT", condition:"always",                        active:true  },
-  { id:"wr8", name:"Send acceptance email to guardian",               trigger:"On ADMISSION_ACCEPTED", action:"SEND_EMAIL",            condition:"guardian.email exists",         active:true  },
-];
-
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function AdmissionsPage() {
   const PAGE_SIZE = 25;
   const { user } = useAuth();
-  const updApplication = useUpdateApplication();
-  const delApplication = useDeleteApplication();
-  const [viewAppId, setViewAppId] = useState<string|null>(null);
-  const [editAppId, setEditAppId] = useState<string|null>(null);
-  const viewAppOrEdit = viewAppId ?? editAppId;
-  const { data: viewAppData } = useApplicationById(viewAppOrEdit ?? undefined);
-    const viewAppItem: any = viewAppData ?? null;
+  const [viewAppId, setViewAppId] = useState<string | null>(null);
+  const [editAppId, setEditAppId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [criteriaRows, setCriteriaRows] = useState<any[]>([]);
 
   const tid = effectiveTenantId(user) ?? "";
 
@@ -106,6 +98,8 @@ export function AdmissionsPage() {
   const [newAppModal, setNewApp] = useState(false);
   const [newInqModal, setNewInq] = useState(false);
   const [docCompliant, setDocComp] = useState(false);
+  const [entranceMarks, setEntranceMarks] = useState("");
+  const [interviewPassed, setInterviewPassed] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [apps, setApps]          = useState<any[]>([]);
   const [inqs, setInqs]          = useState<any[]>([]);
@@ -122,13 +116,13 @@ export function AdmissionsPage() {
 
   // New application form
   const [appForm, setAppForm] = useState({
-    schoolId:"", branchId:"", academicYearId:"", classId:"",
+    schoolId:"", branchId:"", academicYearId:"", classId:"", classSectionId:"",
     firstName:"", lastName:"", dateOfBirth:"", gender:"",
     email:"", phone:"", address:"",
     guardianName:"", guardianCnic:"", guardianEmail:"", guardianPhone:"", relationship:"Father",
     previousSchool:"", previousMarks:"",
   });
-  const [newAppId] = useState(() => `app-new-${Date.now()}`);
+
 
   // New inquiry form
   const [inqForm, setInqForm] = useState({
@@ -139,19 +133,43 @@ export function AdmissionsPage() {
   function ifsf(k:string){ return (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>)=>setInqForm(p=>({...p,[k]:e.target.value})); }
 
   const filteredCampuses = appForm.schoolId ? campuses.filter((c:any)=>c.schoolId===appForm.schoolId) : campuses;
-  const filteredYears    = appForm.branchId ? years.filter((y:any)=>{ try{return JSON.parse(y.metadataJson||"{}").campusId===appForm.branchId;}catch{return true;}}) : years;
+  const filteredYears = years.filter((year: any) => !appForm.branchId || year.campusId === appForm.branchId);
+  const filteredSections = sections.filter((section: any) =>
+    section.campusId === appForm.branchId && section.academicYearId === appForm.academicYearId);
+  const marks = appForm.previousMarks ? Number(appForm.previousMarks) : undefined;
+  const criteria = criteriaRows.find((item: any) => item.branchId === appForm.branchId &&
+    item.academicYearId === appForm.academicYearId && item.classId === appForm.classId);
+  const viewAppItem = apps.find(item => item.Id === (viewAppId ?? editAppId));
 
-  // Check criteria against application form
-  const criteria = appForm.branchId ? (env.useMocks ? MOCK_CRITERIA : []).find((c:any)=>c.BranchName===campuses.find((c:any)=>c.id===appForm.branchId)?.name) : null;
-  const marks = parseFloat(appForm.previousMarks || "0");
-  const criteriaCheck = criteria ? {
-    marks:    marks >= criteria.MinimumMarks,
-    gender:   criteria.GenderPolicy === "CO_EDUCATION" ||
-              (criteria.GenderPolicy === "BOYS_ONLY"  && appForm.gender === "Male") ||
-              (criteria.GenderPolicy === "GIRLS_ONLY" && appForm.gender === "Female"),
-    seats:    criteria.Enrolled < criteria.Seats,
-    autoAccept: marks >= 80 && docCompliant,
-  } : null;
+  function displayApplication(item: any) {
+    return Object.fromEntries(Object.entries(item).map(([key, value]) =>
+      [key.charAt(0).toUpperCase() + key.slice(1), value]));
+  }
+
+  async function loadAdmissions() {
+    if (!tid) return;
+    setLoading(true);
+    setError("");
+    try {
+      if (env.useMocks) {
+        setApps(MOCK_APPLICATIONS);
+        setInqs(MOCK_INQUIRIES);
+        return;
+      }
+      const [applications, inquiryPage, rules] = await Promise.all([
+        admissionsApi.list(tid), admissionsData.getInquiriesPage(tid, 1, 100), admissionsApi.criteria(tid),
+      ]);
+      setApps(applications.map(displayApplication));
+      setInqs(toItems(inquiryPage).map((item: any) => ({ ...item, ...parseMeta(item.metadataJson) })));
+      setCriteriaRows(rules);
+    } catch (failure) {
+      setError(getErrorMessage(failure));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadAdmissions(); }, [tid]);
 
   const filteredApps = useMemo(() =>
     apps.filter(a => `${a.FirstName} ${a.LastName} ${a.GuardianName}`.toLowerCase().includes(search.toLowerCase())),
@@ -164,52 +182,96 @@ export function AdmissionsPage() {
 
   async function changeStatus(appId: string, status: AppStatus, notes?: string) {
     setProcessing(true);
-    if (env.useMocks) {
-      await new Promise(r => setTimeout(r, 600));
-      setApps(p => p.map(a => a.Id === appId ? { ...a, Status:status, DecisionNotes:(notes ?? null) as any, StudentId: status==="ADMISSION_ACCEPTED" ? `stu-${Date.now()}` : a.StudentId } : a));
-      setSelected((p:any) => p?.Id === appId ? { ...p, Status:status, DecisionNotes:(notes ?? null) as any } : p);
-    } else {
-      const s = JSON.parse(localStorage.getItem("smartschool.session")??"{}");
-      const headers: Record<string,string> = { "Content-Type":"application/json", "X-Mock-Role":s.role??"SchoolAdmin", "X-Mock-TenantId":tid };
-      await fetch(`${env.apiBaseUrl}/api/admissions/workflow/applications/${appId}/status`, {
-        method:"PUT", headers, body: JSON.stringify({ tenantId:tid, status, notes:notes??null })
-      });
-      setApps(p => p.map(a => a.Id === appId ? { ...a, Status:status } : a));
+    setError("");
+    try {
+      if (env.useMocks) {
+        setApps(items => items.map(item => item.Id === appId ? { ...item, Status: status } : item));
+        setSelected((item: any) => item ? { ...item, Status: status } : item);
+        return;
+      }
+      await admissionsApi.status(appId, status, tid, notes, entranceMarks === "" ? undefined : Number(entranceMarks), interviewPassed);
+      await loadAdmissions();
+      const current = (await admissionsApi.list(tid)).find(item => item.id === appId);
+      setSelected(current ? displayApplication(current) : null);
+    } catch (failure) {
+      setError(getErrorMessage(failure));
+    } finally {
+      setProcessing(false);
     }
-    setProcessing(false);
   }
 
   async function submitApplication() {
-    if (!appForm.firstName||!appForm.schoolId||!appForm.branchId||!appForm.guardianName||!appForm.gender) return;
-    const autoStatus: AppStatus = criteriaCheck?.autoAccept ? "ADMISSION_ACCEPTED" :
-                                  !criteriaCheck?.marks     ? "ADMISSION_REJECTED" :
-                                  !criteriaCheck?.gender    ? "ADMISSION_REJECTED" :
-                                  !criteriaCheck?.seats     ? "WAITING_LIST"       : "SUBMITTED_APPLICATION";
-    const newApp = {
-      Id: newAppId, FirstName:appForm.firstName, LastName:appForm.lastName,
-      DateOfBirth:appForm.dateOfBirth, Gender:appForm.gender, Email:appForm.email,
-      Phone:appForm.phone, GuardianName:appForm.guardianName, GuardianEmail:appForm.guardianEmail,
-      GuardianPhone:appForm.guardianPhone, PreviousMarks:marks,
-      Status: autoStatus, SubmittedAt:new Date().toISOString(),
-      DecisionNotes: autoStatus==="ADMISSION_REJECTED" && !criteriaCheck?.marks ? `Below minimum marks (${criteria?.MinimumMarks}%)` :
-                     autoStatus==="ADMISSION_REJECTED" && !criteriaCheck?.gender ? "Gender not eligible for this branch" :
-                     autoStatus==="WAITING_LIST" ? "Class section is full" :
-                     autoStatus==="ADMISSION_ACCEPTED" ? "Auto-accepted: marks ≥ 80% + documents complete" : null,
-      StudentId: autoStatus==="ADMISSION_ACCEPTED" ? `stu-auto-${Date.now()}` : null,
-      BranchId:appForm.branchId, SchoolId:appForm.schoolId, ClassId:appForm.classId, docsComplete:docCompliant,
-    };
-    setApps(p => [newApp as any, ...p]);
-    setNewApp(false);
-    setPhase("applications");
-    setSelected(newApp);
+    if (processing) return;
+    setProcessing(true);
+    setError("");
+    try {
+      const body = {
+        ...appForm, tenantId: tid, previousMarks: marks,
+        dateOfBirth: appForm.dateOfBirth || undefined,
+        academicYearId: appForm.academicYearId || undefined,
+        classId: appForm.classId || undefined,
+        classSectionId: appForm.classSectionId || undefined,
+      };
+      const saved = env.useMocks
+        ? { id: crypto.randomUUID(), status: "SUBMITTED_APPLICATION" }
+        : await admissionsApi.create(body);
+      const item = displayApplication({ ...body, ...saved, submittedAt: new Date().toISOString() });
+      if (env.useMocks) setApps(items => [item, ...items]);
+      else await loadAdmissions();
+      setNewApp(false);
+      setPhase("applications");
+      setSelected(item);
+    } catch (failure) {
+      setError(getErrorMessage(failure));
+    } finally {
+      setProcessing(false);
+    }
   }
 
   async function submitInquiry() {
-    if (!inqForm.firstName || !inqForm.guardianName || !inqForm.guardianPhone) return;
-    const newInq = { id:`inq-${Date.now()}`, applicantFirstName:inqForm.firstName, applicantLastName:inqForm.lastName, gradeApplied:inqForm.gradeApplied, guardianName:inqForm.guardianName, guardianPhone:inqForm.guardianPhone, source:inqForm.source, status:"NEW", submittedAt:new Date().toISOString() };
-    setInqs(p => [newInq, ...p]);
-    setNewInq(false);
-    setInqForm({ firstName:"", lastName:"", gradeApplied:"", guardianName:"", guardianPhone:"", source:"Walk-In" });
+    if (processing) return;
+    setProcessing(true);
+    setError("");
+    try {
+      const details = {
+        applicantFirstName: inqForm.firstName, applicantLastName: inqForm.lastName,
+        gradeApplied: inqForm.gradeApplied, guardianName: inqForm.guardianName,
+        guardianPhone: inqForm.guardianPhone, source: inqForm.source,
+        status: "NEW", submittedAt: new Date().toISOString(),
+      };
+      const saved = await admissionsData.createInquiry({
+        tenantId: tid, name: `${inqForm.firstName} ${inqForm.lastName}`.trim(),
+        metadataJson: JSON.stringify(details),
+      });
+      if (env.useMocks) setInqs(items => [{ ...saved, ...details }, ...items]);
+      else await loadAdmissions();
+      setNewInq(false);
+    } catch (failure) {
+      setError(getErrorMessage(failure));
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function reviewInquiry(item: any) {
+    try {
+      await admissionsData.updateInquiry(item.id, {
+        tenantId: tid, name: item.name,
+        metadataJson: JSON.stringify({ ...parseMeta(item.metadataJson), status: "UNDER_REVIEW" }),
+      });
+      await loadAdmissions();
+    } catch (failure) {
+      setError(getErrorMessage(failure));
+    }
+  }
+
+  async function deleteApplication(id: string) {
+    try {
+      await api.delete(`/api/admissions/workflow/applications/${id}`, { params: { tenantId: tid } });
+      await loadAdmissions();
+    } catch (failure) {
+      setError(getErrorMessage(failure));
+    }
   }
 
   const counts = {
@@ -232,6 +294,8 @@ export function AdmissionsPage() {
         }
       />
 
+      {error && <div role="alert" className="surface" style={{ padding: 16, color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
+      {loading && <p role="status">Loading admissions…</p>}
       {/* KPIs */}
       <section className="metric-grid" style={{marginBottom:20}}>
         <StatCard label="Pending review" value={String(counts.submitted)} note="Need decision"  color="#2563EB" bg="#EFF6FF"><ClipboardCheck size={20}/></StatCard>
@@ -266,7 +330,7 @@ export function AdmissionsPage() {
         <button className={phase==="inquiries"?"active":""} onClick={()=>{setPhase("inquiries");setSelected(null);}}>📋 Inquiries ({inqs.length})</button>
         <button className={phase==="applications"?"active":""} onClick={()=>{setPhase("applications");setSelected(null);}}>📝 Applications ({apps.length})</button>
         <button className={phase==="criteria"?"active":""} onClick={()=>{setPhase("criteria");setSelected(null);}}>⚖️ Admission Criteria</button>
-        <button className={phase==="workflow"?"active":""} onClick={()=>{setPhase("workflow");setSelected(null);}}>⚡ Automation Rules ({WORKFLOW_RULES.filter(r=>r.active).length} active)</button>
+        <button className={phase==="workflow"?"active":""} onClick={()=>{setPhase("workflow");setSelected(null);}}>⚡ Automation Rules ({criteriaRows.length} active)</button>
       </div>
 
       {/* ── INQUIRIES ── */}
@@ -295,7 +359,7 @@ export function AdmissionsPage() {
                       <td><span className={`status-pill ${sm.pill}`}>{sm.label}</span></td>
                       <td>
                         <div className="row-actions">
-                          {i.status==="NEW" && <button className="table-action" style={{fontSize:10}} onClick={()=>setInqs(p=>p.map(x=>x.id===i.id?{...x,status:"UNDER_REVIEW"}:x))}>Review</button>}
+                          {i.status==="NEW" && <button className="table-action" style={{fontSize:10}} onClick={() => void reviewInquiry(i)}>Review</button>}
                           {i.status==="UNDER_REVIEW" && <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setNewApp(true);setAppForm(p=>({...p,firstName:i.applicantFirstName,lastName:i.applicantLastName,guardianName:i.guardianName,guardianPhone:i.guardianPhone}));}}>Convert → Application</button>}
                         </div>
                       </td>
@@ -327,7 +391,7 @@ export function AdmissionsPage() {
                   const sm = STATUS_META[a.Status] ?? STATUS_META.SUBMITTED_APPLICATION;
                   const branch = campuses.find((c:any)=>c.id===a.BranchId);
                   return (
-                    <tr key={a.Id} style={{cursor:"pointer"}} onClick={()=>setSelected(a)}>
+                    <tr key={a.Id} style={{cursor:"pointer"}} onClick={()=>{ setEntranceMarks(a.EntranceTestMarks == null ? "" : String(a.EntranceTestMarks)); setInterviewPassed(a.InterviewPassed ?? false); setSelected(a); }}>
                       <td><b>{a.FirstName} {a.LastName}</b><div style={{fontSize:10,color:"var(--muted)"}}>{new Date(a.SubmittedAt).toLocaleDateString()}</div></td>
                       <td style={{fontSize:11}}>{branch?.name ?? "—"}</td>
                       <td>
@@ -340,14 +404,14 @@ export function AdmissionsPage() {
                       <td>
                         {a.docsComplete
                           ? <span style={{color:"#10B981",fontSize:11,fontWeight:700}}>✓ Complete</span>
-                          : <span style={{color:"#EF4444",fontSize:11,fontWeight:700}}>✗ Missing</span>}
+                          : <span style={{fontSize:11}}>Open to check</span>}
                       </td>
                       <td><span className={`status-pill ${sm.pill}`}>{sm.label}</span></td>
                       <td style={{ textAlign: "right" }}>
                               <RowActions
                                 onView={() => setViewAppId(a.Id)}
                                 onEdit={() => setEditAppId(a.Id)}
-                                onDelete={() => delApplication.mutate(a.Id)}
+                                onDelete={() => deleteApplication(a.Id)}
                                 deleteLabel="application"
                               />
                             </td>
@@ -442,18 +506,14 @@ export function AdmissionsPage() {
               <div className="surface">
                 <div style={{padding:"14px 16px"}}>
                   <div style={{fontWeight:700,fontSize:12,marginBottom:10}}>⚖️ Criteria check</div>
-                  {[
-                    { label:"Previous marks",    ok: selected.PreviousMarks >= 50,  note:`${selected.PreviousMarks}% (min 50%)` },
-                    { label:"Gender eligibility",ok: selected.Gender !== "Female" || campuses.find((c:any)=>c.id===selected.BranchId)?.branchType !== "MALE",  note: selected.Gender },
-                    { label:"Documents",         ok: selected.docsComplete,          note: selected.docsComplete ? "All required docs" : "Missing documents" },
-                    { label:"Email provided",    ok: !!selected.Email && !!selected.GuardianEmail, note: selected.Email ? "Both present" : "Missing" },
-                  ].map(r=>(
-                    <div key={r.label} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid var(--surface-2)",fontSize:12}}>
-                      {r.ok ? <CheckCircle2 size={14} style={{color:"#10B981",flexShrink:0}}/> : <AlertTriangle size={14} style={{color:"#EF4444",flexShrink:0}}/>}
-                      <span style={{flex:1}}>{r.label}</span>
-                      <span style={{fontSize:11,color:r.ok?"#10B981":"#EF4444",fontWeight:600}}>{r.note}</span>
-                    </div>
-                  ))}
+                  <p>Acceptance checks the saved criteria, age, branch gender policy, class capacity and uploaded documents on the server.</p>
+                  <p>Previous marks: {selected.PreviousMarks ?? "Not provided"}%</p>
+                  <p>Required documents: {selected.docsComplete ? "Complete" : "See document checklist below"}</p>
+                  {selected.Status !== "ADMISSION_ACCEPTED" && <>
+                    <label className="human-field"><span>Entrance test marks (%)</span><input type="number" min="0" max="100" value={entranceMarks} onChange={e => setEntranceMarks(e.target.value)}/></label>
+                    <label><input type="checkbox" checked={interviewPassed} onChange={e => setInterviewPassed(e.target.checked)}/> Interview passed</label>
+                  </>}
+
                 </div>
               </div>
             </div>
@@ -463,15 +523,13 @@ export function AdmissionsPage() {
           <div className="surface">
             <div style={{padding:"16px 20px"}}>
               <DocumentUploader
-                actorType="STUDENT"
-                entityId={selected.Id}
+                actorType={selected.StudentId ? "STUDENT" : "ADMISSION"}
+                entityId={selected.StudentId || selected.Id}
                 tenantId={tid}
                 title="Registration Documents"
                 onComplianceChange={ok => {
-                  if (ok && selected.Status === "SUBMITTED_APPLICATION") {
-                    setApps(p => p.map(a => a.Id===selected.Id?{...a,docsComplete:true}:a));
-                    setSelected((p:any)=>({...p,docsComplete:true}));
-                  }
+                  setApps(p => p.map(a => a.Id===selected.Id?{...a,docsComplete:ok}:a));
+                  setSelected((p:any)=>p ? {...p,docsComplete:ok} : p);
                 }}
               />
             </div>
@@ -479,94 +537,13 @@ export function AdmissionsPage() {
         </div>
       )}
 
-      {/* ── ADMISSION CRITERIA ── */}
-      {phase==="criteria" && (
-        <div className="surface">
-          <div className="surface-head">
-            <div><h3>Admission criteria</h3><p>Per-branch, per-class eligibility rules enforced automatically on every application</p></div>
-            <button className="primary" style={{fontSize:11}}>+ Add criteria</button>
-          </div>
-          <div className="table-wrap">
-            <table className="premium-table">
-              <thead>
-                <tr><th>Branch</th><th>Class</th><th>Min marks</th><th>Entrance test</th><th>Age range</th><th>Gender policy</th><th>Interview</th><th>Seats</th><th>Fill %</th></tr>
-              </thead>
-              <tbody>
-                {(env.useMocks ? MOCK_CRITERIA : []).map(c => (
-                  <tr key={c.Id}>
-                    <td><b style={{fontSize:12}}>{c.BranchName}</b></td>
-                    <td>{c.ClassName}</td>
-                    <td><b style={{color:c.MinimumMarks>=70?"#7C3AED":"var(--text)"}}>{c.MinimumMarks}%</b></td>
-                    <td>{c.EntranceTestMinimum ? `${c.EntranceTestMinimum}%` : "—"}</td>
-                    <td>{c.MinimumAge ? `${c.MinimumAge}–${c.MaximumAge} yrs` : "—"}</td>
-                    <td>
-                      <span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,
-                                     background:c.GenderPolicy==="CO_EDUCATION"?"#EEF2FF":c.GenderPolicy==="BOYS_ONLY"?"#EFF6FF":"#FDF2F8",
-                                     color:c.GenderPolicy==="CO_EDUCATION"?"#6366F1":c.GenderPolicy==="BOYS_ONLY"?"#2563EB":"#DB2777"}}>
-                        {c.GenderPolicy==="CO_EDUCATION"?"Co-Ed":c.GenderPolicy==="BOYS_ONLY"?"Boys Only":"Girls Only"}
-                      </span>
-                    </td>
-                    <td>{c.InterviewRequired?"✓ Required":"—"}</td>
-                    <td>{c.Seats}</td>
-                    <td>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <div style={{width:50,height:6,borderRadius:999,background:"var(--surface-2)",overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${Math.round((c.Enrolled/c.Seats)*100)}%`,borderRadius:999,background:c.Enrolled/c.Seats>=0.9?"#EF4444":"#10B981"}}/>
-                        </div>
-                        <span style={{fontSize:11}}>{Math.round((c.Enrolled/c.Seats)*100)}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {phase === "criteria" && <AdmissionCriteriaPage />}
 
-      {/* ── WORKFLOW AUTOMATION ── */}
-      {phase==="workflow" && (
-        <div>
-          <div style={{padding:"14px 16px",background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)",border:"1px solid #C7D2FE",borderRadius:12,marginBottom:14,display:"flex",gap:12,alignItems:"flex-start"}}>
-            <Zap size={20} style={{color:"#6366F1",flexShrink:0,marginTop:2}}/>
-            <div>
-              <b style={{fontSize:13,color:"#6366F1",display:"block",marginBottom:4}}>AI-powered admission automation</b>
-              <p style={{fontSize:12,color:"#475569",margin:0,lineHeight:1.6}}>
-                Every application is evaluated automatically against criteria when submitted. The backend
-                (<code>/api/admissions/workflow/applications</code>) runs these checks in sequence and
-                sets the status without manual intervention. Manual override is always available for borderline cases.
-              </p>
-            </div>
-          </div>
-          <div className="surface">
-            <div className="surface-head"><h3>Automation rules</h3><p>Runs on every application submission — in order</p></div>
-            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:10}}>
-              {WORKFLOW_RULES.map((r,i)=>(
-                <div key={r.id} style={{padding:"14px 16px",borderRadius:12,border:"1px solid var(--line)",background:"var(--surface)",display:"flex",gap:14,alignItems:"flex-start"}}>
-                  <div style={{width:28,height:28,borderRadius:8,background:r.active?"#EEF2FF":"var(--surface-2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <span style={{fontSize:12,fontWeight:800,color:r.active?"#6366F1":"var(--muted)"}}>{i+1}</span>
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>{r.name}</div>
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      <code style={{fontSize:10,padding:"2px 8px",borderRadius:6,background:"#FFFBEB",color:"#D97706"}}>Trigger: {r.trigger}</code>
-                      <code style={{fontSize:10,padding:"2px 8px",borderRadius:6,background:"#EEF2FF",color:"#6366F1"}}>→ {r.action}</code>
-                      <code style={{fontSize:10,padding:"2px 8px",borderRadius:6,background:"var(--surface-2)",color:"var(--muted)"}}>if {r.condition}</code>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:r.active?"#ECFDF5":"var(--surface-2)",color:r.active?"#059669":"var(--muted)"}}>
-                      {r.active?"Active":"Disabled"}
-                    </span>
-                    <button style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid var(--line)",background:"var(--surface)",cursor:"pointer"}}
-                      onClick={()=>{}}>Toggle</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {phase === "workflow" && <section className="surface" style={{ padding: 24 }}>
+        <h3>Admission review process</h3>
+        <ol><li>Record an inquiry and create an application with its academic year and class section.</li><li>Upload the required documents and record entrance test or interview outcomes when required.</li><li>An authorized administrator reviews the application and chooses accept, reject or waitlist.</li><li>Acceptance validates eligibility and capacity, provisions student and guardian accounts and saves enrollment.</li></ol>
+        <p>Configure admission criteria in the Criteria tab. Decisions and notes are saved with each application.</p>
+      </section>}
 
       {/* ── NEW APPLICATION MODAL ── */}
       {newAppModal && (
@@ -577,30 +554,7 @@ export function AdmissionsPage() {
               <button className="icon-button" onClick={()=>setNewApp(false)}><X size={18}/></button>
             </div>
 
-            {/* Real-time criteria feedback */}
-            {criteriaCheck && (
-              <div style={{margin:"10px 20px 0",padding:"12px 14px",borderRadius:10,
-                            background:criteriaCheck.autoAccept?"#ECFDF5":!criteriaCheck.marks||!criteriaCheck.gender?"#FFF0F1":"#FFFBEB",
-                            border:`1px solid ${criteriaCheck.autoAccept?"#a7f3d0":!criteriaCheck.marks||!criteriaCheck.gender?"#fecdd3":"#fde68a"}`,
-                            fontSize:12}}>
-                {criteriaCheck.autoAccept ? (
-                  <><CheckCircle2 size={14} style={{display:"inline",marginRight:6,color:"#059669"}}/>
-                  <b style={{color:"#065f46"}}>Will be auto-accepted</b> — marks ≥ 80% + documents complete</>
-                ) : !criteriaCheck.marks ? (
-                  <><AlertTriangle size={14} style={{display:"inline",marginRight:6,color:"#EF4444"}}/>
-                  <b style={{color:"#B91C1C"}}>Will be auto-rejected</b> — marks ({marks}%) below minimum ({criteria?.MinimumMarks}%)</>
-                ) : !criteriaCheck.gender ? (
-                  <><AlertTriangle size={14} style={{display:"inline",marginRight:6,color:"#EF4444"}}/>
-                  <b style={{color:"#B91C1C"}}>Will be auto-rejected</b> — gender not eligible for {campuses.find((c:any)=>c.id===appForm.branchId)?.name}</>
-                ) : !criteriaCheck.seats ? (
-                  <><Clock size={14} style={{display:"inline",marginRight:6,color:"#D97706"}}/>
-                  <b style={{color:"#92400E"}}>Will be waitlisted</b> — class section is full</>
-                ) : (
-                  <><Clock size={14} style={{display:"inline",marginRight:6,color:"#D97706"}}/>
-                  <b style={{color:"#92400E"}}>Will go for review</b> — marks in range, pending principal approval</>
-                )}
-              </div>
-            )}
+            {criteria && <p style={{ padding: "12px 20px" }}>Minimum marks: {criteria.minimumMarks}%. Admission requires an authorized decision after the application is saved.</p>}
 
             <div className="human-form">
               <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>Applicant info</div>
@@ -641,6 +595,15 @@ export function AdmissionsPage() {
                     {filteredYears.map((y:any)=><option key={y.id} value={y.id}>{y.name}</option>)}
                   </select>
                 </label>
+                <label className="human-field"><span>Class section *</span>
+                  <select value={appForm.classSectionId} onChange={event => {
+                    const section = sections.find((item: any) => item.id === event.target.value);
+                    setAppForm(form => ({ ...form, classSectionId: event.target.value, classId: section?.gradeLevelId ?? "" }));
+                  }}>
+                    <option value="">Select class section</option>
+                    {filteredSections.map((section: any) => <option key={section.id} value={section.id}>{section.gradeLevelName} {section.name}</option>)}
+                  </select>
+                </label>
                 <label className="human-field"><span>Previous marks (%)</span><input type="number" min="0" max="100" value={appForm.previousMarks} onChange={afsf("previousMarks")} placeholder="e.g. 75"/></label>
               </div>
 
@@ -657,21 +620,12 @@ export function AdmissionsPage() {
                 <PkPhoneInput label="Guardian phone" value={appForm.guardianPhone} onChange={v => afsf("guardianPhone")({target:{value:v}} as any)}/>
               </div>
 
-              {/* Document upload */}
-              <div style={{marginTop:16,padding:"16px",background:"var(--surface-2)",borderRadius:12}}>
-                <DocumentUploader
-                  actorType="STUDENT"
-                  entityId={newAppId}
-                  tenantId={tid}
-                  title="Upload required documents"
-                  onComplianceChange={setDocComp}
-                />
-              </div>
+              <p>Save the application first, then upload its required documents from the application details.</p>
             </div>
 
             <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
               <button className="secondary" onClick={()=>setNewApp(false)}>Cancel</button>
-              <button className="primary" onClick={submitApplication} disabled={!appForm.firstName||!appForm.schoolId||!appForm.branchId||!appForm.guardianName||!appForm.gender}>
+              <button className="primary" onClick={submitApplication} disabled={processing || !appForm.firstName || !appForm.schoolId || !appForm.branchId || !appForm.guardianName || !appForm.gender || !appForm.classSectionId}>
                 Submit application
               </button>
             </div>
@@ -698,7 +652,7 @@ export function AdmissionsPage() {
             </div></div>
             <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
               <button className="secondary" onClick={()=>setNewInq(false)}>Cancel</button>
-              <button className="primary" onClick={submitInquiry} disabled={!inqForm.firstName||!inqForm.guardianName||!inqForm.guardianPhone}>Submit inquiry</button>
+              <button className="primary" onClick={submitInquiry} disabled={processing || !inqForm.firstName || !inqForm.guardianName || !inqForm.guardianPhone}>Submit inquiry</button>
             </div>
           </div>
         </div>
@@ -728,7 +682,14 @@ export function AdmissionsPage() {
           title="Application"
           item={viewAppItem}
           onClose={() => setEditAppId(null)}
-          onSave={async data => { await updApplication.mutateAsync({id: editAppId!, body: data}); setEditAppId(null); }}
+          onSave={async data => {
+            await api.put(`/api/admissions/workflow/applications/${editAppId}`, {
+              tenantId: tid, firstName: data.FirstName, lastName: data.LastName,
+              guardianName: data.GuardianName, guardianPhone: data.GuardianPhone,
+            });
+            setEditAppId(null);
+            await loadAdmissions();
+          }}
           fields={[
             { key: "FirstName", label: "First name", type: "text", required: true },
             { key: "LastName", label: "Last name", type: "text", required: true },
