@@ -130,7 +130,7 @@ api.interceptors.response.use(
       const original = err.config as (typeof err.config & { _smartSchoolRetry?: boolean }) | undefined;
       if (original && !original._smartSchoolRetry && !env.useMocks) {
         original._smartSchoolRetry = true;
-        const refreshedToken = await refreshAccessToken();
+        const refreshedToken =() => refreshAccessToken();
         if (refreshedToken) {
           original.headers = original.headers ?? {};
           original.headers.Authorization = `Bearer ${refreshedToken}`;
