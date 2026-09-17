@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
+import { env } from "../../../config/env";
 
 const DEMO_ROLES = [
   { role: "SuperAdmin",  email: "superadmin@smartschool.local",  label: "Super Admin",   icon: "🌐", color: "#6366F1", bg: "#EEF2FF" },
@@ -34,8 +35,8 @@ export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail]       = useState("superadmin@smartschool.local");
-  const [password, setPassword] = useState("ChangeMe@123456");
+  const [email, setEmail]       = useState(env.useMocks ? "superadmin@smartschool.local" : "");
+  const [password, setPassword] = useState(env.useMocks ? "demo" : "");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
   const [activeRole, setActiveRole] = useState("SuperAdmin");
@@ -53,7 +54,7 @@ export function LoginPage() {
   function pickRole(r: typeof DEMO_ROLES[0]) {
     setActiveRole(r.role);
     setEmail(r.email);
-    setPassword("ChangeMe@123456");
+    setPassword("demo");
     setError("");
   }
 
@@ -162,39 +163,42 @@ export function LoginPage() {
           {/* Header */}
           <div style={{ marginBottom:32 }}>
             <h2 style={{ fontSize:26, fontWeight:800, color:"#0F2241", margin:"0 0 6px", letterSpacing:-.5 }}>Welcome back</h2>
-            <p style={{ color:"#64748B", fontSize:14, margin:0 }}>Sign in or pick a demo role below.</p>
+            <p style={{ color:"#64748B", fontSize:14, margin:0 }}>{env.useMocks ? "Sign in or pick a demo role below." : "Sign in with your SmartSchool account."}</p>
           </div>
 
-          {/* Demo role grid */}
-          <div style={{ marginBottom:28 }}>
-            <div style={{ fontSize:10, fontWeight:700, color:"#94A3B8", letterSpacing:1.2, textTransform:"uppercase", marginBottom:12 }}>Quick demo access</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8 }}>
-              {DEMO_ROLES.map(r => {
-                const active = activeRole === r.role;
-                return (
-                  <button key={r.role} onClick={() => pickRole(r)}
-                    style={{
-                      display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                      padding:"14px 8px", border:`2px solid ${active ? r.color : "#E2E8F0"}`,
-                      borderRadius:14, background: active ? r.bg : "#fff",
-                      cursor:"pointer", transition:"all .15s", boxShadow: active ? `0 0 0 3px ${r.color}20` : "none",
-                    }}
-                    onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.borderColor = r.color; (e.currentTarget as HTMLElement).style.background = r.bg; } }}
-                    onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.borderColor = "#E2E8F0"; (e.currentTarget as HTMLElement).style.background = "#fff"; } }}>
-                    <span style={{ fontSize:22 }}>{r.icon}</span>
-                    <span style={{ fontSize:10, fontWeight:700, color: active ? r.color : "#475569", textAlign:"center", lineHeight:1.3 }}>{r.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {env.useMocks && (
+            <>
+              {/* Demo role grid — development/mock mode only. */}
+              <div style={{ marginBottom:28 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"#94A3B8", letterSpacing:1.2, textTransform:"uppercase", marginBottom:12 }}>Quick demo access</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8 }}>
+                  {DEMO_ROLES.map(r => {
+                    const active = activeRole === r.role;
+                    return (
+                      <button key={r.role} type="button" onClick={() => pickRole(r)}
+                        style={{
+                          display:"flex", flexDirection:"column", alignItems:"center", gap:6,
+                          padding:"14px 8px", border:`2px solid ${active ? r.color : "#E2E8F0"}`,
+                          borderRadius:14, background: active ? r.bg : "#fff",
+                          cursor:"pointer", transition:"all .15s", boxShadow: active ? `0 0 0 3px ${r.color}20` : "none",
+                        }}
+                        onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.borderColor = r.color; (e.currentTarget as HTMLElement).style.background = r.bg; } }}
+                        onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.borderColor = "#E2E8F0"; (e.currentTarget as HTMLElement).style.background = "#fff"; } }}>
+                        <span style={{ fontSize:22 }}>{r.icon}</span>
+                        <span style={{ fontSize:10, fontWeight:700, color: active ? r.color : "#475569", textAlign:"center", lineHeight:1.3 }}>{r.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {/* Divider */}
-          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
-            <div style={{ flex:1, height:1, background:"#E2E8F0" }}/>
-            <span style={{ color:"#94A3B8", fontSize:11, fontWeight:600 }}>or sign in with credentials</span>
-            <div style={{ flex:1, height:1, background:"#E2E8F0" }}/>
-          </div>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
+                <div style={{ flex:1, height:1, background:"#E2E8F0" }}/>
+                <span style={{ color:"#94A3B8", fontSize:11, fontWeight:600 }}>or sign in with credentials</span>
+                <div style={{ flex:1, height:1, background:"#E2E8F0" }}/>
+              </div>
+            </>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:16 }}>
@@ -210,7 +214,7 @@ export function LoginPage() {
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                 <label style={{ fontSize:12, fontWeight:600, color:"#374151" }}>Password</label>
-                <a href="#" style={{ fontSize:11, color:"#6366F1", fontWeight:600, textDecoration:"none" }}>Forgot password?</a>
+                <Link to="/forgot-password" style={{ fontSize:11, color:"#6366F1", fontWeight:600, textDecoration:"none" }}>Forgot password?</Link>
               </div>
               <input
                 type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password"
@@ -250,18 +254,14 @@ export function LoginPage() {
             </button>
           </form>
 
-          {/* Footer */}
-          <div style={{ marginTop:32, padding:"16px 18px", background:"#F1F5F9", borderRadius:12, border:"1px solid #E2E8F0" }}>
-            <div style={{ fontSize:11, fontWeight:700, color:"#475569", marginBottom:8, textTransform:"uppercase", letterSpacing:.8 }}>API mode</div>
-            <div style={{ fontSize:11, color:"#64748B", lineHeight:1.6 }}>
-              Currently in <code style={{ background:"#E2E8F0", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>
-                {(import.meta as any).env?.VITE_USE_MOCKS === "true" ? "MOCK" : "REAL API"}
-              </code> mode.{" "}
-              {(import.meta as any).env?.VITE_USE_MOCKS === "true"
-                ? "Set VITE_USE_MOCKS=false in .env for real backend."
-                : `API: ${(import.meta as any).env?.VITE_API_BASE_URL ?? "http://localhost:7001"}`}
+          {(env.useMocks || (import.meta as any).env?.DEV) && (
+            <div style={{ marginTop:32, padding:"16px 18px", background:"#F1F5F9", borderRadius:12, border:"1px solid #E2E8F0" }}>
+              <div style={{ fontSize:11, fontWeight:700, color:"#475569", marginBottom:8, textTransform:"uppercase", letterSpacing:.8 }}>Development API mode</div>
+              <div style={{ fontSize:11, color:"#64748B", lineHeight:1.6 }}>
+                {env.useMocks ? "Mock data is enabled." : `API: ${env.apiBaseUrl}`}
+              </div>
             </div>
-          </div>
+          )}
 
           <p style={{ textAlign:"center", color:"#94A3B8", fontSize:11, marginTop:24 }}>
             &copy; {new Date().getFullYear()} SmartSchool Aside · Enterprise School ERP

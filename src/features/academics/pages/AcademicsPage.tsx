@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { RealModulePage } from "../../../components/ui/RealModulePage";
 import { AcademicSetupPage } from "./AcademicSetupPage";
+import { TimetableOperationsPanel } from "./TimetableOperationsPanel";
 
 type AcademicWorkspace = "setup" | "subject" | "course-offering" | "teacher-assignment" | "timetable";
 
@@ -31,6 +32,8 @@ export function AcademicsPage() {
 
       {workspace === "setup" ? (
         <AcademicSetupPage embedded />
+      ) : workspace === "timetable" ? (
+        <TimetableOperationsPanel />
       ) : (
         <RealModulePage
           module="academics"

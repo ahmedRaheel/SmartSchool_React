@@ -132,7 +132,8 @@ export function StudentsPage() {
         lastName: form.lastName || undefined, dateOfBirth: form.dateOfBirth || undefined,
         gender: form.gender || undefined, admissionDate: form.admissionDate,
       });
-      const studentId = res?.id ?? `stu-mock-${Date.now()}`;
+      const studentId = res?.id;
+      if (!studentId) throw new Error("Student creation did not return an id.");
       const guardian: any = await createGuardian.mutateAsync({
         tenantId: tid,
         fullName: form.guardianName.trim(),

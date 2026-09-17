@@ -1,4 +1,5 @@
 import { DocumentSetupPanel } from "./DocumentSetupPanel";
+import { CertificateOperationsPanel } from "./CertificateOperationsPanel";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../core/api/ApiClient";
 import { documentApi } from "../api/documentApi";
@@ -21,7 +22,7 @@ const ACTOR_LABELS: Record<string, string> = {
 
 export function DocumentsPage() {
   const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
-  const [tab, setTab]           = useState<"upload"|"compliance"|"all"|"setup">("compliance");
+  const [tab, setTab]           = useState<"upload"|"compliance"|"all"|"setup"|"certificates">("compliance");
   const [entityType, setEntityType] = useState<EntityType>("STUDENT");
   const [entityId, setEntityId] = useState("");
   const [search, setSearch] = useState("");
@@ -77,9 +78,11 @@ export function DocumentsPage() {
         <button className={tab==="compliance"?"active":""} onClick={()=>setTab("compliance")}>📊 Compliance overview</button>
         <button className={tab==="upload"?"active":""} onClick={()=>setTab("upload")}>📤 Upload documents</button>
         <button className={tab==="all"?"active":""} onClick={()=>setTab("all")}>🗂 All documents</button>
+        <button className={tab === "certificates" ? "active" : ""} onClick={() => setTab("certificates")}>🏅 Certificates & letters</button>
         <button className={tab === "setup" ? "active" : ""} onClick={() => setTab("setup")}>Document setup</button>
       </div>
 
+      {tab === "certificates" && <CertificateOperationsPanel />}
       {tab === "setup" && <DocumentSetupPanel tenantId={tid}/>}
       {tab==="compliance" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>

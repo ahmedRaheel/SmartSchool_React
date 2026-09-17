@@ -66,6 +66,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
           { path: "/attendance",     label: "Attendance",          icon: CalendarCheck },
           { path: "/examinations",   label: "Examinations",        icon: ClipboardCheck },
           { path: "/learning",       label: "Assignments",         icon: FileCheck2 },
+          { path: "/academics",      label: "Academics & Timetable",icon: BookOpen },
         ],
       },
       {
@@ -79,7 +80,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
           { path: "/inventory",      label: "Inventory",           icon: Package },
           { path: "/activities",     label: "Activities",          icon: Star },
           { path: "/workflow",       label: "Workflow",            icon: Workflow },
-          { path: "/documents",      label: "Documents",           icon: FileText },
+          { path: "/documents",      label: "Documents & Certificates",           icon: FileText },
         ],
       },
       {
@@ -114,6 +115,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
           { path: "/attendance",     label: "Attendance",          icon: CalendarCheck },
           { path: "/examinations",   label: "Results & Exams",     icon: ClipboardCheck },
           { path: "/learning",       label: "Assignments",         icon: FileCheck2 },
+          { path: "/academics",      label: "Academics & Timetable",icon: BookOpen },
           { path: "/activities",     label: "Activities",          icon: Star },
           { path: "/admissions",     label: "Admissions",          icon: ClipboardCheck },
         ],
@@ -126,6 +128,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
           { path: "/audit",          label: "Audit Logs",          icon: ShieldCheck },
           { path: "/communication",  label: "Communication",       icon: MessageCircle },
           { path: "/workflow",       label: "Approvals",           icon: Workflow },
+          { path: "/documents",      label: "Documents & Certificates", icon: FileText },
         ],
       },
     ],
@@ -150,6 +153,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
           { path: "/attendance",     label: "Attendance",          icon: CalendarCheck },
           { path: "/examinations",   label: "Examinations",        icon: ClipboardCheck },
           { path: "/learning",       label: "Assignments",         icon: FileCheck2 },
+          { path: "/academics",      label: "Academics & Timetable",icon: BookOpen },
         ],
       },
       {
@@ -163,6 +167,7 @@ const MENUS: Record<string, { title: string; sections: NavigationSection[] }> = 
           { path: "/inventory",      label: "Inventory",           icon: Package },
           { path: "/activities",     label: "Activities",          icon: Star },
           { path: "/workflow",       label: "Workflow",            icon: Workflow },
+          { path: "/documents",      label: "Documents & Certificates", icon: FileText },
           { path: "/audit",          label: "Audit Logs",          icon: ShieldCheck },
         ],
       },

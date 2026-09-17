@@ -77,6 +77,9 @@ export type Permission =
 
   // Examinations
   | "exams.manage"
+  | "exams.create"
+  | "exams.tasks.assign"
+  | "exams.tasks.update"
   | "exams.enter.marks"
   | "exams.publish"
   | "exams.view.all"
@@ -145,10 +148,10 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "hr.list", "hr.view", "hr.create", "hr.edit", "hr.delete",
     "hr.leave.manage", "hr.leave.approve",
     "payroll.view", "payroll.run",
-    "finance.invoices.list", "finance.invoices.create", "finance.invoices.manage",
-    "finance.fees.manage", "finance.payments.record", "finance.waiver.approve",
+    "finance.invoices.list", "finance.invoices.manage",
+    "finance.fees.manage", "finance.waiver.approve",
     "attendance.mark", "attendance.view.class", "attendance.view.all", "attendance.edit",
-    "exams.manage", "exams.enter.marks", "exams.publish", "exams.view.all", "exams.gradescale.manage",
+    "exams.view.all", "exams.gradescale.manage",
     "learning.assignments.create", "learning.assignments.view.all", "learning.submissions.grade",
     "learning.lessons.manage",
     "audit.view",
@@ -171,10 +174,10 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "hr.list", "hr.view", "hr.create", "hr.edit", "hr.delete",
     "hr.leave.manage", "hr.leave.approve",
     "payroll.view", "payroll.run",
-    "finance.invoices.list", "finance.invoices.create", "finance.invoices.manage",
-    "finance.fees.manage", "finance.payments.record", "finance.waiver.approve",
+    "finance.invoices.list", "finance.invoices.manage",
+    "finance.fees.manage", "finance.waiver.approve",
     "attendance.mark", "attendance.view.class", "attendance.view.all", "attendance.edit",
-    "exams.manage", "exams.enter.marks", "exams.publish", "exams.view.all", "exams.gradescale.manage",
+    "exams.view.all", "exams.gradescale.manage",
     "learning.assignments.create", "learning.assignments.view.all", "learning.submissions.grade",
     "learning.lessons.manage",
     "audit.view",
@@ -205,7 +208,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Attendance — view all, NO mark (teacher marks), can edit corrections
     "attendance.view.class", "attendance.view.all", "attendance.edit",
     // Exams & Results — view all, publish results — NO add/delete
-    "exams.view.all", "exams.publish", "exams.gradescale.manage",
+    "exams.view.all", "exams.gradescale.manage",
     // Learning — view all assignments/submissions — NO create/delete
     "learning.assignments.view.all",
     // Audit — view only (system-written, no one can add)
@@ -229,7 +232,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "students.list", "students.view", "students.create", "students.edit",
     "hr.list", "hr.view", "hr.leave.approve",
     "payroll.view",
-    "finance.invoices.list", "finance.invoices.create", "finance.payments.record",
+    "finance.invoices.list",
     "attendance.view.all", "attendance.mark", "attendance.edit",
     "exams.view.all",
     "learning.assignments.view.all",
@@ -254,8 +257,8 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "payroll.own.view",
     // Attendance — mark own class only
     "attendance.mark", "attendance.view.class",
-    // Exams — enter marks + view results (no manage/publish)
-    "exams.enter.marks", "exams.view.all",
+    // Exams — teachers update only examiner-assigned subject tasks.
+    "exams.tasks.update", "exams.view.all",
     // Assignments — full control of own assignments
     "learning.assignments.create", "learning.assignments.view.all",
     "learning.submissions.grade", "learning.lessons.manage",
@@ -339,7 +342,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   Examiner: [
     "school.reports.view", "school.notifications.view",
     "students.list", "students.view",
-    "exams.manage", "exams.enter.marks", "exams.publish", "exams.view.all", "exams.gradescale.manage",
+    "exams.manage", "exams.create", "exams.tasks.assign", "exams.publish", "exams.view.all", "exams.gradescale.manage",
     "hr.own.view", "hr.leave.apply", "payroll.own.view",
     "ai.assistant", "ai.predictions.run",
     "communication.messages",
@@ -357,7 +360,7 @@ export function normaliseRole(raw: string): Role {
   if (r === "student")                                            return "Student";
   if (r === "parent" || r === "guardian")                         return "Parent";
   if (r === "driver")                                             return "Driver";
-  if (r === "accountant")                                         return "Accountant";
+  if (r === "accountant" || r === "financeofficer" || r === "finance officer")                                         return "Accountant";
   if (r === "hrmanager" || r === "hr")                            return "HRManager";
   if (r === "librarian")                                          return "Librarian";
   if (r === "examiner")                                           return "Examiner";

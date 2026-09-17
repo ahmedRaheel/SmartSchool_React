@@ -1,256 +1,174 @@
-import { RowActions } from "../../../components/ui/RowActions";
-import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
-import { EditModal } from "../../../components/ui/EditModal";
-import { ViewDrawer } from "../../../components/ui/ViewDrawer";
-import { useState, useMemo } from "react";
-import { DollarSign, Plus, Search, X, CheckCircle2, FileText, Briefcase } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BadgeDollarSign, CalendarDays, CheckCircle2, FileText, Play, Search, UserRound, WalletCards, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { StatCard }   from "../../../components/ui/StatCard";
-import { useEmployees, usePayrollRuns, useCreatePayrollRun, useSalaryStructures, usePayslips , useUpdatePayrollRun, useDeletePayrollRun, usePayrollRunById} from "../../../core/api/queries";
+import { StatCard } from "../../../components/ui/StatCard";
+import { useEmployees } from "../../../core/api/queries";
+import { operationalApi } from "../../../core/api/operationalApi";
+import { toItems } from "../../../core/utils/dataHelpers";
+import { usePermissions } from "../../../core/rbac/usePermissions";
 import { useAuth } from "../../auth/auth";
 import { effectiveTenantId } from "../../../core/tenant/tenantContext";
-import { Pagination } from "../../../components/ui/Pagination";
 
-const pkr = (n?: number) => n !== undefined ? `PKR ${Number(n).toLocaleString()}` : "—";
-const SALARY_MAP: Record<string,number> = {
-  TEACHER:29000, PRINCIPAL:85000, ADMIN_OFFICER:45000, ACCOUNTANT:55000,
-  DRIVER:22000, HR:40000, LIBRARIAN:30000, TRANSPORT:25000, OTHER:20000,
-};
+const pkr = (value: number) => new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 }).format(Number(value || 0));
+const monthName = (year: number, month: number) => new Date(year, month - 1, 1).toLocaleDateString("en-PK", { month: "long", year: "numeric" });
 
 export function PayrollPage() {
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
-  const pagedList = (lst: any[]) => lst.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
   const { user } = useAuth();
-  const updPayrollRun = useUpdatePayrollRun();
-  const delPayrollRun = useDeletePayrollRun();
-  const [editRunId, setEditRunId] = useState<string|null>(null);
-  const [viewRunId, setViewRunId] = useState<string|null>(null); const tid = effectiveTenantId(user) ?? "";
-  const viewRunOrEdit = viewRunId ?? editRunId;
-  const { data: viewRunData } = usePayrollRunById(viewRunOrEdit ?? undefined);
-    const viewRunItem: any = viewRunData ?? null;
-
-  const [tab, setTab] = useState<"register"|"runs"|"payslips">("register");
+  const permissions = usePermissions();
+  const tenantId = effectiveTenantId(user) ?? "";
+  const queryClient = useQueryClient();
+  const canRun = permissions.can("payroll.run");
+  const [tab, setTab] = useState<"compensation" | "runs" | "payslips">("compensation");
   const [search, setSearch] = useState("");
+  const [compModal, setCompModal] = useState(false);
   const [runModal, setRunModal] = useState(false);
-  const [runForm, setRunForm] = useState({ period:"", notes:"" });
-  const [error, setError] = useState("");
-  const [runSuccess, setRunSuccess] = useState(false);
+  const now = new Date();
+  const [compForm, setCompForm] = useState({ employeeId: "", jobGradeId: "", effectiveFrom: now.toISOString().slice(0, 10), basicSalary: "", grossSalary: "", currencyCode: "PKR" });
+  const [runForm, setRunForm] = useState({ year: String(now.getFullYear()), month: String(now.getMonth() + 1) });
 
-  const { data: empData } = useEmployees();
-  const { data: runsData } = usePayrollRuns();
-  const { data: slipsData } = usePayslips();
-  const createRun = useCreatePayrollRun();
+  const dashboard = useQuery({
+    queryKey: ["payroll-operations", tenantId],
+    queryFn: () => operationalApi.payroll.dashboard(tenantId),
+    enabled: Boolean(tenantId),
+  });
+  const { data: employeeData } = useEmployees(1, compModal);
+  const employees = toItems(employeeData);
 
-  const employees = toItems(empData);
-  const runs      = toItems(runsData);
-  const slips     = toItems(slipsData);
+  const saveCompensation = useMutation({
+    mutationFn: () => operationalApi.payroll.saveCompensation({
+      tenantId,
+      employeeId: compForm.employeeId,
+      jobGradeId: compForm.jobGradeId || null,
+      effectiveFrom: compForm.effectiveFrom,
+      basicSalary: Number(compForm.basicSalary),
+      grossSalary: compForm.grossSalary ? Number(compForm.grossSalary) : null,
+      currencyCode: compForm.currencyCode.toUpperCase(),
+    }),
+    onSuccess: async () => {
+      setCompModal(false);
+      setCompForm({ employeeId: "", jobGradeId: "", effectiveFrom: now.toISOString().slice(0, 10), basicSalary: "", grossSalary: "", currencyCode: "PKR" });
+      await queryClient.invalidateQueries({ queryKey: ["payroll-operations", tenantId] });
+    },
+  });
 
-  const activeEmployees = employees.filter((e:any) => e.status === "ACTIVE");
+  const createRun = useMutation({
+    mutationFn: () => operationalApi.payroll.createRun({ tenantId, year: Number(runForm.year), month: Number(runForm.month) }),
+    onSuccess: async () => {
+      setRunModal(false);
+      setTab("runs");
+      await queryClient.invalidateQueries({ queryKey: ["payroll-operations", tenantId] });
+    },
+  });
 
-  const filtered = useMemo(() =>
-    activeEmployees.filter((e:any) =>
-      `${e.firstName} ${e.lastName} ${e.staffType} ${e.employeeNumber}`.toLowerCase().includes(search.toLowerCase())
-    ), [activeEmployees, search]);
+  const approveRun = useMutation({
+    mutationFn: (runId: string) => operationalApi.payroll.approveRun(tenantId, runId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll-operations", tenantId] }),
+  });
 
-  const totalPayroll = filtered.reduce((acc:number, e:any) => acc + (SALARY_MAP[e.staffType] ?? 20000), 0);
-  const teacherTotal = filtered.filter((e:any)=>e.staffType==="TEACHER").reduce((acc:number,e:any)=>acc+(SALARY_MAP[e.staffType]??20000),0);
-
-  async function runPayroll() {
-    if (!runForm.period) { setError("Period required (e.g. August 2026)"); return; }
-    try {
-      await createRun.mutateAsync({ tenantId:tid, name:`Payroll Run — ${runForm.period}`, metadataJson:JSON.stringify({ period:runForm.period, notes:runForm.notes, totalAmount:totalPayroll, employeeCount:activeEmployees.length, status:"COMPLETED", runAt:new Date().toISOString() }) });
-      setRunSuccess(true);
-    } catch(e:any) { setError(e?.message??"Failed"); }
-  }
+  const compensations = dashboard.data?.compensations ?? [];
+  const runs = dashboard.data?.runs ?? [];
+  const payslips = dashboard.data?.payslips ?? [];
+  const activeCompensations = compensations.filter(item => !item.effectiveTo && item.status.toUpperCase() === "ACTIVE");
+  const monthlyGross = activeCompensations.reduce((sum, item) => sum + Number(item.grossSalary), 0);
+  const latestRun = runs[0];
+  const latestPayslipNet = payslips.filter(item => !latestRun || item.runId === latestRun.runId).reduce((sum, item) => sum + Number(item.netAmount), 0);
+  const term = search.trim().toLowerCase();
+  const filteredComp = compensations.filter(item => `${item.employeeName} ${item.employeeNumber} ${item.status}`.toLowerCase().includes(term));
+  const filteredRuns = runs.filter(item => `${item.year} ${item.month} ${item.status}`.toLowerCase().includes(term));
+  const filteredPayslips = payslips.filter(item => `${item.employeeName} ${item.employeeNumber} ${item.year} ${item.month} ${item.runStatus}`.toLowerCase().includes(term));
 
   return (
     <>
-      <PageHeader title="Payroll" subtitle="Monthly payroll management, salary structures and payslips"
-        action={<div className="page-actions">
-          {tab==="register" && <button className="primary" onClick={()=>{setRunModal(true);setError("");setRunSuccess(false);}}>
-            <DollarSign size={14}/> Run payroll
-          </button>}
-        </div>}
+      <PageHeader
+        title="Payroll"
+        subtitle="Effective compensation, payroll runs and persisted payslips"
+        action={canRun ? (
+          <div className="page-actions">
+            <button className="secondary" onClick={() => setCompModal(true)}><BadgeDollarSign size={14} /> Set compensation</button>
+            <button className="primary" onClick={() => setRunModal(true)}><Play size={14} /> Run payroll</button>
+          </div>
+        ) : undefined}
       />
-      <section className="metric-grid" style={{marginBottom:20}}>
-        <StatCard label="Active staff"    value={String(activeEmployees.length)} note="" color="#0F2241" bg="#EEF2FF"><Briefcase size={20}/></StatCard>
-        <StatCard label="Est. payroll"    value={pkr(totalPayroll)}              note="This month"    color="#10B981" bg="#ECFDF5"><DollarSign size={20}/></StatCard>
-        <StatCard label="Teaching staff"  value={String(filtered.filter((e:any)=>e.staffType==="TEACHER").length)} note={pkr(teacherTotal)} color="#2563EB" bg="#EFF6FF"><DollarSign size={20}/></StatCard>
-        <StatCard label="Payroll runs"    value={String(runs.length)} note="Total" color="#8B5CF6" bg="#F5F3FF"><CheckCircle2 size={20}/></StatCard>
+
+      <section className="metric-grid" style={{ marginBottom: 20 }}>
+        <StatCard label="Active compensation" value={String(activeCompensations.length)} note="employees configured" color="#2563EB" bg="#EFF6FF"><UserRound size={20} /></StatCard>
+        <StatCard label="Monthly gross" value={pkr(monthlyGross)} note="current compensation" color="#4F46E5" bg="#EEF2FF"><BadgeDollarSign size={20} /></StatCard>
+        <StatCard label="Payroll runs" value={String(runs.length)} note={latestRun ? monthName(latestRun.year, latestRun.month) : "none yet"} color="#D97706" bg="#FFFBEB"><CalendarDays size={20} /></StatCard>
+        <StatCard label="Latest net payroll" value={pkr(latestPayslipNet)} note={`${latestRun?.employeeCount ?? 0} employees`} color="#059669" bg="#ECFDF5"><WalletCards size={20} /></StatCard>
       </section>
 
-      <div className="section-tabs" style={{marginBottom:14}}>
-        <button className={tab==="register"?"active":""} onClick={()=>setTab("register")}>👥 Payroll register ({activeEmployees.length})</button>
-        <button className={tab==="runs"?"active":""} onClick={()=>setTab("runs")}>⚙️ Payroll runs ({runs.length})</button>
-        <button className={tab==="payslips"?"active":""} onClick={()=>setTab("payslips")}>📄 Payslips</button>
+      <div className="section-tabs">
+        <button className={tab === "compensation" ? "active" : ""} onClick={() => setTab("compensation")}>👥 Compensation ({compensations.length})</button>
+        <button className={tab === "runs" ? "active" : ""} onClick={() => setTab("runs")}>⚙ Payroll runs ({runs.length})</button>
+        <button className={tab === "payslips" ? "active" : ""} onClick={() => setTab("payslips")}>📄 Payslips ({payslips.length})</button>
       </div>
 
-      {tab==="register" && (
-        <div className="surface">
-          <div className="surface-head">
-            <label className="search-box" style={{maxWidth:280}}>
-              <Search size={14}/>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search staff…"/>
-            </label>
-            <div style={{fontSize:12,color:"var(--muted)"}}>Est. total: <b style={{color:"#10B981"}}>{pkr(totalPayroll)}</b></div>
-          </div>
-          <div className="table-wrap">
-            <table className="premium-table">
-              <thead><tr><th>Employee</th><th>Number</th><th>Role</th><th>Type</th><th>Est. salary (PKR)</th><th>Status</th>
-                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
-              <tbody>
-                {filtered.length===0
-                  ? <tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--muted)"}}>No active staff. Add employees in the HR module.</td></tr>
-                  : filtered.map((e:any) => (
-                    <tr key={e.id}>
-                      <td>
-                        <div className="person-cell">
-                          <span className="row-avatar" style={{background:"#EEF2FF",color:"#6366F1"}}>{e.firstName[0]}{e.lastName?.[0]??""}</span>
-                          <div><b>{e.firstName} {e.lastName??""}</b><div style={{fontSize:10,color:"var(--muted)"}}>{e.jobTitle??e.staffType}</div></div>
-                        </div>
-                      </td>
-                      <td><code style={{fontSize:11}}>{e.employeeNumber??"—"}</code></td>
-                      <td><span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"#EEF2FF",color:"#6366F1",fontWeight:700}}>{e.staffType}</span></td>
-                      <td style={{fontSize:11}}>{e.employmentTypeCode}</td>
-                      <td><b>{pkr(SALARY_MAP[e.staffType]??20000)}</b></td>
-                      <td><span className={`status-pill ${e.status==="ACTIVE"?"success":"gray"}`}>{e.status}</span></td>
-<td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                              <RowActions
-                                onView={() => setViewRunId(e.id)}
-                                onEdit={() => { setEditRunId(viewRunId!); setViewRunId(null); }}
-                                onDelete={() => delPayrollRun.mutate(e.id)}
-                                deleteLabel="record"
-                                
-                              />
-                            </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="table-footer">
-            <span>{filtered.length} employees · Est. total: <b>{pkr(totalPayroll)}</b>/month</span>
-          </div>
+      <div className="surface">
+        <div className="surface-head">
+          <div className="surface-head-left"><h3>{tab === "compensation" ? "Employee compensation" : tab === "runs" ? "Payroll run history" : "Payslip register"}</h3><p>{tab === "compensation" ? "Effective-dated salary source used for payroll generation." : tab === "runs" ? "Monthly payroll snapshots and approval status." : "Persisted employee payroll results."}</p></div>
+          <label className="search-box" style={{ maxWidth: 300 }}><Search size={14} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search employee, period or status…" /></label>
         </div>
-      )}
 
-      {tab==="runs" && (
-        <div className="surface">
-          <div className="surface-head"><h3>Payroll run history</h3></div>
-          <div className="table-wrap">
-            <table className="premium-table">
-              <thead><tr><th>Run</th><th>Period</th><th>Employees</th><th>Total (PKR)</th><th>Status</th><th>Run at</th>
-                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
-              <tbody>
-                {runs.length===0
-                  ? <tr><td colSpan={6} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No payroll runs yet. Click "Run payroll" to begin.</td></tr>
-                  : runs.map((r:any)=>{ const m=parseMeta(r.metadataJson); return (
-                    <tr key={r.id}>
-                      <td><b style={{fontSize:12}}>{r.name}</b></td>
-                      <td>{m.period??"—"}</td>
-                      <td>{m.employeeCount??"—"}</td>
-                      <td><b>{pkr(m.totalAmount)}</b></td>
-                      <td><span className={`status-pill ${m.status==="COMPLETED"?"success":"warning"}`}>{m.status??"PENDING"}</span></td>
-                      <td style={{fontSize:11,color:"var(--muted)"}}>{m.runAt?new Date(m.runAt).toLocaleString():"—"}</td>
-                    </tr>
-                  );})}
-              </tbody>
-            </table>
+        {dashboard.isLoading ? <div className="empty-state"><b>Loading payroll…</b></div> : tab === "compensation" ? (
+          filteredComp.length === 0 ? <div className="empty-state"><BadgeDollarSign size={34} /><b>No compensation configured</b><p>Set effective compensation before creating a payroll run.</p></div> : (
+            <div className="table-wrap sticky-head"><table className="premium-table">
+              <thead><tr><th>Employee</th><th>Number</th><th>Effective from</th><th>Basic salary</th><th>Gross salary</th><th>Currency</th><th>Status</th></tr></thead>
+              <tbody>{filteredComp.map(item => <tr key={item.compensationId}>
+                <td><b>{item.employeeName}</b></td><td><code style={{ fontSize: 11 }}>{item.employeeNumber}</code></td><td>{new Date(`${item.effectiveFrom}T00:00:00`).toLocaleDateString("en-PK")}</td><td>{pkr(item.basicSalary)}</td><td><b>{pkr(item.grossSalary)}</b></td><td>{item.currencyCode}</td><td><span className={`status-pill ${item.status.toUpperCase() === "ACTIVE" ? "success" : "gray"}`}>{item.status}</span></td>
+              </tr>)}</tbody>
+            </table></div>
+          )
+        ) : tab === "runs" ? (
+          filteredRuns.length === 0 ? <div className="empty-state"><CalendarDays size={34} /><b>No payroll runs</b><p>Run payroll after employee compensation is configured.</p></div> : (
+            <div className="table-wrap sticky-head"><table className="premium-table">
+              <thead><tr><th>Period</th><th>Employees</th><th>Gross</th><th>Net</th><th>Created</th><th>Status</th>{canRun && <th style={{ textAlign: "right" }}>Action</th>}</tr></thead>
+              <tbody>{filteredRuns.map(run => <tr key={run.runId}>
+                <td><b>{monthName(run.year, run.month)}</b></td><td>{run.employeeCount}</td><td>{pkr(run.grossAmount)}</td><td><b>{pkr(run.netAmount)}</b></td><td>{new Date(run.createdAt).toLocaleString("en-PK")}</td><td><span className={`status-pill ${run.status.toUpperCase() === "APPROVED" ? "success" : "warning"}`}>{run.status}</span></td>
+                {canRun && <td style={{ textAlign: "right" }}>{run.status.toUpperCase() !== "APPROVED" && <button className="soft-button" disabled={approveRun.isPending} onClick={() => approveRun.mutate(run.runId)}><CheckCircle2 size={13} /> Approve</button>}</td>}
+              </tr>)}</tbody>
+            </table></div>
+          )
+        ) : (
+          filteredPayslips.length === 0 ? <div className="empty-state"><FileText size={34} /><b>No payslips generated</b><p>Creating a payroll run snapshots employee payroll records.</p></div> : (
+            <div className="table-wrap sticky-head"><table className="premium-table">
+              <thead><tr><th>Employee</th><th>Number</th><th>Period</th><th>Gross</th><th>Deductions</th><th>Net</th><th>Run status</th></tr></thead>
+              <tbody>{filteredPayslips.map(item => <tr key={item.employeePayrollId}>
+                <td><b>{item.employeeName}</b></td><td><code style={{ fontSize: 11 }}>{item.employeeNumber}</code></td><td>{monthName(item.year, item.month)}</td><td>{pkr(item.grossAmount)}</td><td>{pkr(item.deductionAmount)}</td><td><b style={{ color: "var(--success)" }}>{pkr(item.netAmount)}</b></td><td><span className={`status-pill ${item.runStatus.toUpperCase() === "APPROVED" ? "success" : "warning"}`}>{item.runStatus}</span></td>
+              </tr>)}</tbody>
+            </table></div>
+          )
+        )}
+      </div>
+
+      {compModal && (
+        <div className="modal-backdrop" onClick={event => event.target === event.currentTarget && setCompModal(false)}>
+          <div className="modal-card" style={{ width: "min(650px,96vw)" }}>
+            <div className="modal-head"><div><h2>Set employee compensation</h2><p>A new effective-dated record becomes the payroll source.</p></div><button className="icon-button" onClick={() => setCompModal(false)}><X size={18} /></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field field-wide"><span>Employee *</span><select value={compForm.employeeId} onChange={event => setCompForm(current => ({ ...current, employeeId: event.target.value }))}><option value="">Select active employee</option>{employees.map((employee: any) => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName ?? ""} ({employee.employeeNumber ?? employee.id.slice(-6)})</option>)}</select></label>
+              <label className="human-field"><span>Effective from *</span><input type="date" value={compForm.effectiveFrom} onChange={event => setCompForm(current => ({ ...current, effectiveFrom: event.target.value }))} /></label>
+              <label className="human-field"><span>Currency</span><input maxLength={3} value={compForm.currencyCode} onChange={event => setCompForm(current => ({ ...current, currencyCode: event.target.value.toUpperCase() }))} /></label>
+              <label className="human-field"><span>Basic salary *</span><input type="number" min="1" value={compForm.basicSalary} onChange={event => setCompForm(current => ({ ...current, basicSalary: event.target.value }))} /></label>
+              <label className="human-field"><span>Gross salary</span><input type="number" min={compForm.basicSalary || "1"} value={compForm.grossSalary} onChange={event => setCompForm(current => ({ ...current, grossSalary: event.target.value }))} placeholder="Defaults to basic" /></label>
+            </div></div>
+            <div className="modal-actions"><button className="secondary" onClick={() => setCompModal(false)}>Cancel</button><button className="primary" disabled={!compForm.employeeId || !compForm.effectiveFrom || Number(compForm.basicSalary) <= 0 || saveCompensation.isPending} onClick={() => saveCompensation.mutate()}>{saveCompensation.isPending ? "Saving…" : "Save compensation"}</button></div>
           </div>
-        </div>
-      )}
-
-      {tab==="payslips" && (
-        <div className="surface">
-          <div className="surface-head"><h3>Payslips</h3><p>Generated payslips per employee per period</p></div>
-          {slips.length===0 ? (
-            <div style={{padding:48,textAlign:"center",color:"var(--muted)"}}>
-              <FileText size={36} style={{margin:"0 auto 12px",display:"block",opacity:.3}}/>
-              <b>No payslips generated yet</b>
-              <p style={{fontSize:12,margin:"8px 0 0"}}>Run a payroll to generate payslips for all active staff.</p>
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table className="premium-table">
-                <thead><tr><th>Employee</th><th>Period</th><th>Amount (PKR)</th>
-                    <th style={{ textAlign: "right", width: 1 }}>Actions</th></tr></thead>
-                <tbody>{slips.map((s:any)=>{ const m=parseMeta(s.metadataJson); return <tr key={s.id}><td><b>{s.name}</b></td><td>{m.period??"—"}</td><td><b>{pkr(m.amount)}</b></td></tr>;})}</tbody>
-              </table>
-            </div>
-          )}
         </div>
       )}
 
       {runModal && (
-        <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget){setRunModal(false);setRunSuccess(false);}}}>
-          <div className="modal-card" style={{width:"min(460px,96vw)"}}>
-            <div className="modal-head"><h2>Run payroll</h2><button className="icon-button" onClick={()=>{setRunModal(false);setRunSuccess(false);}}><X size={18}/></button></div>
-            {runSuccess ? (
-              <div style={{padding:32,textAlign:"center"}}>
-                <CheckCircle2 size={48} style={{color:"#059669",margin:"0 auto 12px",display:"block"}}/>
-                <b style={{fontSize:16,color:"#059669"}}>Payroll processed!</b>
-                <p style={{fontSize:12,color:"var(--muted)",margin:"8px 0 16px"}}>{activeEmployees.length} payslips generated for {runForm.period}.</p>
-                <div style={{padding:"12px 16px",background:"#ECFDF5",borderRadius:10,fontSize:13,fontWeight:700,color:"#059669"}}>Total: {pkr(totalPayroll)}</div>
-                <button className="primary" style={{marginTop:16,width:"100%"}} onClick={()=>{setRunModal(false);setRunSuccess(false);setTab("runs");}}>View payroll runs →</button>
-              </div>
-            ) : (
-              <>
-                <div className="human-form">
-                  <div style={{padding:"12px 14px",background:"var(--surface-2)",borderRadius:10,marginBottom:14,fontSize:12}}>
-                    <b>{activeEmployees.length} active employees</b> · Est. total: <b style={{color:"#10B981"}}>{pkr(totalPayroll)}</b>
-                  </div>
-                  <div className="human-form-grid">
-                    <label className="human-field field-wide"><span>Payroll period *</span>
-                      <input value={runForm.period} onChange={e=>setRunForm(p=>({...p,period:e.target.value}))} placeholder="e.g. August 2026"/>
-                    </label>
-                    <label className="human-field field-wide"><span>Notes</span>
-                      <input value={runForm.notes} onChange={e=>setRunForm(p=>({...p,notes:e.target.value}))} placeholder="Optional notes"/>
-                    </label>
-                  </div>
-                  {error && <div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
-                </div>
-                <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>
-                  <button className="secondary" onClick={()=>setRunModal(false)}>Cancel</button>
-                  <button className="primary" onClick={runPayroll} disabled={createRun.isPending}>{createRun.isPending?"Processing…":"✓ Process payroll"}</button>
-                </div>
-              </>
-            )}
+        <div className="modal-backdrop" onClick={event => event.target === event.currentTarget && setRunModal(false)}>
+          <div className="modal-card" style={{ width: "min(520px,96vw)" }}>
+            <div className="modal-head"><div><h2>Run payroll</h2><p>Creates an immutable payroll snapshot for the selected month.</p></div><button className="icon-button" onClick={() => setRunModal(false)}><X size={18} /></button></div>
+            <div className="human-form"><div className="human-form-grid">
+              <label className="human-field"><span>Year *</span><input type="number" min="2000" max="2200" value={runForm.year} onChange={event => setRunForm(current => ({ ...current, year: event.target.value }))} /></label>
+              <label className="human-field"><span>Month *</span><select value={runForm.month} onChange={event => setRunForm(current => ({ ...current, month: event.target.value }))}>{Array.from({ length: 12 }, (_, index) => index + 1).map(month => <option key={month} value={month}>{new Date(2026, month - 1, 1).toLocaleDateString("en-PK", { month: "long" })}</option>)}</select></label>
+              <div className="field-wide" style={{ padding: "12px 14px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--line)", fontSize: 12 }}>Configured employees: <b>{activeCompensations.length}</b> · Current gross basis: <b>{pkr(monthlyGross)}</b></div>
+            </div></div>
+            <div className="modal-actions"><button className="secondary" onClick={() => setRunModal(false)}>Cancel</button><button className="primary" disabled={activeCompensations.length === 0 || createRun.isPending} onClick={() => createRun.mutate()}>{createRun.isPending ? "Processing…" : "Create payroll run"}</button></div>
           </div>
         </div>
-      )}
-
-      {viewRunId && viewRunItem && (
-        <ViewDrawer title="Payroll run" item={viewRunItem} onClose={() => setViewRunId(null)}
-          fields={[
-            { key: "name",      label: "Run name", wide: true },
-            { key: "month",     label: "Month" },
-            { key: "year",      label: "Year" },
-            { key: "totalGross",label: "Gross total" },
-            { key: "totalNet",  label: "Net total" },
-            { key: "status",    label: "Status" },
-          ]} />
-      )}
-
-      <Pagination page={page} pageSize={PAGE_SIZE} total={runs.length} onPage={setPage} label="payroll runs"/>
-
-      {editRunId && viewRunItem && (
-        <EditModal
-          title="Payroll Run"
-          item={viewRunItem}
-          onClose={() => setEditRunId(null)}
-          onSave={async data => {
-            await updPayrollRun.mutateAsync({ id: editRunId!, body: data });
-            setEditRunId(null);
-          }}
-          fields={[
-            { key:"name",        label:"Run name",     required:true, wide:true },
-            { key:"periodStart", label:"Period start",  type:"date"             },
-            { key:"periodEnd",   label:"Period end",    type:"date"             },
-            { key:"status",      label:"Status",        type:"select", options:[{value:"DRAFT",label:"Draft"},{value:"PROCESSING",label:"Processing"},{value:"COMPLETED",label:"Completed"},{value:"PAID",label:"Paid"}] },
-            { key:"notes",       label:"Notes",         wide:true               },
-          ]}
-        />
       )}
     </>
   );

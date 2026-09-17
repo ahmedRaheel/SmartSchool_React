@@ -5,7 +5,7 @@
 import { useState, useMemo } from "react";
 import { parseMeta, toItems } from "../../../../core/utils/dataHelpers";
 import { Plus, X, BookMarked, Search } from "lucide-react";
-import { useAcademicSystems, useCreateAcademicSystem } from "../../../../core/api/queries";
+import { useAcademicSystems, useCreateAcademicSystem, useDeleteAcademicSystem, useUpdateAcademicSystem } from "../../../../core/api/queries";
 import { useAuth } from "../../../auth/auth";
 import { effectiveTenantId } from "../../../../core/tenant/tenantContext";
 import { RowActions } from "../../../../components/ui/RowActions";
@@ -16,7 +16,8 @@ import { Pagination } from "../../../../components/ui/Pagination";
 const SYSTEM_TYPES = ["MATRIC","INTERMEDIATE","O_LEVEL","A_LEVEL","CAMBRIDGE","IB","MONTESSORI","OTHER"];
 
 export function AcademicSystemTab() {
-  const delSys = { mutate: (_id: string) => {} }; // stub until hook added
+  const delSys = useDeleteAcademicSystem();
+  const updateSys = useUpdateAcademicSystem();
   const { user } = useAuth();
   const tid = effectiveTenantId(user) ?? "";
   const { data, isLoading, refetch } = useAcademicSystems();
@@ -30,14 +31,12 @@ export function AcademicSystemTab() {
   const [modal, setModal]       = useState(false);
   const [viewItem, setViewItem] = useState<any|null>(null);
   const [editItem, setEditItem] = useState<any|null>(null);
-  const [localItems, setLocalItems] = useState<any[]>([]);
   const [form, setForm]         = useState({ name:"", systemType:"MATRIC", description:"", country:"Pakistan", isDefault: false });
   const [error, setError]       = useState("");
 
-  const merged = [...items, ...localItems.filter(li => !items.find((i:any) => i.id === li.id))];
-  const filtered = useMemo(() => merged.filter(i =>
+  const filtered = useMemo(() => items.filter(i =>
     `${i.name} ${parseMeta(i.metadataJson).systemType ?? ""}`.toLowerCase().includes(search.toLowerCase())
-  ), [merged, search]);
+  ), [items, search]);
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
   const sf = (k: string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
@@ -100,7 +99,7 @@ export function AcademicSystemTab() {
                       <td style={{fontSize:12,color:"var(--muted)",maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{meta.description ?? "—"}</td>
                       <td style={{textAlign:"center"}}>{meta.isDefault ? <span className="status-pill success" style={{fontSize:9}}>DEFAULT</span> : <span style={{color:"var(--muted-2)",fontSize:11}}>—</span>}</td>
                       <td style={{textAlign:"right"}}>
-                        <RowActions onView={() => setViewItem(item)} onEdit={() => setEditItem(item)} onDelete={() => delSys.mutate(item.id)} deleteLabel="academic system"/>
+                        <RowActions onView={() => setViewItem(item)} onEdit={() => setEditItem({ ...item, ...parseMeta(item.metadataJson) })} onDelete={() => delSys.mutate(item.id, { onSuccess: () => void refetch() })} deleteLabel="academic system"/>
                       </td>
                     </tr>
                   );
@@ -115,7 +114,7 @@ export function AcademicSystemTab() {
       {/* View Drawer */}
       {viewItem && (
         <ViewDrawer title="Academic System" item={viewItem} onClose={() => setViewItem(null)}
-          onEdit={() => { setEditItem(viewItem); setViewItem(null); }}
+          onEdit={() => { setEditItem({ ...viewItem, ...parseMeta(viewItem.metadataJson) }); setViewItem(null); }}
           fields={[
             {key:"name",        label:"System name",  wide:true},
             {key:"systemType",  label:"Type"},
@@ -130,7 +129,23 @@ export function AcademicSystemTab() {
       {editItem && (
         <EditModal title="Academic System" item={editItem} onClose={() => setEditItem(null)}
           onSave={async data => {
-            setLocalItems(p => p.map(x => x.id===editItem.id ? {...x,...data} : x));
+            const currentMeta = parseMeta(editItem.metadataJson);
+            await updateSys.mutateAsync({
+              id: editItem.id,
+              body: {
+                tenantId: tid,
+                name: data.name,
+                metadataJson: JSON.stringify({
+                  ...currentMeta,
+                  systemType: data.systemType,
+                  country: data.country,
+                  description: data.description,
+                  isDefault: currentMeta.isDefault ?? false,
+                }),
+              },
+            });
+            setEditItem(null);
+            await refetch();
           }}
           fields={[
             {key:"name",        label:"System name",  required:true, wide:true},

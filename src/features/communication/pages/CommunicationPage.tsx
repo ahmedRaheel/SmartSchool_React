@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Bell, CheckCheck, MessageSquare, Plus, Search, Send, Users, X } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatCard } from "../../../components/ui/StatCard";
@@ -31,6 +32,7 @@ const NOTIFICATION_ICON: Record<string | number, string> = {
 };
 
 function NotificationsPanel() {
+  const navigate = useNavigate();
   const { data: notificationData, isLoading } = useNotifications();
   const { data: unread = 0 } = useUnreadCount();
   const markRead = useMarkRead();
@@ -67,7 +69,14 @@ function NotificationsPanel() {
         visible.map((notification: any) => (
           <button
             key={notification.id}
-            onClick={() => !notification.isRead && markRead.mutate(notification.id)}
+            onClick={() => {
+              if (!notification.isRead) {
+                markRead.mutate(notification.id);
+              }
+              if (notification.actionUrl) {
+                navigate(notification.actionUrl);
+              }
+            }}
             style={{
               width: "100%",
               textAlign: "left",
