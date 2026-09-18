@@ -27,10 +27,10 @@ const REPORTS: { category: ReportType; title: string; desc: string; icon: string
 ];
 
 const CAT_COLOR: Record<ReportType,{color:string;bg:string}> = {
-  academic:   { color:"#2563EB", bg:"#EFF6FF" },
-  financial:  { color:"#10B981", bg:"#ECFDF5" },
-  attendance: { color:"#D97706", bg:"#FFFBEB" },
-  hr:         { color:"#8B5CF6", bg:"#F5F3FF" },
+  academic:   { color:"var(--info)", bg:"var(--info-bg)" },
+  financial:  { color:"var(--success)", bg:"var(--success-bg)" },
+  attendance: { color:"var(--warning)", bg:"var(--warning-bg)" },
+  hr:         { color:"var(--purple)", bg:"var(--purple-soft)" },
 };
 
 const ATTENDANCE_DATA = [
@@ -78,11 +78,11 @@ export function ReportsPage() {
         <div className="surface-head"><h3>Key metrics overview</h3><p>Live from all modules</p></div>
         <div style={{padding:"0 20px 20px"}}>
           {[
-            { label:"Students enrolled",  value:students, max:3000, color:"#2563EB" },
-            { label:"Active staff",       value:employees, max:200, color:"#10B981" },
-            { label:"Fee collection",     value:Math.round(collected/1000), max:10000, color:"#059669", suffix:"K" },
-            { label:"Outstanding fees",   value:Math.round(outstanding/1000), max:5000, color:"#EF4444", suffix:"K" },
-            { label:"Pass rate",          value:passRate, max:100, color:passRate>=70?"#10B981":"#EF4444", suffix:"%" },
+            { label:"Students enrolled",  value:students, max:3000, color:"var(--info)" },
+            { label:"Active staff",       value:employees, max:200, color:"var(--success)" },
+            { label:"Fee collection",     value:Math.round(collected/1000), max:10000, color:"var(--success)", suffix:"K" },
+            { label:"Outstanding fees",   value:Math.round(outstanding/1000), max:5000, color:"var(--danger)", suffix:"K" },
+            { label:"Pass rate",          value:passRate, max:100, color:passRate>=70?"var(--success)":"var(--danger)", suffix:"%" },
           ].map(m => (
             <div key={m.label} style={{marginBottom:12}}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
@@ -97,12 +97,12 @@ export function ReportsPage() {
 
           {/* Attendance bar chart */}
           <div style={{marginTop:20}}>
-            <div style={{fontSize:12,fontWeight:700,marginBottom:10,color:"var(--muted)"}}>This week's attendance rate</div>
+            <div className="section-label" style={{marginBottom:10}}>This week's attendance rate</div>
             <div style={{display:"flex",alignItems:"flex-end",gap:10,height:BAR_H}}>
               {ATTENDANCE_DATA.map(d => (
                 <div key={d.day} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                  <div style={{fontSize:10,fontWeight:700,color:d.rate>=90?"#10B981":d.rate>=80?"#D97706":"#EF4444"}}>{d.rate}%</div>
-                  <div style={{width:"100%",background:d.rate>=90?"#10B981":d.rate>=80?"#D97706":"#EF4444",borderRadius:"6px 6px 0 0",height:`${(d.rate/100)*(BAR_H-30)}px`,minHeight:4,transition:"height .4s"}}/>
+                  <div style={{fontSize:10,fontWeight:700,color:d.rate>=90?"var(--success)":d.rate>=80?"var(--warning)":"var(--danger)"}}>{d.rate}%</div>
+                  <div style={{width:"100%",background:d.rate>=90?"var(--success)":d.rate>=80?"var(--warning)":"var(--danger)",borderRadius:"6px 6px 0 0",height:`${(d.rate/100)*(BAR_H-30)}px`,minHeight:4,transition:"height .4s"}}/>
                   <div style={{fontSize:11,color:"var(--muted)"}}>{d.day}</div>
                 </div>
               ))}
@@ -126,14 +126,14 @@ export function ReportsPage() {
             const cfg = CAT_COLOR[r.category];
             const isLoading = downloading === r.title;
             return (
-              <div key={r.title} style={{padding:"14px 16px",border:"1px solid var(--line)",borderRadius:12,display:"flex",alignItems:"center",gap:12,background:"var(--surface)"}}>
+              <div key={r.title} className="report-card">
                 <span style={{fontSize:22,flexShrink:0}}>{r.icon}</span>
                 <div style={{flex:1,minWidth:0}}>
-                  <b style={{fontSize:12,display:"block"}}>{r.title}</b>
-                  <div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>{r.desc}</div>
+                  <b style={{fontSize:13,display:"block"}}>{r.title}</b>
+                  <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{r.desc}</div>
                 </div>
                 <button onClick={()=>downloadReport(r.title)} disabled={!!downloading}
-                  style={{width:34,height:34,borderRadius:8,border:`1px solid ${cfg.color}30`,background:cfg.bg,color:cfg.color,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  style={{width:34,height:34,borderRadius:"var(--r-sm)",border:`1px solid ${cfg.color}30`,background:cfg.bg,color:cfg.color,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                   {isLoading ? <BarChart3 size={14} style={{animation:"spin 1s linear infinite"}}/> : <Download size={14}/>}
                 </button>
               </div>

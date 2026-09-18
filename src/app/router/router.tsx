@@ -1,12 +1,12 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppShell }            from "../../components/layout/AppShell";
 import { RouteErrorPage }      from "../../components/ui/RouteErrorPage";
-import { MockDataProvider }    from "../../mocks/MockDataProvider";
 import { RoleGuard }           from "../../core/rbac/RoleGuard";
 import { NotFoundPage }        from "../../core/rbac/NotFoundPage";
 
 // Auth
 import { LoginPage }           from "../../features/auth/pages/LoginPage";
+import { ForgotPasswordPage, ResetPasswordPage } from "../../features/auth/pages/PasswordRecoveryPage";
 
 // Dashboard
 import { DashboardPage }       from "../../features/dashboard/pages/DashboardPage";
@@ -65,9 +65,11 @@ function G(
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
+  { path: "/forgot-password", element: <ForgotPasswordPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
   {
     path: "/",
-    element: <MockDataProvider><AppShell /></MockDataProvider>,
+    element: <AppShell />,
     errorElement: <RouteErrorPage />,
     children: [
       // ── Dashboard (all roles) ────────────────────────────────────────────

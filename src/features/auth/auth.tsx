@@ -9,6 +9,7 @@ import {
 } from "react";
 import { env } from "../../config/env";
 import { captureApiError } from "../../core/telemetry/telemetry";
+import { refreshAccessToken } from "./tokenService";
 
 /** Represents the authenticated SmartSchool user persisted across browser refreshes. */
 export interface SessionUser {
@@ -218,26 +219,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return; // already logged out
 
-    function checkExpiry() {
+    async function checkExpiry() {
       const token = localStorage.getItem("access_token");
-      if (!token || token.startsWith("mock_")) return; // mock tokens never expire
+      if (!token || token.startsWith("mock_")) return;
 
       try {
         const part = token.split(".")[1];
         if (!part) return;
         const { exp } = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
-        if (typeof exp === "number" && exp * 1000 < Date.now()) {
-          // Session expired while tab was idle
+        if (typeof exp === "number" && exp * 1000 < Date.now() + 120_000) {
+          const refreshedToken = await refreshAccessToken();
+          if (refreshedToken) {
+            setUser(createSessionUser(refreshedToken));
+            return;
+          }
           clearAuthenticationState();
           setUser(null);
           const returnTo = encodeURIComponent(window.location.pathname);
           window.location.replace(`/login?returnTo=${returnTo}&reason=expired`);
         }
-      } catch { /* ignore malformed tokens */ }
+      } catch { /* malformed tokens are handled by the API interceptor */ }
     }
 
-    checkExpiry(); // immediate check on mount / user change
-    const id = window.setInterval(checkExpiry, 60_000); // repeat every minute
+    void checkExpiry();
+    const id = window.setInterval(() => void checkExpiry(), 60_000);
     return () => window.clearInterval(id);
   }, [user?.id]); // re-register only when the logged-in user changes
 
@@ -294,46 +299,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     clearAuthenticationState();
     setUser(null);
-    const body = new URLSearchParams({
-      grant_type: "password",
-      client_id: "smartschool-login-api",
-      client_secret: "development-login-api-secret-change-me",
-      username: email,
-      password: credentials.password,
-      scope: "openid profile email smartschool.api offline_access",
-    });
     try {
       const { data } = await axios.post(
-        identityUrl("/connect/token"),
-        body.toString(),
+        identityUrl("/api/account/login"),
+        { email, password: credentials.password },
         {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
           timeout: 30_000,
-        }
+        },
       );
-      if (!data?.access_token)
-        throw new Error("Identity did not return an access token.");
-      if (data.refresh_token)
-        localStorage.setItem("refresh_token", data.refresh_token);
-      if (data.id_token) localStorage.setItem("id_token", data.id_token);
-      persistSession(
-        data.access_token,
-        createSessionUser(data.access_token, email)
-      );
+      const accessToken = data?.accessToken ?? data?.access_token;
+      const refreshToken = data?.refreshToken ?? data?.refresh_token;
+      if (!accessToken) throw new Error("Identity did not return an access token.");
+      if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
+      persistSession(String(accessToken), createSessionUser(String(accessToken), email));
       return { success: true };
     } catch (error) {
-      const e = error as AxiosError<{
-        error?: string;
-        error_description?: string;
-      }>;
-      const message =
-        e.response?.data?.error_description ||
-        e.response?.data?.error ||
-        e.message ||
-        "Login failed.";
+      const e = error as AxiosError<{ message?: string; error?: string; error_description?: string }>;
+      const message = e.response?.data?.message || e.response?.data?.error_description || e.response?.data?.error || e.message || "Login failed.";
       clearAuthenticationState();
       setUser(null);
       captureApiError(error, "IdentityLogin");
@@ -343,53 +326,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function impersonate(
     targetUserId: string,
-    reason: string
+    reason: string,
   ): Promise<AuthResult> {
-    const actorToken =
-      localStorage.getItem("access_token") ??
-      localStorage.getItem("access_token") ??
-      sessionStorage.getItem("access_token");
-    if (!actorToken || !user)
-      return {
-        success: false,
-        message: "Your administrator session is no longer available.",
-      };
-    const body = new URLSearchParams({
-      grant_type: "impersonation",
-      client_id: "smartschool-login-api",
-      actor_token: actorToken,
-      target_user_id: targetUserId,
-      reason: reason.trim() || "Support session",
-    });
+    const actorToken = localStorage.getItem("access_token");
+    if (!actorToken || !user) {
+      return { success: false, message: "Your administrator session is no longer available." };
+    }
+
     try {
       const { data } = await axios.post(
-        identityUrl("/connect/token"),
-        body.toString(),
+        identityUrl("/api/identity/users/impersonation/start"),
+        { targetUserId, reason: reason.trim() || "Support session" },
         {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
+          headers: { Authorization: `Bearer ${actorToken}`, "Content-Type": "application/json" },
           timeout: 30_000,
-        }
+        },
       );
-      if (!data?.access_token)
-        throw new Error("Identity did not return an impersonation token.");
+
+      const accessToken = data?.accessToken ?? data?.access_token;
+      if (!accessToken) throw new Error("Identity did not return an impersonation token.");
+
       localStorage.setItem(ORIGINAL_TOKEN_KEY, actorToken);
       localStorage.setItem(ORIGINAL_SESSION_KEY, JSON.stringify(user));
-      persistSession(data.access_token, createSessionUser(data.access_token));
+      if (data?.refreshToken) localStorage.setItem("refresh_token", data.refreshToken);
+      persistSession(String(accessToken), createSessionUser(String(accessToken)));
       return { success: true };
     } catch (error) {
-      const e = error as AxiosError<{
-        error?: string;
-        error_description?: string;
-      }>;
+      const e = error as AxiosError<{ message?: string; error?: string; error_description?: string }>;
       return {
         success: false,
-        message:
-          e.response?.data?.error_description ||
-          e.response?.data?.error ||
-          e.message,
+        message: e.response?.data?.message || e.response?.data?.error_description || e.response?.data?.error || e.message,
       };
     }
   }

@@ -72,10 +72,10 @@ export function ParentPortalPage() {
 
       {/* Child selector */}
       {CHILDREN.length > 1 && (
-        <div style={{display:"flex",gap:8,marginBottom:16}}>
+        <div className="filter-strip" style={{marginBottom:16}}>
           {CHILDREN.map(c => (
             <button key={c.id} onClick={()=>setChild(c)}
-              style={{padding:"8px 16px",borderRadius:10,border:`1.5px solid ${child.id===c.id?"#6366F1":"var(--line)"}`,background:child.id===c.id?"#EEF2FF":"var(--surface)",color:child.id===c.id?"#6366F1":"var(--text)",fontSize:12,cursor:"pointer",fontWeight:child.id===c.id?700:400}}>
+              className={`filter-btn ${child.id===c.id?"active":""}`}>
               {c.name} · {c.grade}
             </button>
           ))}
@@ -95,7 +95,7 @@ export function ParentPortalPage() {
         <button className={tab==="fees"?"active":""} onClick={()=>setTab("fees")}>💰 Fees</button>
         <button className={tab==="transport"?"active":""} onClick={()=>setTab("transport")}>🚌 Transport</button>
         <button className={tab==="messages"?"active":""} onClick={()=>setTab("messages")}>
-          🤖 AI Assistant {unread>0&&<span style={{background:"#EF4444",color:"white",borderRadius:20,fontSize:9,padding:"1px 5px",marginLeft:4,fontWeight:700}}>{unread}</span>}
+          🤖 AI Assistant {unread>0&&<span className="tab-badge">{unread}</span>}
         </button>
       </div>
 
@@ -105,13 +105,13 @@ export function ParentPortalPage() {
           <div style={{padding:"0 20px 20px"}}>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
               {child.courses.map(c => (
-                <div key={c.subject} style={{padding:"14px 16px",border:"1px solid var(--line)",borderRadius:12}}>
+                <div key={c.subject} style={{padding:"14px 16px",border:"1px solid var(--line)",borderRadius:"var(--r-lg)"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <b style={{fontSize:12}}>{c.subject}</b>
                     <span style={{fontSize:20,fontWeight:800,color:GRADE_COLOR[c.grade]??"#0F2241"}}>{c.grade}</span>
                   </div>
                   <div style={{height:6,background:"var(--surface-2)",borderRadius:999,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${c.pct}%`,background:GRADE_COLOR[c.grade]??"#6366F1",borderRadius:999}}/>
+                    <div style={{height:"100%",width:`${c.pct}%`,background:GRADE_COLOR[c.grade]??"var(--indigo)",borderRadius:999}}/>
                   </div>
                   <div style={{fontSize:11,color:"var(--muted)",marginTop:4,textAlign:"right"}}>{c.pct}%</div>
                 </div>
@@ -125,21 +125,21 @@ export function ParentPortalPage() {
         <div className="surface">
           <div className="surface-head"><h3>{child.name} — Attendance record</h3></div>
           <div style={{padding:"0 20px 20px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:16,padding:"16px",background:"var(--surface-2)",borderRadius:12,marginBottom:16}}>
+            <div className="attendance-bar-wrap">
               <div style={{textAlign:"center"}}>
-                <div style={{fontSize:32,fontWeight:800,color:parseFloat(child.attendance)>=80?"#10B981":"#EF4444"}}>{child.attendance}</div>
+                <div className={`attendance-bar-pct ${parseFloat(child.attendance)>=80?"good":"poor"}`}>{child.attendance}</div>
                 <div style={{fontSize:11,color:"var(--muted)"}}>Overall attendance</div>
               </div>
-              <div style={{flex:1,height:12,background:"var(--line)",borderRadius:999,overflow:"hidden"}}>
-                <div style={{height:"100%",width:child.attendance,background:parseFloat(child.attendance)>=80?"#10B981":"#EF4444",borderRadius:999}}/>
+              <div className="attendance-bar-track">
+                <div className={`attendance-bar-fill ${parseFloat(child.attendance)>=80?"good":"poor"}`} style={{width:child.attendance}}/>
               </div>
             </div>
-            <div style={{fontSize:12,fontWeight:700,marginBottom:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.6}}>Recent days</div>
+            <div className="section-label" style={{marginBottom:10}}>Recent days</div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {child.recentAttendance.map((r,i) => (
-                <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",border:"1px solid var(--line)",borderRadius:10}}>
+                <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",border:"1px solid var(--line)",borderRadius:"var(--r-md)"}}>
                   <span style={{fontSize:12,fontWeight:600,minWidth:60,color:"var(--muted)"}}>{r.date}</span>
-                  <span style={{padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700,background:r.status==="Present"?"#ECFDF5":r.status==="Absent"?"#FFF0F1":"#FFFBEB",color:r.status==="Present"?"#059669":r.status==="Absent"?"#EF4444":"#D97706"}}>
+                  <span className={`status-pill ${r.status==="Present"?"success":r.status==="Absent"?"danger":"warning"}`}>
                     {r.status==="Present"?"✓ Present":r.status==="Absent"?"✗ Absent":"⏰ Late"}
                   </span>
                 </div>
@@ -154,18 +154,18 @@ export function ParentPortalPage() {
           <div className="surface-head"><h3>{child.name} — Fee account</h3></div>
           <div style={{padding:"0 20px 20px"}}>
             {child.outstandingFee === 0 ? (
-              <div style={{padding:"20px",background:"#ECFDF5",border:"1px solid #a7f3d0",borderRadius:12,display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-                <CheckCircle2 size={24} style={{color:"#059669",flexShrink:0}}/>
+              <div className="success-callout" style={{padding:"20px",marginBottom:16}}>
+                <CheckCircle2 size={24} style={{flexShrink:0}}/>
                 <div>
-                  <b style={{fontSize:14,color:"#059669"}}>All fees paid</b>
-                  <div style={{fontSize:12,color:"#065f46",marginTop:2}}>No outstanding balance for {child.name}.</div>
+                  <b style={{fontSize:14}}>All fees paid</b>
+                  <div style={{fontSize:12,marginTop:2}}>No outstanding balance for {child.name}.</div>
                 </div>
               </div>
             ) : (
-              <div style={{padding:"20px",background:"#FFF0F1",border:"1.5px solid #fecdd3",borderRadius:12,marginBottom:16}}>
-                <b style={{fontSize:14,color:"#B91C1C",display:"block",marginBottom:4}}>Outstanding balance: {pkr(child.outstandingFee)}</b>
-                <p style={{fontSize:12,color:"#7F1D1D",margin:"0 0 12px"}}>Please clear this balance to avoid late fees.</p>
-                <button className="primary" style={{background:"#EF4444",fontSize:12}}>💳 Pay now online</button>
+              <div className="warn-callout" style={{flexDirection:"column",alignItems:"flex-start",padding:"20px",marginBottom:16,background:"var(--danger-bg)",borderColor:"var(--danger-border)",color:"var(--danger)"}}>
+                <b style={{fontSize:14,marginBottom:4}}>Outstanding balance: {pkr(child.outstandingFee)}</b>
+                <p style={{fontSize:12,margin:"0 0 12px",color:"var(--text-2)"}}>Please clear this balance to avoid late fees.</p>
+                <button className="danger-solid" style={{fontSize:12}}>💳 Pay now online</button>
               </div>
             )}
             <div style={{fontSize:12,color:"var(--muted)"}}>For detailed invoice history, contact the school accounts office or visit the fee payment counter.</div>
@@ -177,8 +177,8 @@ export function ParentPortalPage() {
         <div className="surface">
           <div className="surface-head"><h3>{child.name} — Transport details</h3></div>
           <div style={{padding:"0 20px 20px"}}>
-            <div style={{padding:"16px",background:"var(--surface-2)",borderRadius:12,display:"flex",gap:14,alignItems:"flex-start",marginBottom:14}}>
-              <Bus size={24} style={{color:"#6366F1",flexShrink:0}}/>
+            <div className="metric-card" style={{alignItems:"flex-start",marginBottom:14}}>
+              <Bus size={24} style={{color:"var(--indigo)",flexShrink:0}}/>
               <div>
                 <b style={{fontSize:14,display:"block",marginBottom:4}}>Bus assigned</b>
                 <div style={{fontSize:13}}>{child.bus}</div>
@@ -187,7 +187,7 @@ export function ParentPortalPage() {
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {[["Morning pick-up","7:30 AM from Gulberg stop"],["Afternoon drop-off","2:45 PM at Gulberg stop"],["Driver","Rafiq Ahmed · +92 321 0000000"],["Supervisor","Nadia Bibi · +92 300 1111111"]].map(([l,v])=>(
-                <div key={l} style={{padding:"12px 14px",border:"1px solid var(--line)",borderRadius:10}}>
+                <div key={l} style={{padding:"12px 14px",border:"1px solid var(--line)",borderRadius:"var(--r-md)"}}>
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:2}}>{l}</div>
                   <b style={{fontSize:12}}>{v}</b>
                 </div>
@@ -201,7 +201,7 @@ export function ParentPortalPage() {
         <div className="surface" style={{display:"flex",flexDirection:"column",height:"calc(100vh - 380px)",minHeight:380}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid var(--line)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
-              <b style={{fontSize:14,display:"flex",alignItems:"center",gap:8}}><MessageCircle size={15} style={{color:"#6366F1"}}/>AI School Assistant</b>
+              <b style={{fontSize:14,display:"flex",alignItems:"center",gap:8}}><MessageCircle size={15} style={{color:"var(--indigo)"}}/>AI School Assistant</b>
               <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>Ask about your children's progress, fees, transport, or school policies</div>
             </div>
             {unread>0&&<button className="secondary" style={{fontSize:11}} onClick={()=>markAll.mutate()}>Mark all read</button>}
@@ -209,7 +209,7 @@ export function ParentPortalPage() {
           <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:8}}>
             {aiHistory.map((m,i) => (
               <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-                <div style={{maxWidth:"78%",padding:"9px 13px",borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",background:m.role==="user"?"#6366F1":"var(--surface-2)",color:m.role==="user"?"white":"var(--text)",fontSize:13,lineHeight:1.6}}>
+                <div style={{maxWidth:"78%",padding:"9px 13px",borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",background:m.role==="user"?"var(--indigo)":"var(--surface-2)",color:m.role==="user"?"#fff":"var(--text)",fontSize:13,lineHeight:1.6}}>
                   {m.text}
                 </div>
               </div>
@@ -218,9 +218,9 @@ export function ParentPortalPage() {
           </div>
           <div style={{padding:"10px 14px",borderTop:"1px solid var(--line)",display:"flex",gap:8}}>
             <input value={aiMsg} onChange={e=>setAiMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendAi();}} placeholder="Ask about fees, progress, school policies…"
-              style={{flex:1,height:38,padding:"0 14px",border:"1.5px solid var(--line)",borderRadius:20,background:"var(--surface-2)",fontSize:13,outline:"none"}}/>
+              className="chat-input"/>
             <button onClick={sendAi} disabled={!aiMsg.trim()||aiLoading}
-              style={{width:38,height:38,borderRadius:"50%",border:"none",background:aiMsg.trim()?"#6366F1":"var(--line)",color:"white",cursor:aiMsg.trim()?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              className="chat-send-btn" style={{background:aiMsg.trim()?"var(--indigo)":"var(--line)",color:"#fff"}}>
               {aiLoading?<RefreshCw size={14} style={{animation:"spin 1s linear infinite"}}/>:<Send size={14}/>}
             </button>
           </div>

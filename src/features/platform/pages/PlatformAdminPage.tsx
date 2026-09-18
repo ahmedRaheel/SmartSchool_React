@@ -68,14 +68,14 @@ export function PlatformAdminPage() {
           <div className="surface-head"><h3>Module health status</h3><p>All backend modules and infrastructure</p></div>
           <div style={{padding:"0 20px 20px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
             {PLATFORM_MODULES.map(m => (
-              <div key={m.name} style={{padding:"12px 16px",border:"1px solid var(--line)",borderRadius:12,display:"flex",alignItems:"center",gap:12}}>
+              <div key={m.name} className="metric-card">
                 <span style={{fontSize:20}}>{m.icon}</span>
                 <div style={{flex:1}}>
                   <b style={{fontSize:12}}>{m.name}</b>
                   <div style={{fontSize:10,color:"var(--muted)",marginTop:1}}>{m.version}</div>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,color:"#059669"}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:"#10B981"}}/>
+                <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,color:"var(--success)"}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:"var(--success)"}}/>
                   {m.status}
                 </div>
               </div>
@@ -97,7 +97,7 @@ export function PlatformAdminPage() {
                   <tr key={t.id}>
                     <td><b style={{fontSize:12}}>{t.name}</b></td>
                     <td style={{fontSize:11}}><code>{m.domain??t.code}</code></td>
-                    <td><span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"#EEF2FF",color:"#6366F1",fontWeight:700}}>{m.subscriptionPlan??"Starter"}</span></td>
+                    <td><span className="role-badge">{m.subscriptionPlan??"Starter"}</span></td>
                     <td>{m.studentCount??0}</td>
                     <td><span className={`status-pill ${m.status==="ACTIVE"?"success":m.status==="TRIAL"?"warning":"gray"}`}>{m.status??"ACTIVE"}</span></td>
                     <td style={{fontSize:10,color:"var(--muted)"}}>{m.createdAt?new Date(m.createdAt).toLocaleDateString():"—"}</td>
@@ -124,22 +124,22 @@ export function PlatformAdminPage() {
               { id:"m2", name:"AI Tutor",           metadataJson:JSON.stringify({ provider:"Ollama", model:"mistral:7b", temp:0.7, maxTokens:1024, active:true, usage:"Student tutoring sessions" }) },
               { id:"m3", name:"Prediction Engine",  metadataJson:JSON.stringify({ provider:"Custom ML", model:"sklearn-ensemble", temp:null, maxTokens:null, active:true, usage:"Dropout and grade prediction" }) },
             ]).map((m:any)=>{ const meta=parseMeta(m.metadataJson); return (
-              <div key={m.id} style={{padding:"16px",border:"1.5px solid var(--line)",borderRadius:12,display:"flex",gap:14,alignItems:"flex-start"}}>
-                <div style={{width:40,height:40,borderRadius:10,background:meta.active?"#EEF2FF":"var(--surface-2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <Cpu size={20} style={{color:meta.active?"#6366F1":"var(--muted)"}}/>
+              <div key={m.id} style={{padding:"16px",border:"1.5px solid var(--line)",borderRadius:"var(--r-lg)",display:"flex",gap:14,alignItems:"flex-start"}}>
+                <div className="metric-icon" style={{background:meta.active?"var(--indigo-soft)":"var(--surface-2)"}}>
+                  <Cpu size={20} style={{color:meta.active?"var(--indigo)":"var(--muted)"}}/>
                 </div>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                     <b style={{fontSize:13}}>{m.name}</b>
-                    <span style={{padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:meta.active?"#ECFDF5":"var(--surface-2)",color:meta.active?"#059669":"var(--muted)"}}>
+                    <span className={`status-pill ${meta.active?"success":"gray"}`}>
                       {meta.active?"Active":"Inactive"}
                     </span>
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
-                    <code style={{fontSize:10,padding:"2px 8px",borderRadius:6,background:"var(--surface-2)"}}>{meta.provider}</code>
-                    <code style={{fontSize:10,padding:"2px 8px",borderRadius:6,background:"#EEF2FF",color:"#6366F1"}}>{meta.model}</code>
-                    {meta.temp!=null&&<code style={{fontSize:10,padding:"2px 8px",borderRadius:6,background:"#FFFBEB",color:"#D97706"}}>temp={meta.temp}</code>}
-                    {meta.maxTokens&&<code style={{fontSize:10,padding:"2px 8px",borderRadius:6,background:"#F5F3FF",color:"#8B5CF6"}}>max={meta.maxTokens} tokens</code>}
+                    <code className="chip-tag">{meta.provider}</code>
+                    <code className="chip-tag accent">{meta.model}</code>
+                    {meta.temp!=null&&<code className="chip-tag warning">temp={meta.temp}</code>}
+                    {meta.maxTokens&&<code className="chip-tag purple">max={meta.maxTokens} tokens</code>}
                   </div>
                   {meta.usage&&<div style={{fontSize:11,color:"var(--muted)"}}>{meta.usage}</div>}
                 </div>

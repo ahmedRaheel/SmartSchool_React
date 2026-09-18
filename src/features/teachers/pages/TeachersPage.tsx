@@ -86,7 +86,7 @@ export function TeachersPage() {
     </label>}
     {!teacherId && <p>Select a teacher to view their workspace.</p>}
     {loading && <p role="status">Loading teacher workspace…</p>}
-    {error && <p role="alert" style={{ color: "var(--danger)" }}>{getErrorMessage(error)}</p>}
+    {error && <p role="alert" className="form-error">{getErrorMessage(error)}</p>}
     {teacherId && <>
       <section className="metric-grid" style={{ marginBottom: 20 }}>
         <StatCard label="My classes" value={String(classes.length)} note="Current assignments" color="#2563EB" bg="#EFF6FF"><BookOpen size={20} /></StatCard>

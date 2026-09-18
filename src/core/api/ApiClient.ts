@@ -7,6 +7,7 @@
  */
 import axios from "axios";
 import { env } from "../../config/env";
+import { refreshAccessToken } from "../../features/auth/tokenService";
 
 /** Interface implemented by both the real HttpApiClient and MockApiClient. */
 export interface ApiClient {
@@ -68,33 +69,33 @@ function forceLogout(reason: "expired" | "unauthorized"): void {
 }
 
 // ── Request interceptor ────────────────────────────────────────────────────────
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   if (config.data instanceof FormData) {
     config.headers.delete("Content-Type");
   }
-  const token = localStorage.getItem("access_token");
 
+  let token = localStorage.getItem("access_token");
   if (token && !token.startsWith("mock_")) {
-    // Proactive expiry check — catch it before the server does
     if (isTokenExpired(token)) {
-      forceLogout("expired");
-      // Abort the request by returning a never-resolving promise
-      return Promise.reject(new Error("Your session has expired. Please sign in again."));
+      token = await refreshAccessToken();
+      if (!token) {
+        forceLogout("expired");
+        return Promise.reject(new Error("Your session has expired. Please sign in again."));
+      }
     }
     config.headers.Authorization = `Bearer ${token}`;
   } else if (env.useMocks) {
-    // Mock-mode headers — backend reads these to simulate the actor
     try {
       const raw = localStorage.getItem("smartschool.session");
       if (raw) {
-        const s = JSON.parse(raw);
-        config.headers["X-Mock-Role"]     = s.role     ?? "SchoolAdmin";
-        config.headers["X-Mock-UserId"]   = s.id       ?? "00000000-0000-0000-0000-000000000001";
-        config.headers["X-Mock-TenantId"] = s.tenantId ?? "11111111-1111-1111-1111-111111111111";
-        const entityId = s.employeeId ?? s.studentId ?? s.driverId ?? s.businessEntityId;
+        const session = JSON.parse(raw);
+        config.headers["X-Mock-Role"] = session.role ?? "SchoolAdmin";
+        config.headers["X-Mock-UserId"] = session.id ?? "00000000-0000-0000-0000-000000000001";
+        config.headers["X-Mock-TenantId"] = session.tenantId ?? "11111111-1111-1111-1111-111111111111";
+        const entityId = session.employeeId ?? session.studentId ?? session.driverId ?? session.businessEntityId;
         if (entityId) config.headers["X-Mock-EntityId"] = entityId;
       }
-    } catch { /* silently ignore */ }
+    } catch { /* development-only mock state */ }
   }
 
   return config;
@@ -126,9 +127,19 @@ api.interceptors.response.use(
     const status = err.response?.status;
 
     if (status === 401) {
-      // Token was rejected by the server (expired, revoked, or tampered)
+      const original = err.config as (typeof err.config & { _smartSchoolRetry?: boolean }) | undefined;
+      if (original && !original._smartSchoolRetry && !env.useMocks) {
+        original._smartSchoolRetry = true;
+        const refreshedToken =() => refreshAccessToken();
+        if (refreshedToken) {
+          original.headers = original.headers ?? {};
+          original.headers.Authorization = `Bearer ${refreshedToken}`;
+          return api.request(original);
+        }
+      }
+
       forceLogout("unauthorized");
-      return Promise.reject(new Error("Your session has expired. Please sign in again.")); // swallow — page is being replaced
+      return Promise.reject(new Error("Your session has expired. Please sign in again."));
     }
 
     // Surface validation/business/server errors globally. Do not convert a

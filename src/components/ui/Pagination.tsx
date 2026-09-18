@@ -40,7 +40,7 @@ export function Pagination({
           <select
             value={pageSize}
             onChange={e => { onPageSize(Number(e.target.value)); onPage(1); }}
-            style={{ fontSize:11, padding:"3px 6px", border:"1.5px solid var(--line)", borderRadius:7, background:"var(--surface)", color:"var(--text)", cursor:"pointer" }}
+            className="pagination-select"
           >
             {pageSizeOptions.map(n => <option key={n} value={n}>{n} / page</option>)}
           </select>

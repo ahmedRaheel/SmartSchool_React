@@ -27,9 +27,9 @@ const BRANCH_LABELS: Record<number, string> = {
   1: "Head Office", 2: "Regional Head Office", 3: "Regional Branch",
 };
 const BRANCH_COLORS: Record<number, { bg: string; color: string }> = {
-  1: { bg:"#EEF2FF", color:"#6366F1" },
-  2: { bg:"#EFF6FF", color:"#2563EB" },
-  3: { bg:"#F0FDF4", color:"#059669" },
+  1: { bg:"var(--indigo-soft)", color:"var(--indigo)" },
+  2: { bg:"var(--info-bg)", color:"var(--info)" },
+  3: { bg:"var(--teal-soft)", color:"var(--success)" },
 };
 
 /** Reusable modal wrapper */
@@ -279,7 +279,7 @@ export function SchoolCampusTab() {
                       </td>
                       <td><code style={{ fontSize:11 }}>{c.code ?? "—"}</code></td>
                       <td>
-                        <span style={{ padding:"2px 8px", borderRadius:20, fontSize:10, fontWeight:700, background:bt.bg, color:bt.color }}>
+                        <span className="role-badge" style={{ background:bt.bg, color:bt.color, borderColor:`${bt.color}30` }}>
                           {BRANCH_LABELS[Number(c.branchType)] ?? "Branch"}
                         </span>
                       </td>
@@ -422,7 +422,7 @@ export function SchoolCampusTab() {
                   const active = cForm.educationLevelIds.includes(el.id);
                   return (
                     <button key={el.id} type="button" onClick={() => toggleEdLevel(el.id)}
-                      style={{ padding:"5px 12px", borderRadius:20, border:`1.5px solid ${active?"var(--indigo)":"var(--line)"}`, background:active?"var(--indigo-soft)":"var(--surface)", color:active?"var(--indigo)":"var(--text)", fontSize:11, fontWeight:active?700:400, cursor:"pointer" }}>
+                      className={`pill-toggle${active ? " active" : ""}`}>
                       {el.name}
                     </button>
                   );

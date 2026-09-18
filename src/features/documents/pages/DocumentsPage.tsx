@@ -1,4 +1,5 @@
 import { DocumentSetupPanel } from "./DocumentSetupPanel";
+import { CertificateOperationsPanel } from "./CertificateOperationsPanel";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../core/api/ApiClient";
 import { documentApi } from "../api/documentApi";
@@ -21,7 +22,7 @@ const ACTOR_LABELS: Record<string, string> = {
 
 export function DocumentsPage() {
   const { user } = useAuth(); const tid = effectiveTenantId(user) ?? "";
-  const [tab, setTab]           = useState<"upload"|"compliance"|"all"|"setup">("compliance");
+  const [tab, setTab]           = useState<"upload"|"compliance"|"all"|"setup"|"certificates">("compliance");
   const [entityType, setEntityType] = useState<EntityType>("STUDENT");
   const [entityId, setEntityId] = useState("");
   const [search, setSearch] = useState("");
@@ -77,9 +78,11 @@ export function DocumentsPage() {
         <button className={tab==="compliance"?"active":""} onClick={()=>setTab("compliance")}>📊 Compliance overview</button>
         <button className={tab==="upload"?"active":""} onClick={()=>setTab("upload")}>📤 Upload documents</button>
         <button className={tab==="all"?"active":""} onClick={()=>setTab("all")}>🗂 All documents</button>
+        <button className={tab === "certificates" ? "active" : ""} onClick={() => setTab("certificates")}>🏅 Certificates & letters</button>
         <button className={tab === "setup" ? "active" : ""} onClick={() => setTab("setup")}>Document setup</button>
       </div>
 
+      {tab === "certificates" && <CertificateOperationsPanel />}
       {tab === "setup" && <DocumentSetupPanel tenantId={tid}/>}
       {tab==="compliance" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -92,16 +95,16 @@ export function DocumentsPage() {
                     <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{cs.total} {(ACTOR_LABELS[cs.type] ?? cs.type).toLowerCase()}s tracked</div>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:20,fontWeight:800,color:cs.pending===0?"#10B981":"#D97706"}}>{cs.total>0?Math.round((cs.compliant/cs.total)*100):0}%</div>
+                    <div style={{fontSize:20,fontWeight:800,color:cs.pending===0?"var(--success)":"var(--warning)"}}>{cs.total>0?Math.round((cs.compliant/cs.total)*100):0}%</div>
                     <div style={{fontSize:11,color:"var(--muted)"}}>compliance</div>
                   </div>
                 </div>
                 <div style={{height:8,background:"var(--surface-2)",borderRadius:999,overflow:"hidden",marginBottom:12}}>
-                  <div style={{height:"100%",width:`${cs.total>0?(cs.compliant/cs.total)*100:0}%`,background:cs.pending===0?"#10B981":"#D97706",borderRadius:999,transition:"width .6s"}}/>
+                  <div style={{height:"100%",width:`${cs.total>0?(cs.compliant/cs.total)*100:0}%`,background:cs.pending===0?"var(--success)":"var(--warning)",borderRadius:999,transition:"width .6s"}}/>
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <span style={{fontSize:11,padding:"3px 10px",borderRadius:20,background:"#ECFDF5",color:"#059669",fontWeight:700}}>{cs.compliant} compliant</span>
-                  {cs.pending > 0 && <span style={{fontSize:11,padding:"3px 10px",borderRadius:20,background:"#FFFBEB",color:"#D97706",fontWeight:700}}>{cs.pending} pending</span>}
+                  <span className="status-pill success">{cs.compliant} compliant</span>
+                  {cs.pending > 0 && <span className="status-pill warning">{cs.pending} pending</span>}
                 </div>
                 {cs.pending > 0 && (
                   <button className="secondary" style={{marginTop:10,fontSize:11}} onClick={()=>setTab("upload")}>
@@ -121,7 +124,7 @@ export function DocumentsPage() {
             <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
               {(Object.entries(ACTOR_LABELS) as [EntityType,string][]).map(([k,v]) => (
                 <button key={k} onClick={()=>{setEntityType(k);setEntityId("");}}
-                  style={{padding:"7px 16px",borderRadius:10,border:`1.5px solid ${entityType===k?"#6366F1":"var(--line)"}`,background:entityType===k?"#EEF2FF":"var(--surface)",color:entityType===k?"#6366F1":"var(--text)",fontSize:12,cursor:"pointer",fontWeight:entityType===k?700:400}}>
+                  className={`filter-btn ${entityType===k?"active":""}`}>
                   {v}
                 </button>
               ))}
@@ -130,14 +133,14 @@ export function DocumentsPage() {
             <div style={{marginBottom:14}}>
               <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Select {ACTOR_LABELS[entityType]}</label>
               <select value={entityId} onChange={e=>setEntityId(e.target.value)}
-                style={{width:"100%",height:40,padding:"0 12px",border:"1.5px solid var(--line)",borderRadius:10,background:"var(--surface)",fontSize:13}}>
+                className="human-field" style={{border:0,padding:0}}>
                 <option value="">— Select {ACTOR_LABELS[entityType].toLowerCase()} —</option>
                 {entityOptions.map((o:any) => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </div>
 
             {entityId && (
-              <div style={{border:"1px solid var(--line)",borderRadius:14,padding:20}}>
+              <div className="surface" style={{padding:20}}>
                 <DocumentUploader
                   actorType={entityType}
                   entityId={entityId}

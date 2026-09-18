@@ -43,16 +43,16 @@ type Phase = "inquiries" | "applications" | "criteria" | "workflow";
 type AppStatus = "SUBMITTED_APPLICATION" | "ADMISSION_ACCEPTED" | "ADMISSION_REJECTED" | "WAITING_LIST";
 
 const STATUS_META: Record<string, { label:string; pill:string; color:string; bg:string }> = {
-  SUBMITTED_APPLICATION: { label:"Submitted",  pill:"info",    color:"#2563EB", bg:"#EFF6FF" },
-  ADMISSION_ACCEPTED:    { label:"Accepted ✓", pill:"success", color:"#059669", bg:"#ECFDF5" },
-  ADMISSION_REJECTED:    { label:"Rejected",   pill:"danger",  color:"#EF4444", bg:"#FFF0F1" },
-  WAITING_LIST:          { label:"Waitlisted", pill:"warning", color:"#D97706", bg:"#FFFBEB" },
+  SUBMITTED_APPLICATION: { label:"Submitted",  pill:"info",    color:"var(--info)", bg:"var(--info-bg)" },
+  ADMISSION_ACCEPTED:    { label:"Accepted ✓", pill:"success", color:"var(--success)", bg:"var(--success-bg)" },
+  ADMISSION_REJECTED:    { label:"Rejected",   pill:"danger",  color:"var(--danger)", bg:"var(--danger-bg)" },
+  WAITING_LIST:          { label:"Waitlisted", pill:"warning", color:"var(--warning)", bg:"var(--warning-bg)" },
   // Inquiry statuses
-  NEW:          { label:"New",          pill:"info",    color:"#2563EB", bg:"#EFF6FF" },
-  UNDER_REVIEW: { label:"Under Review", pill:"warning", color:"#D97706", bg:"#FFFBEB" },
-  APPROVED:     { label:"Approved",     pill:"success", color:"#059669", bg:"#ECFDF5" },
-  ENROLLED:     { label:"Enrolled",     pill:"success", color:"#059669", bg:"#ECFDF5" },
-  REJECTED:     { label:"Rejected",     pill:"danger",  color:"#EF4444", bg:"#FFF0F1" },
+  NEW:          { label:"New",          pill:"info",    color:"var(--info)", bg:"var(--info-bg)" },
+  UNDER_REVIEW: { label:"Under Review", pill:"warning", color:"var(--warning)", bg:"var(--warning-bg)" },
+  APPROVED:     { label:"Approved",     pill:"success", color:"var(--success)", bg:"var(--success-bg)" },
+  ENROLLED:     { label:"Enrolled",     pill:"success", color:"var(--success)", bg:"var(--success-bg)" },
+  REJECTED:     { label:"Rejected",     pill:"danger",  color:"var(--danger)", bg:"var(--danger-bg)" },
 };
 
 // Mock data matching backend AdmissionApplicationDto
@@ -294,7 +294,7 @@ export function AdmissionsPage() {
         }
       />
 
-      {error && <div role="alert" className="surface" style={{ padding: 16, color: "var(--danger)", marginBottom: 16 }}>{error}</div>}
+      {error && <div role="alert" className="form-error" style={{marginBottom:16}}>{error}</div>}
       {loading && <p role="status">Loading admissions…</p>}
       {/* KPIs */}
       <section className="metric-grid" style={{marginBottom:20}}>
@@ -305,17 +305,17 @@ export function AdmissionsPage() {
       </section>
 
       {/* Flow diagram */}
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 16px",background:"var(--surface-2)",borderRadius:12,flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 16px",background:"var(--surface-2)",borderRadius:"var(--r-lg)",flexWrap:"wrap"}}>
         {[
-          { label:"1. Inquiry", color:"#2563EB",  bg:"#EFF6FF",  icon:"📋" },
-          { label:"2. Application + Docs", color:"#7C3AED", bg:"#F5F3FF", icon:"📝" },
-          { label:"3. Auto-check criteria", color:"#D97706", bg:"#FFFBEB", icon:"⚡" },
-          { label:"4. Approve / Reject", color:"#059669",   bg:"#ECFDF5", icon:"✅" },
-          { label:"5. Student enrolled", color:"#0F2241",   bg:"#EEF2FF", icon:"🎓" },
+          { label:"1. Inquiry", color:"var(--info)",  bg:"var(--info-bg)",  cls:"info", icon:"📋" },
+          { label:"2. Application + Docs", color:"var(--purple)", bg:"var(--purple-soft)", cls:"purple", icon:"📝" },
+          { label:"3. Auto-check criteria", color:"var(--warning)", bg:"var(--warning-bg)", cls:"warning", icon:"⚡" },
+          { label:"4. Approve / Reject", color:"var(--success)",   bg:"var(--success-bg)", cls:"success", icon:"✅" },
+          { label:"5. Student enrolled", color:"var(--navy)",   bg:"var(--indigo-soft)", cls:"info", icon:"🎓" },
         ].map((s,i) => (
           <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
             {i>0 && <ArrowRight size={14} style={{color:"var(--muted)"}}/>}
-            <span style={{padding:"4px 12px",borderRadius:20,background:s.bg,color:s.color,fontSize:11,fontWeight:700}}>
+            <span className={`status-pill ${s.cls}`}>
               {s.icon} {s.label}
             </span>
           </div>
@@ -354,13 +354,13 @@ export function AdmissionsPage() {
                       <td><b>{i.applicantFirstName} {i.applicantLastName}</b></td>
                       <td>{i.gradeApplied}</td>
                       <td><div>{i.guardianName}</div><div style={{fontSize:10,color:"var(--muted)"}}>{i.guardianPhone}</div></td>
-                      <td><span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"var(--surface-2)"}}>{i.source}</span></td>
+                      <td><span className="status-pill gray">{i.source}</span></td>
                       <td style={{fontSize:11}}>{new Date(i.submittedAt).toLocaleDateString()}</td>
                       <td><span className={`status-pill ${sm.pill}`}>{sm.label}</span></td>
                       <td>
                         <div className="row-actions">
-                          {i.status==="NEW" && <button className="table-action" style={{fontSize:10}} onClick={() => void reviewInquiry(i)}>Review</button>}
-                          {i.status==="UNDER_REVIEW" && <button className="table-action" style={{fontSize:10,color:"#059669"}} onClick={()=>{setNewApp(true);setAppForm(p=>({...p,firstName:i.applicantFirstName,lastName:i.applicantLastName,guardianName:i.guardianName,guardianPhone:i.guardianPhone}));}}>Convert → Application</button>}
+                          {i.status==="NEW" && <button className="table-action" onClick={() => void reviewInquiry(i)}>Review</button>}
+                          {i.status==="UNDER_REVIEW" && <button className="table-action" style={{fontSize:10,color:"var(--success)"}} onClick={()=>{setNewApp(true);setAppForm(p=>({...p,firstName:i.applicantFirstName,lastName:i.applicantLastName,guardianName:i.guardianName,guardianPhone:i.guardianPhone}));}}>Convert → Application</button>}
                         </div>
                       </td>
                     </tr>
@@ -395,7 +395,7 @@ export function AdmissionsPage() {
                       <td><b>{a.FirstName} {a.LastName}</b><div style={{fontSize:10,color:"var(--muted)"}}>{new Date(a.SubmittedAt).toLocaleDateString()}</div></td>
                       <td style={{fontSize:11}}>{branch?.name ?? "—"}</td>
                       <td>
-                        <b style={{color:a.PreviousMarks>=70?"#10B981":a.PreviousMarks>=50?"#D97706":"#EF4444"}}>
+                        <b style={{color:a.PreviousMarks>=70?"var(--success)":a.PreviousMarks>=50?"var(--warning)":"var(--danger)"}}>
                           {a.PreviousMarks}%
                         </b>
                       </td>
@@ -403,7 +403,7 @@ export function AdmissionsPage() {
                       <td style={{fontSize:11}}>{a.GuardianName}</td>
                       <td>
                         {a.docsComplete
-                          ? <span style={{color:"#10B981",fontSize:11,fontWeight:700}}>✓ Complete</span>
+                          ? <span style={{color:"var(--success)",fontSize:11,fontWeight:700}}>✓ Complete</span>
                           : <span style={{fontSize:11}}>Open to check</span>}
                       </td>
                       <td><span className={`status-pill ${sm.pill}`}>{sm.label}</span></td>
@@ -446,8 +446,8 @@ export function AdmissionsPage() {
                   ["Guardian phone",   selected.GuardianPhone ?? "—"],
                   ["Submitted",        new Date(selected.SubmittedAt).toLocaleString()],
                 ].map(([l,v])=>(
-                  <div key={l} style={{display:"flex",padding:"9px 0",borderBottom:"1px solid var(--surface-2)",fontSize:12}}>
-                    <span style={{width:130,color:"var(--muted)",flexShrink:0}}>{l}</span>
+                  <div key={l} className="review-row">
+                    <span className="review-row-label">{l}</span>
                     <b>{String(v)}</b>
                   </div>
                 ))}
@@ -462,11 +462,11 @@ export function AdmissionsPage() {
                   {(()=>{
                     const sm = STATUS_META[selected.Status] ?? STATUS_META.SUBMITTED_APPLICATION;
                     return (
-                      <div style={{padding:"14px 16px",borderRadius:12,background:sm.bg,border:`1.5px solid ${sm.color}30`,marginBottom:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:sm.color,marginBottom:4}}>Current Status</div>
+                      <div style={{padding:"14px 16px",borderRadius:"var(--r-lg)",background:sm.bg,border:`1.5px solid ${sm.color}30`,marginBottom:12}}>
+                        <div className="section-label" style={{color:sm.color,marginBottom:4}}>Current Status</div>
                         <div style={{fontSize:18,fontWeight:800,color:sm.color}}>{sm.label}</div>
                         {selected.DecisionNotes && <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>{selected.DecisionNotes}</div>}
-                        {selected.StudentId && <div style={{fontSize:11,marginTop:6,padding:"4px 10px",background:"white",borderRadius:6,color:sm.color,fontWeight:700}}>Student account created ✓</div>}
+                        {selected.StudentId && <div style={{fontSize:11,marginTop:6,padding:"4px 10px",background:"var(--surface)",borderRadius:"var(--r-sm)",color:sm.color,fontWeight:700,border:"1px solid var(--line)"}}>Student account created ✓</div>}
                       </div>
                     );
                   })()}
@@ -476,21 +476,21 @@ export function AdmissionsPage() {
                     <div style={{display:"flex",gap:8,flexDirection:"column"}}>
                       <div style={{fontSize:11,color:"var(--muted)",marginBottom:4}}>Manual decision:</div>
                       <div style={{display:"flex",gap:8}}>
-                        <button className="primary" style={{flex:1,fontSize:11,background:"#059669"}} onClick={()=>changeStatus(selected.Id,"ADMISSION_ACCEPTED","Manually approved by administrator")} disabled={processing}>
+                        <button className="primary" style={{flex:1,fontSize:11,background:"var(--success)"}} onClick={()=>changeStatus(selected.Id,"ADMISSION_ACCEPTED","Manually approved by administrator")} disabled={processing}>
                           {processing?"Processing…":"✓ Accept admission"}
                         </button>
-                        <button className="secondary" style={{flex:1,fontSize:11,color:"#D97706"}} onClick={()=>changeStatus(selected.Id,"WAITING_LIST","Added to waitlist by administrator")} disabled={processing}>
+                        <button className="secondary" style={{flex:1,fontSize:11,color:"var(--warning)"}} onClick={()=>changeStatus(selected.Id,"WAITING_LIST","Added to waitlist by administrator")} disabled={processing}>
                           ⏱ Waitlist
                         </button>
                       </div>
-                      <button style={{width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid #EF4444",background:"#FFF0F1",color:"#EF4444",fontSize:11,fontWeight:700,cursor:"pointer"}}
+                      <button className="danger-button" style={{width:"100%",padding:"8px",fontSize:11,fontWeight:700}}
                         onClick={()=>changeStatus(selected.Id,"ADMISSION_REJECTED","Rejected by administrator")} disabled={processing}>
                         ✗ Reject
                       </button>
                     </div>
                   )}
                   {selected.Status === "ADMISSION_ACCEPTED" && (
-                    <div style={{padding:"10px 12px",background:"#ECFDF5",border:"1px solid #a7f3d0",borderRadius:10,fontSize:12,color:"#065f46"}}>
+                    <div className="success-callout">
                       ✅ Student + parent accounts provisioned automatically. Student is now in the Students module.
                     </div>
                   )}
@@ -557,7 +557,7 @@ export function AdmissionsPage() {
             {criteria && <p style={{ padding: "12px 20px" }}>Minimum marks: {criteria.minimumMarks}%. Admission requires an authorized decision after the application is saved.</p>}
 
             <div className="human-form">
-              <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>Applicant info</div>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--muted-2)",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>Applicant info</div>
               <div className="human-form-grid">
                 <label className="human-field"><span>First name *</span><input value={appForm.firstName} onChange={afsf("firstName")}/></label>
                 <label className="human-field"><span>Last name</span><input value={appForm.lastName} onChange={afsf("lastName")}/></label>
@@ -573,7 +573,7 @@ export function AdmissionsPage() {
                 <PkPhoneInput label="Phone" value={appForm.phone} onChange={v => afsf("phone")({target:{value:v}} as any)}/>
               </div>
 
-              <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,marginTop:8}}>Enrollment target</div>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--muted-2)",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,marginTop:8}}>Enrollment target</div>
               <div className="human-form-grid">
                 <label className="human-field field-wide"><span>School *</span>
                   <select value={appForm.schoolId} onChange={afsf("schoolId")}>
@@ -607,7 +607,7 @@ export function AdmissionsPage() {
                 <label className="human-field"><span>Previous marks (%)</span><input type="number" min="0" max="100" value={appForm.previousMarks} onChange={afsf("previousMarks")} placeholder="e.g. 75"/></label>
               </div>
 
-              <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,marginTop:8}}>Guardian info</div>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--muted-2)",textTransform:"uppercase",letterSpacing:.8,marginBottom:4,marginTop:8}}>Guardian info</div>
               <div className="human-form-grid">
                 <label className="human-field"><span>Guardian name *</span><input value={appForm.guardianName} onChange={afsf("guardianName")}/></label>
                 <label className="human-field"><span>Relationship</span>

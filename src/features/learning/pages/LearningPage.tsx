@@ -109,7 +109,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
             </div>
 
             {isLate && !meta.allowLate && (
-              <div style={{ margin: "14px 20px 0", padding: "10px 14px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 10, fontSize: 12, color: "var(--danger)", display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ margin: "14px 20px 0", padding: "10px 14px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius:"var(--r-md)", fontSize: 12, color: "var(--danger)", display: "flex", gap: 8, alignItems: "center" }}>
                 <AlertCircle size={15} style={{ flexShrink: 0 }} />
                 This assignment does not accept late submissions. Contact your teacher.
               </div>
@@ -121,12 +121,8 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
                 <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: "var(--text-2)" }}>Attach file</div>
                 <div
                   onClick={() => fileRef.current?.click()}
-                  style={{
-                    border: `2px dashed ${file ? "var(--success)" : "var(--line-2)"}`,
-                    borderRadius: 12, padding: "20px 16px", textAlign: "center",
-                    cursor: "pointer", background: file ? "var(--success-bg)" : "var(--surface-2)",
-                    transition: "all .15s",
-                  }}
+                  className={`drop-zone${file ? " drag-over" : ""}`}
+                  style={{ border: `2px dashed ${file ? "var(--success)" : "var(--line-2)"}`, background: file ? "var(--success-bg)" : undefined }}
                   onDragOver={e => { e.preventDefault(); }}
                   onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setFile(f); }}
                 >
@@ -159,7 +155,7 @@ function SubmitModal({ assignment, onClose, onDone }: { assignment: any; onClose
                 <span>Comment for your teacher (optional)</span>
                 <textarea value={comment} onChange={e => setComment(e.target.value)}
                   placeholder="Any notes or questions about this submission…"
-                  style={{ minHeight: 80, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", width: "100%", fontSize: 13, resize: "vertical" }} />
+                  style={{ minHeight: 80, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", width: "100%", fontSize: 13, resize: "vertical" }} />
               </label>
               {error && <div style={{ color: "var(--danger)", fontSize: 12 }}>{error}</div>}
             </div>
@@ -258,7 +254,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
         <div style={{ padding: "12px 20px", background: "var(--surface-2)", borderBottom: "1px solid var(--line)", display: "flex", gap: 16, alignItems: "center" }}>
           {[["Submitted", counts.submitted, "info"], ["Late", counts.late, "warning"], ["Graded", counts.graded, "success"], ["Missing", counts.missing, "danger"]].map(([l, v, t]) => (
             <div key={String(l)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span className={`status-pill ${t}`} style={{ fontSize: 10 }}>{v} {l}</span>
+              <span className={`status-pill ${t}`}>{v} {l}</span>
             </div>
           ))}
           <div style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>
@@ -269,42 +265,42 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
         <div style={{ display: "grid", gridTemplateColumns: selected ? "1fr 360px" : "1fr", height: "calc(92vh - 130px)", overflow: "hidden" }}>
           {/* Submission list */}
           <div style={{ overflow: "auto", borderRight: selected ? "1px solid var(--line)" : "none" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="premium-table" style={{ width: "100%" }}>
               <thead>
                 <tr>
                   {["Student", "Submitted", "File", "Grade", "Status", "Actions"].map(h => (
-                    <th key={h} style={{ padding: "10px 14px", background: "var(--surface-2)", borderBottom: "1.5px solid var(--line)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".6px", color: "var(--muted)", textAlign: h === "Actions" ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
+                    <th key={h} style={{ textAlign: h === "Actions" ? "right" : "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {subs.map(sub => (
                   <tr key={sub.studentId} style={{ background: selected?.id === sub.id ? "var(--indigo-soft)" : "" }}>
-                    <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
+                    <td >
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 8, background: "var(--indigo-soft)", color: "var(--indigo)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
+                        <div className="row-avatar">
                           {sub.studentName.split(" ").map((n:any) => n[0]).join("")}
                         </div>
                         <b style={{ fontSize: 12 }}>{sub.studentName}</b>
                       </div>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)", fontSize: 11, color: "var(--muted)" }}>
+                    <td style={{ fontSize: 11, color: "var(--muted)" }}>
                       {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString("en-PK", { dateStyle: "short", timeStyle: "short" }) : "—"}
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
+                    <td >
                       {sub.fileName ? (
                         <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--accent)" }}>
                           <FileText size={12} /> {sub.fileName.length > 18 ? sub.fileName.slice(0, 18) + "…" : sub.fileName}
                         </span>
                       ) : <span style={{ fontSize: 11, color: "var(--muted-2)" }}>No file</span>}
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
+                    <td >
                       {sub.grade ? <b style={{ fontSize: 15, color: "var(--success)" }}>{sub.grade}</b> : <span style={{ color: "var(--muted-2)", fontSize: 11 }}>—</span>}
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
-                      <span className={`status-pill ${STATUS_COLOR[sub.status] ?? "gray"}`} style={{ fontSize: 9 }}>{sub.status}</span>
+                    <td >
+                      <span className={`status-pill ${STATUS_COLOR[sub.status] ?? "gray"}`}>{sub.status}</span>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: "1px solid var(--line)" }}>
+                    <td >
                       {sub.status !== "MISSING" && (
                         <button className="table-action" style={{ fontSize: 10, display: "flex", alignItems: "center", gap: 4 }}
                           onClick={() => { setSel(sub); setGrade(sub.grade); setFb(sub.feedback); }}>
@@ -327,14 +323,14 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                   Submitted {selected.submittedAt ? new Date(selected.submittedAt).toLocaleString("en-PK") : "—"}
                 </div>
                 {selected.comment && (
-                  <div style={{ marginTop: 10, padding: "8px 12px", background: "var(--surface)", borderRadius: 8, border: "1px solid var(--line)", fontSize: 12, fontStyle: "italic", color: "var(--muted)" }}>
+                  <div style={{ marginTop: 10, padding: "8px 12px", background: "var(--surface)", borderRadius:"var(--r)", border: "1px solid var(--line)", fontSize: 12, fontStyle: "italic", color: "var(--muted)" }}>
                     "{selected.comment}"
                   </div>
                 )}
               </div>
               <div style={{ padding: 18, flex: 1 }}>
                 {selected.fileName && (
-                  <button onClick={() => void download(selected.id, selected.fileName!)} style={{ width: "100%", padding: "14px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 16 }}>
+                  <button onClick={() => void download(selected.id, selected.fileName!)} style={{ width: "100%", padding: "14px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 16 }}>
                     <FileText size={20} style={{ color: "var(--accent)" }} />
                     <div style={{ textAlign: "left" }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>{selected.fileName}</div>
@@ -346,7 +342,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                   <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-2)" }}>Marks (out of {totalMarks}) *</span>
                   <input type="number" min={0} max={totalMarks} value={grade} onChange={e => setGrade(e.target.value)}
                     placeholder={`0 – ${totalMarks}`}
-                    style={{ height: 42, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius: 10, fontSize: 16, fontWeight: 700, textAlign: "center" }} />
+                    style={{ height: 42, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", fontSize: 16, fontWeight: 700, textAlign: "center" }} />
                   {grade && (
                     <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
                       {Math.round((Number(grade) / totalMarks) * 100)}% · Grade: <b>{computeGradeLabel(Number(grade), totalMarks)}</b>
@@ -357,7 +353,7 @@ function GradeDrawer({ assignment, onClose }: { assignment: any; onClose: () => 
                   <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-2)" }}>Feedback to student</span>
                   <textarea value={feedback} onChange={e => setFb(e.target.value)}
                     placeholder="Constructive feedback that helps the student improve…"
-                    style={{ minHeight: 100, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius: 10, fontSize: 13, resize: "vertical" }} />
+                    style={{ minHeight: 100, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", fontSize: 13, resize: "vertical" }} />
                 </label>
               </div>
               <div style={{ padding: "12px 18px", borderTop: "1px solid var(--line)", display: "flex", gap: 8 }}>
@@ -487,13 +483,13 @@ export function LearningPage() {
   }
 
   const TYPE_COLOR: Record<string, { bg: string; color: string }> = {
-    HOMEWORK:     { bg: "#EFF6FF", color: "#2563EB" },
-    PROJECT:      { bg: "#F5F3FF", color: "#7C3AED" },
-    ESSAY:        { bg: "#ECFDF5", color: "#059669" },
-    LAB_REPORT:   { bg: "#FFF7ED", color: "#EA580C" },
-    PRESENTATION: { bg: "#FDF2F8", color: "#DB2777" },
-    RESEARCH:     { bg: "#FFFBEB", color: "#D97706" },
-    CLASSWORK:    { bg: "#F0FDF4", color: "#16A34A" },
+    HOMEWORK:     { bg: "var(--info-bg)",      color: "var(--info)" },
+    PROJECT:      { bg: "var(--purple-soft)",  color: "var(--purple)" },
+    ESSAY:        { bg: "var(--success-bg)",   color: "var(--success)" },
+    LAB_REPORT:   { bg: "var(--warning-bg)",   color: "var(--warning)" },
+    PRESENTATION: { bg: "var(--rose-soft)",    color: "var(--rose)" },
+    RESEARCH:     { bg: "var(--warning-bg)",   color: "var(--warning)" },
+    CLASSWORK:    { bg: "var(--teal-soft)",    color: "var(--teal)" },
   };
 
   return (
@@ -553,7 +549,7 @@ export function LearningPage() {
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={8} style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>
+                    <tr><td colSpan={8} className="empty-cell">
                       {isTeacher ? "No assignments yet. Create your first assignment →" : "No assignments assigned to you yet."}
                     </td></tr>
                   ) : filtered.map((a: any) => {
@@ -561,7 +557,7 @@ export function LearningPage() {
                     const due = m.dueDate ? new Date(m.dueDate + "T" + (m.dueTime ?? "23:59")) : null;
                     const isOverdue = due && due < now && !submittedIds.has(a.id) && !a.mySubmissionId;
                     const isSubmitted = submittedIds.has(a.id) || m.status === "SUBMITTED";
-                    const typeStyle = TYPE_COLOR[m.type ?? "HOMEWORK"] ?? { bg: "#EEF2FF", color: "#6366F1" };
+                    const typeStyle = TYPE_COLOR[m.type ?? "HOMEWORK"] ?? { bg: "var(--indigo-soft)", color: "var(--indigo)" };
 
                     return (
                       <tr key={a.id}>
@@ -576,7 +572,7 @@ export function LearningPage() {
                           </div>
                         </td>
                         <td>
-                          <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 20, background: typeStyle.bg, color: typeStyle.color, fontWeight: 700 }}>
+                          <span style={{ fontSize: 10, padding: "3px 9px", borderRadius:"var(--r-2xl)", background: typeStyle.bg, color: typeStyle.color, fontWeight: 700 }}>
                             {m.type ?? "HOMEWORK"}
                           </span>
                         </td>
@@ -591,7 +587,7 @@ export function LearningPage() {
                         </td>
                         <td style={{ textAlign: "center" }}><b>{m.totalMarks ?? 100}</b></td>
                         <td>
-                          <span className={`status-pill ${isSubmitted ? "success" : isOverdue ? "danger" : m.status === "GRADED" ? "purple" : "warning"}`} style={{ fontSize: 9 }}>
+                          <span className={`status-pill ${isSubmitted ? "success" : isOverdue ? "danger" : m.status === "GRADED" ? "purple" : "warning"}`} >
                             {isSubmitted ? "SUBMITTED" : isOverdue ? "OVERDUE" : m.status === "GRADED" ? "GRADED" : "PENDING"}
                           </span>
                         </td>
@@ -640,10 +636,9 @@ export function LearningPage() {
               {lessons.map((l: any) => {
                 const m = parseMeta(l.metadataJson);
                 return (
-                  <div key={l.id} style={{ padding: "14px 16px", border: "1px solid var(--line)", borderRadius: 12, display: "flex", gap: 14, alignItems: "center", cursor: "pointer", transition: "all .12s" }}
-                    onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--accent)")}
-                    onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--line)")}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--indigo-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div key={l.id} className="lesson-card"
+                    >
+                    <div style={{ width: 36, height: 36, borderRadius:"var(--r-md)", background: "var(--indigo-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: 13, fontWeight: 800, color: "var(--indigo)" }}>{m.sortOrder ?? 1}</span>
                     </div>
                     <div style={{ flex: 1 }}>
@@ -652,7 +647,7 @@ export function LearningPage() {
                     </div>
                     <div style={{ fontSize: 11, color: "var(--muted)" }}>{m.resourceCount ?? 0} resources</div>
                     {isTeacher && (
-                      <button className="table-action" style={{ fontSize: 10 }}><Plus size={11} /> Add resource</button>
+                      <button className="table-action"><Plus size={11} /> Add resource</button>
                     )}
                   </div>
                 );

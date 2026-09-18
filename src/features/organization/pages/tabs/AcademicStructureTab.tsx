@@ -114,7 +114,7 @@ export function AcademicStructureTab() {
                         <td><b>{item.name}</b></td>
                         <td><code style={{fontSize:11}}>{item.code}</code></td>
                         {sub==="years" && <td style={{fontSize:11, color:"var(--muted)"}}>
-                          {meta.startDate} → {meta.endDate} {meta.isCurrent && <span className="status-pill success" style={{fontSize:9}}>Current</span>}
+                          {meta.startDate} → {meta.endDate} {meta.isCurrent && <span className="status-pill success">Current</span>}
                         </td>}
                         <td style={{textAlign:"right"}}>
                           <RowActions

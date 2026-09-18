@@ -154,8 +154,8 @@ export const useCreateInventoryItem=()=>{ const qc=useQueryClient(); const tid=u
 export const usePurchaseOrders  = () => { const tid=useTid(); return useQuery({ queryKey:["purchase-orders",tid], queryFn:()=>A.getPurchaseOrders(tid) }); };
 
 // ── Communication ─────────────────────────────────────────────────────────────
-export const useNotifications   = () => { const {user}=useAuth(); const tid=useTid(); return useQuery({ queryKey:["notifs",tid,user?.id], queryFn:()=>A.getNotifications(tid,user!.id), enabled:!!user?.id }); };
-export const useUnreadCount     = () => { const {user}=useAuth(); const tid=useTid(); return useQuery({ queryKey:["unread",tid,user?.id], queryFn:()=>A.getUnreadCount(tid,user!.id).then(r=>(r as any).unreadCount??0), enabled:!!user?.id }); };
+export const useNotifications   = () => { const {user}=useAuth(); const tid=useTid(); return useQuery({ queryKey:["notifs",tid,user?.id], queryFn:()=>A.getNotifications(tid,user!.id), enabled:!!user?.id, refetchInterval:60_000 }); };
+export const useUnreadCount     = () => { const {user}=useAuth(); const tid=useTid(); return useQuery({ queryKey:["unread",tid,user?.id], queryFn:()=>A.getUnreadCount(tid,user!.id).then(r=>(r as any).unreadCount??0), enabled:!!user?.id, refetchInterval:60_000 }); };
 export const useMarkRead        = () => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:(id:string)=>A.markNotifRead(id,tid,user!.id), onSuccess:()=>{ qc.invalidateQueries({queryKey:["notifs"]}); qc.invalidateQueries({queryKey:["unread"]}); } }); };
 export const useMarkAllRead     = () => { const qc=useQueryClient(); const {user}=useAuth(); const tid=useTid(); return useMutation({ mutationFn:()=>A.markAllRead(tid,user!.id), onSuccess:()=>{ qc.invalidateQueries({queryKey:["notifs"]}); qc.invalidateQueries({queryKey:["unread"]}); } }); };
 export const useConversations   = () => { const tid=useTid(); return useQuery({ queryKey:["convs",tid], queryFn:()=>A.getConversations(tid) }); };

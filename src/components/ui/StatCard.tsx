@@ -15,7 +15,7 @@ interface StatCardProps {
 
 export function StatCard({
   label, value, note, children,
-  color = "#2563EB", bg = "#EFF6FF",
+  color = "var(--info)", bg = "var(--info-bg)",
   onClick, loading, trend,
 }: StatCardProps) {
   return (

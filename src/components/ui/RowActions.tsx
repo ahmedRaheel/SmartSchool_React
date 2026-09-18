@@ -35,7 +35,7 @@ function DeleteConfirm({ label, onConfirm, onCancel }: { label: string; onConfir
     <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
       <div className="modal-card" style={{ width: "min(420px,96vw)" }}>
         <div style={{ padding: "28px 28px 24px", textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--danger-bg)", border: "1.5px solid var(--danger-border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <div style={{ width: 56, height: 56, borderRadius:"var(--r-xl)", background: "var(--danger-bg)", border: "1.5px solid var(--danger-border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <AlertTriangle size={24} style={{ color: "var(--danger)" }} />
           </div>
           <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>Delete {label}?</h3>
@@ -45,7 +45,7 @@ function DeleteConfirm({ label, onConfirm, onCancel }: { label: string; onConfir
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
             <button className="secondary" style={{ minWidth: 90 }} onClick={onCancel}>Cancel</button>
             <button
-              style={{ minWidth: 120, height: 36, padding: "0 18px", borderRadius: 9, border: "none", background: "var(--danger)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: busy ? "wait" : "pointer", opacity: busy ? .7 : 1 }}
+              style={{ minWidth: 120, height: 36, padding: "0 18px", borderRadius:"var(--r-md)", border: "none", background: "var(--danger)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: busy ? "wait" : "pointer", opacity: busy ? .7 : 1 }}
               onClick={confirm} disabled={busy}
             >
               {busy ? "Deleting…" : "Yes, delete"}
@@ -107,20 +107,12 @@ export function RowActions({ onView, onEdit, onDelete, deleteLabel = "this recor
                 <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setMenuOpen(false)} />
                 <div style={{
                   position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 100,
-                  background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12,
+                  background: "var(--surface)", border: "1px solid var(--line)", borderRadius:"var(--r-lg)",
                   boxShadow: "var(--shadow-lg)", padding: "4px", minWidth: 140,
                 }}>
                   {allActions.map((a, i) => (
                     <button key={i} onClick={() => { a.onClick(); setMenuOpen(false); }}
-                      style={{
-                        width: "100%", display: "flex", alignItems: "center", gap: 9,
-                        padding: "8px 12px", border: 0, borderRadius: 8, background: "transparent",
-                        fontSize: 12, cursor: "pointer", textAlign: "left",
-                        color: a.variant === "danger" ? "var(--danger)" : "var(--text)",
-                        fontWeight: 500,
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      className={`popover-item${a.variant === "danger" ? " danger" : ""}`}
                     >
                       {a.icon}{a.label}
                     </button>

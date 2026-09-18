@@ -33,7 +33,7 @@ export function LookupTab() {
         <div style={{ fontSize:10, color:"var(--muted)", padding:"6px 8px", fontWeight:700, textTransform:"uppercase", letterSpacing:.8 }}>Types</div>
         {typeList.map((t:string) => (
           <button key={t} onClick={()=>setSelected(t)}
-            style={{ width:"100%", padding:"8px 10px", border:"none", borderRadius:8, cursor:"pointer", textAlign:"left", fontSize:11, fontWeight:selected===t?600:400, background:selected===t?"var(--navy)":"transparent", color:selected===t?"#fff":"var(--text)", marginBottom:2 }}>
+            className={`lookup-nav-item ${selected===t?"active":""}`}>
             {t.replace(/_/g," ")}
           </button>
         ))}
@@ -54,7 +54,7 @@ export function LookupTab() {
                       <td><b>{v.name}</b></td><td><code style={{fontSize:11}}>{v.code}</code></td>
                       <td>{v.sortOrder??"-"}</td>
                       <td><span className={`status-pill ${v.isActive?"success":"gray"}`}>{v.isActive?"Active":"Inactive"}</span></td>
-                      <td><button className="table-action danger-button" style={{fontSize:10}} onClick={()=>remove.mutate(v.id)}><Trash2 size={11}/></button></td>
+                      <td><button className="table-action danger-button" onClick={()=>remove.mutate(v.id)}><Trash2 size={11}/></button></td>
                     </tr>
                   ))
                 }
