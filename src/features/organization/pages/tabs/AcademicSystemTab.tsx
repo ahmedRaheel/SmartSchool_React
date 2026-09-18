@@ -86,7 +86,7 @@ export function AcademicSystemTab() {
               </thead>
               <tbody>
                 {paged.length === 0 ? (
-                  <tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--muted)"}}>
+                  <tr><td colSpan={6} className="empty-cell">
                     {search ? `No results for "${search}"` : "No academic systems yet. Add one above."}
                   </td></tr>
                 ) : paged.map((item:any) => {
@@ -94,10 +94,10 @@ export function AcademicSystemTab() {
                   return (
                     <tr key={item.id}>
                       <td><b style={{fontSize:13}}>{item.name}</b></td>
-                      <td><span className="status-pill info" style={{fontSize:10}}>{meta.systemType ?? "—"}</span></td>
+                      <td><span className="status-pill info">{meta.systemType ?? "—"}</span></td>
                       <td style={{fontSize:12}}>{meta.country ?? "Pakistan"}</td>
                       <td style={{fontSize:12,color:"var(--muted)",maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{meta.description ?? "—"}</td>
-                      <td style={{textAlign:"center"}}>{meta.isDefault ? <span className="status-pill success" style={{fontSize:9}}>DEFAULT</span> : <span style={{color:"var(--muted-2)",fontSize:11}}>—</span>}</td>
+                      <td style={{textAlign:"center"}}>{meta.isDefault ? <span className="status-pill success">DEFAULT</span> : <span style={{color:"var(--muted-2)",fontSize:11}}>—</span>}</td>
                       <td style={{textAlign:"right"}}>
                         <RowActions onView={() => setViewItem(item)} onEdit={() => setEditItem({ ...item, ...parseMeta(item.metadataJson) })} onDelete={() => delSys.mutate(item.id, { onSuccess: () => void refetch() })} deleteLabel="academic system"/>
                       </td>

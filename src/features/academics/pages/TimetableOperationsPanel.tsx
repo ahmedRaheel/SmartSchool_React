@@ -130,9 +130,9 @@ export function TimetableOperationsPanel() {
   return (
     <div className="page-stack">
       <div className="metric-grid cols-3">
-        <div className="metric-card"><span className="metric-icon" style={{ color: "#2563EB", background: "#EFF6FF" }}><Clock3 size={18} /></span><div><small>Periods</small><strong>{periods.length}</strong><p>configured for campus</p></div></div>
-        <div className="metric-card"><span className="metric-icon" style={{ color: "#4F46E5", background: "#EEF2FF" }}><CalendarDays size={18} /></span><div><small>Timetables</small><strong>{timetables.length}</strong><p>academic schedules</p></div></div>
-        <div className="metric-card"><span className="metric-icon" style={{ color: "#059669", background: "#ECFDF5" }}><CalendarDays size={18} /></span><div><small>Scheduled entries</small><strong>{entries.length}</strong><p>{selectedTimetable?.name ?? "select a timetable"}</p></div></div>
+        <div className="metric-card"><span className="metric-icon" style={{ color: "var(--info)", background: "var(--info-bg)" }}><Clock3 size={18} /></span><div><small>Periods</small><strong>{periods.length}</strong><p>configured for campus</p></div></div>
+        <div className="metric-card"><span className="metric-icon" style={{ color: "var(--indigo)", background: "var(--indigo-soft)" }}><CalendarDays size={18} /></span><div><small>Timetables</small><strong>{timetables.length}</strong><p>academic schedules</p></div></div>
+        <div className="metric-card"><span className="metric-icon" style={{ color: "var(--success)", background: "var(--success-bg)" }}><CalendarDays size={18} /></span><div><small>Scheduled entries</small><strong>{entries.length}</strong><p>{selectedTimetable?.name ?? "select a timetable"}</p></div></div>
       </div>
 
       <div className="surface">
@@ -154,7 +154,7 @@ export function TimetableOperationsPanel() {
           : filteredEntries.length === 0 ? <div className="empty-state"><CalendarDays size={34} /><b>No timetable entries yet</b><p>Create periods and a timetable, then add teaching allocations to the weekly schedule.</p></div>
           : <div style={{ padding: 16, display: "grid", gap: 12 }}>
               {entriesByDay.filter(group => group.entries.length > 0).map(group => (
-                <div key={group.day.value} style={{ border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
+                <div key={group.day.value} style={{ border: "1px solid var(--line)", borderRadius:"var(--r-lg)", overflow: "hidden" }}>
                   <div style={{ padding: "10px 14px", background: "var(--surface-2)", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}><b>{group.day.label}</b><span className="status-pill gray">{group.entries.length} entries</span></div>
                   <div className="table-wrap"><table className="premium-table"><thead><tr><th>Period</th><th>Class</th><th>Course</th><th>Teacher</th><th>Room</th><th>Type</th><th style={{ textAlign: "right" }}>Action</th></tr></thead><tbody>
                     {group.entries.map(item => <tr key={item.entryId}><td><b>{item.periodName}</b></td><td>{item.classSectionName ?? "—"}</td><td>{item.courseName ?? "—"}</td><td>{item.teacherName ?? "—"}</td><td>{item.roomName ?? "—"}</td><td><span className="status-pill info">{item.entryType}</span></td><td style={{ textAlign: "right" }}><button className="table-action danger" disabled={deleteEntry.isPending} onClick={() => deleteEntry.mutate(item.entryId)}><Trash2 size={13} /></button></td></tr>)}

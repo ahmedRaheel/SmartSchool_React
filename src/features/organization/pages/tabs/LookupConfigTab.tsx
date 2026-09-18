@@ -54,7 +54,7 @@ export function LookupConfigTab() {
     width: "100%",
     padding: "8px 10px",
     border: "none",
-    borderRadius: 8,
+    borderRadius:"var(--r)",
     cursor: "pointer",
     textAlign: "left",
     fontSize: 11,
@@ -88,7 +88,7 @@ export function LookupConfigTab() {
                           <td><code style={{fontSize:11}}>{v.code}</code></td>
                           <td>{v.sortOrder ?? "—"}</td>
                           <td><span className={`status-pill ${v.isActive?"success":"gray"}`}>{v.isActive?"Active":"Inactive"}</span></td>
-                          <td><button className="table-action danger-button" style={{fontSize:10}} onClick={()=>deleteLookup.mutate(v.id)}><Trash2 size={11}/></button></td>
+                          <td><button className="table-action danger-button" onClick={()=>deleteLookup.mutate(v.id)}><Trash2 size={11}/></button></td>
                         </tr>
                       ))
                   }

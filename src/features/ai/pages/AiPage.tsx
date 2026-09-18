@@ -27,13 +27,13 @@ function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}
 const SUBJECTS = ["Mathematics","Physics","Chemistry","English","Computer Science","Biology","Urdu","History","Islamiyat","Pakistan Studies","Economics"];
 const DIFFICULTIES = ["easy","medium","hard","adaptive"];
 const PRED_KINDS = [
-  { value: "dropout-risk",     label: "Dropout risk",       color: "#DC2626", icon: "⚠️", desc: "Probability of dropping out this term" },
-  { value: "grade-prediction", label: "Grade prediction",   color: "#2563EB", icon: "📊", desc: "Expected final grade based on current performance" },
-  { value: "attendance-risk",  label: "Attendance risk",    color: "#D97706", icon: "📅", desc: "Likelihood of attendance falling below 75%" },
-  { value: "fee-default",      label: "Fee default risk",   color: "#9333EA", icon: "💰", desc: "Probability of fee payment default" },
+  { value: "dropout-risk",     label: "Dropout risk",       color: "var(--danger)", icon: "⚠️", desc: "Probability of dropping out this term" },
+  { value: "grade-prediction", label: "Grade prediction",   color: "var(--info)", icon: "📊", desc: "Expected final grade based on current performance" },
+  { value: "attendance-risk",  label: "Attendance risk",    color: "var(--warning)", icon: "📅", desc: "Likelihood of attendance falling below 75%" },
+  { value: "fee-default",      label: "Fee default risk",   color: "var(--purple)", icon: "💰", desc: "Probability of fee payment default" },
 ];
-const RISK_BG: Record<string, string> = { Low: "#ECFDF5", Medium: "#FFFBEB", High: "#FEF2F2", Critical: "#FEF2F2" };
-const RISK_COLOR: Record<string, string> = { Low: "#059669", Medium: "#D97706", High: "#DC2626", Critical: "#7F1D1D" };
+const RISK_BG: Record<string, string> = { Low: "var(--success-bg)", Medium: "var(--warning-bg)", High: "var(--danger-bg)", Critical: "var(--danger-bg)" };
+const RISK_COLOR: Record<string, string> = { Low: "var(--success)", Medium: "var(--warning)", High: "var(--danger)", Critical: "var(--danger)" };
 
 // ─── Shared chat message component ────────────────────────────────────────────
 function Bubble({ m }: { m: ChatMsg }) {
@@ -47,17 +47,17 @@ function Bubble({ m }: { m: ChatMsg }) {
         </div>
       )}
       <div style={{ maxWidth: "76%", display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ padding: "10px 14px", borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isUser ? "var(--indigo)" : isSys ? "var(--surface-2)" : "var(--surface)", color: isUser ? "white" : "var(--text)", fontSize: 13, lineHeight: 1.65, border: isUser ? "none" : "1px solid var(--line)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+        <div style={{ padding: "10px 14px", borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isUser ? "var(--indigo)" : isSys ? "var(--surface-2)" : "var(--surface)", color: isUser ? "#fff" : "var(--text)", fontSize: 13, lineHeight: 1.65, border: isUser ? "none" : "1px solid var(--line)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
           {m.content}
         </div>
         {m.citations && m.citations.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {m.citations.slice(0, 3).map((c: any, i: number) => (
-              <div key={i} style={{ fontSize: 10, padding: "4px 10px", background: "#EFF6FF", borderRadius: 6, border: "1px solid #BFDBFE", color: "#1D4ED8", display: "flex", gap: 6, alignItems: "center" }}>
+              <div key={i} style={{ fontSize: 10, padding: "4px 10px", background: "var(--info-bg)", borderRadius: "var(--r-sm)", border: "1px solid var(--info-border)", color: "var(--info)", display: "flex", gap: 6, alignItems: "center" }}>
                 <FileText size={9} style={{ flexShrink: 0 }} />
                 <span style={{ fontWeight: 700 }}>{c.documentTitle}</span>
-                {c.relevanceScore && <span style={{ color: "#60A5FA" }}>{Math.round(c.relevanceScore * 100)}%</span>}
-                {c.excerpt && <span style={{ color: "#3B82F6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{c.excerpt.slice(0, 60)}…</span>}
+                {c.relevanceScore && <span style={{ color: "var(--accent)" }}>{Math.round(c.relevanceScore * 100)}%</span>}
+                {c.excerpt && <span style={{ color: "var(--info)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{c.excerpt.slice(0, 60)}…</span>}
               </div>
             ))}
           </div>
@@ -70,7 +70,7 @@ function Bubble({ m }: { m: ChatMsg }) {
   );
 }
 
-function TypingDots({ color = "#6366F1" }: { color?: string }) {
+function TypingDots({ color = "var(--indigo)" }: { color?: string }) {
   return (
     <div style={{ display: "flex", gap: 5, padding: "4px 2px", alignItems: "center" }}>
       {[0, 1, 2].map(i => (
@@ -92,12 +92,12 @@ function ChatInput({ onSend, loading, placeholder, accentColor = "var(--indigo)"
   return (
     <div style={{ padding: "12px 14px", borderTop: "1px solid var(--line)", background: "var(--surface)", display: "flex", gap: 8, alignItems: "flex-end" }}>
       <textarea ref={textareaRef} value={val} onChange={onInput} onKeyDown={onKey} placeholder={placeholder} rows={1}
-        style={{ flex: 1, height: 40, maxHeight: 120, padding: "10px 14px", border: "1.5px solid var(--line)", borderRadius: 12, background: "var(--surface-2)", fontSize: 13, resize: "none", outline: "none", lineHeight: 1.5, transition: "border-color .15s" }}
+        style={{ flex: 1, height: 40, maxHeight: 120, padding: "10px 14px", border: "1.5px solid var(--line)", borderRadius:"var(--r-lg)", background: "var(--surface-2)", fontSize: 13, resize: "none", outline: "none", lineHeight: 1.5, transition: "border-color .15s" }}
         onFocus={e => e.target.style.borderColor = accentColor}
         onBlur={e => e.target.style.borderColor = "var(--line)"}
       />
       <button onClick={send} disabled={!val.trim() || loading}
-        style={{ width: 40, height: 40, borderRadius: 10, border: "none", background: val.trim() && !loading ? accentColor : "var(--surface-2)", color: val.trim() && !loading ? "white" : "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: val.trim() && !loading ? "pointer" : "default", transition: "all .14s" }}>
+        style={{ width: 40, height: 40, borderRadius:"var(--r-md)", border: "none", background: val.trim() && !loading ? accentColor : "var(--surface-2)", color: val.trim() && !loading ? "white" : "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: val.trim() && !loading ? "pointer" : "default", transition: "all .14s" }}>
         {loading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={16} />}
       </button>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -161,9 +161,7 @@ function AssistantTab() {
         <div style={{ padding: "0 16px 12px", display: "flex", flexWrap: "wrap", gap: 6 }}>
           {QUICK.map(q => (
             <button key={q} onClick={() => send(q)}
-              style={{ fontSize: 11, padding: "6px 12px", borderRadius: 20, border: "1.5px solid var(--line)", background: "var(--surface-2)", cursor: "pointer", color: "var(--text-2)", fontWeight: 500, transition: "border-color .12s" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = "var(--line)"}>
+              className="filter-btn">
               {q}
             </button>
           ))}
@@ -215,7 +213,7 @@ function TutorTab() {
       <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
-            <Brain size={15} style={{ color: "#7C3AED" }} /> AI Tutor
+            <Brain size={15} style={{ color: "var(--purple)" }} /> AI Tutor
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
             {session ? `Active session: ${subject} — ${topic}` : "Personalised adaptive tutoring · powered by Ollama LLM"}
@@ -233,8 +231,8 @@ function TutorTab() {
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ width: "100%", maxWidth: 420 }}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", boxShadow: "0 8px 24px rgba(124,58,237,.3)" }}>
-                <Brain size={28} color="white" />
+              <div className="ai-avatar">
+                <Brain size={28} color="#fff" />
               </div>
               <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800 }}>Start a tutoring session</h3>
               <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Choose your subject and topic — your tutor will adapt to your level</p>
@@ -243,25 +241,25 @@ function TutorTab() {
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, display: "block", marginBottom: 5, color: "var(--text-2)" }}>Subject</label>
                 <select value={subject} onChange={e => setSubject(e.target.value)}
-                  style={{ width: "100%", height: 42, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }}>
+                  style={{ width: "100%", height: 42, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }}>
                   {SUBJECTS.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, display: "block", marginBottom: 5, color: "var(--text-2)" }}>Topic / Chapter *</label>
                 <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g. Quadratic Equations, Photosynthesis…"
-                  style={{ width: "100%", height: 42, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }} />
+                  style={{ width: "100%", height: 42, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }} />
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {QUICK_TOPICS.map(t => (
                   <button key={t} onClick={() => setTopic(t)}
-                    style={{ fontSize: 11, padding: "5px 12px", borderRadius: 20, border: "1.5px solid var(--line)", background: topic === t ? "var(--purple-soft)" : "var(--surface)", color: topic === t ? "var(--purple)" : "var(--muted)", cursor: "pointer", fontWeight: topic === t ? 700 : 400 }}>
+                    style={{ fontSize: 11, padding: "5px 12px", borderRadius:"var(--r-2xl)", border: "1.5px solid var(--line)", background: topic === t ? "var(--purple-soft)" : "var(--surface)", color: topic === t ? "var(--purple)" : "var(--muted)", cursor: "pointer", fontWeight: topic === t ? 700 : 400 }}>
                     {t}
                   </button>
                 ))}
               </div>
               <button onClick={start} disabled={!topic.trim() || loading}
-                style={{ height: 46, borderRadius: 12, border: "none", background: topic.trim() && !loading ? "linear-gradient(135deg,#7C3AED,#A78BFA)" : "var(--surface-2)", color: topic.trim() && !loading ? "white" : "var(--muted)", fontSize: 14, fontWeight: 700, cursor: topic.trim() && !loading ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: topic.trim() ? "0 4px 14px rgba(124,58,237,.3)" : "none" }}>
+                style={{ height: 46, borderRadius:"var(--r-lg)", border: "none", background: topic.trim() && !loading ? "linear-gradient(135deg,#7C3AED,#A78BFA)" : "var(--surface-2)", color: topic.trim() && !loading ? "white" : "var(--muted)", fontSize: 14, fontWeight: 700, cursor: topic.trim() && !loading ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: topic.trim() ? "0 4px 14px rgba(124,58,237,.3)" : "none" }}>
                 {loading ? <><RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> Starting…</> : <><Sparkles size={16} /> Begin tutoring</>}
               </button>
             </div>
@@ -276,12 +274,12 @@ function TutorTab() {
                 <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#A78BFA)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Brain size={14} color="white" />
                 </div>
-                <TypingDots color="#7C3AED" />
+                <TypingDots color="var(--purple)" />
               </div>
             )}
             <div ref={endRef} />
           </div>
-          <ChatInput onSend={send} loading={loading} placeholder={`Ask about ${topic} in ${subject}…`} accentColor="#7C3AED" />
+          <ChatInput onSend={send} loading={loading} placeholder={`Ask about ${topic} in ${subject}…`} accentColor="var(--purple)" />
         </>
       )}
     </div>
@@ -340,7 +338,7 @@ function QuizTab() {
     <div className="surface" style={{ overflow: "auto" }}>
       <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}><Layers size={15} style={{ color: "#059669" }} /> AI Quiz Generator</div>
+          <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}><Layers size={15} style={{ color: "var(--success)" }} /> AI Quiz Generator</div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Adaptive questions with explanations · timed for exam practice</div>
         </div>
         {quiz && <button className="secondary" style={{ fontSize: 11, height: 30 }} onClick={reset}>New quiz</button>}
@@ -352,14 +350,14 @@ function QuizTab() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
               <label style={{ gridColumn: "1/-1", display: "flex", flexDirection: "column", gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-2)" }}>Subject</span>
-                <select value={subject} onChange={e => setSubject(e.target.value)} style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }}>
+                <select value={subject} onChange={e => setSubject(e.target.value)} style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }}>
                   {SUBJECTS.map(s => <option key={s}>{s}</option>)}
                 </select>
               </label>
               <label style={{ gridColumn: "1/-1", display: "flex", flexDirection: "column", gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-2)" }}>Topic *</span>
                 <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g. Quadratic Equations, Photosynthesis"
-                  style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }} />
+                  style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }} />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-2)" }}>Questions: <b style={{ color: "var(--indigo)" }}>{count}</b></span>
@@ -367,13 +365,13 @@ function QuizTab() {
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-2)" }}>Difficulty</span>
-                <select value={diff} onChange={e => setDiff(e.target.value)} style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }}>
+                <select value={diff} onChange={e => setDiff(e.target.value)} style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }}>
                   {DIFFICULTIES.map(d => <option key={d}>{d}</option>)}
                 </select>
               </label>
             </div>
             <button onClick={generate} disabled={!topic.trim()}
-              style={{ width: "100%", height: 46, borderRadius: 12, border: "none", background: topic.trim() ? "linear-gradient(135deg,#059669,#10B981)" : "var(--surface-2)", color: topic.trim() ? "white" : "var(--muted)", fontSize: 14, fontWeight: 700, cursor: topic.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              style={{ width: "100%", height: 46, borderRadius:"var(--r-lg)", border: "none", background: topic.trim() ? "linear-gradient(135deg,#059669,#10B981)" : "var(--surface-2)", color: topic.trim() ? "white" : "var(--muted)", fontSize: 14, fontWeight: 700, cursor: topic.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Sparkles size={16} /> Generate {count}-question quiz
             </button>
           </div>
@@ -392,19 +390,19 @@ function QuizTab() {
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{topic} · {count} questions · {diff}</div>
               </div>
               {timeLeft !== null && !submitted && (
-                <div style={{ padding: "8px 18px", borderRadius: 24, background: timeLeft < 60 ? "var(--danger-bg)" : "var(--indigo-soft)", border: `1.5px solid ${timeLeft < 60 ? "var(--danger-border)" : "#C7D2FE"}`, fontSize: 15, fontWeight: 800, color: timeLeft < 60 ? "var(--danger)" : "var(--indigo)" }}>
+                <div style={{ padding: "8px 18px", borderRadius:"var(--r-2xl)", background: timeLeft < 60 ? "var(--danger-bg)" : "var(--indigo-soft)", border: `1.5px solid ${timeLeft < 60 ? "var(--danger-border)" : "var(--info-border)"}`, fontSize: 15, fontWeight: 800, color: timeLeft < 60 ? "var(--danger)" : "var(--indigo)" }}>
                   ⏱ {fmt(timeLeft)}
                 </div>
               )}
               {result && (
-                <div style={{ padding: "8px 20px", borderRadius: 24, background: pct >= 70 ? "var(--success-bg)" : "var(--danger-bg)", border: `1.5px solid ${pct >= 70 ? "var(--success-border)" : "var(--danger-border)"}`, fontSize: 18, fontWeight: 800, color: pct >= 70 ? "var(--success)" : "var(--danger)" }}>
+                <div style={{ padding: "8px 20px", borderRadius:"var(--r-2xl)", background: pct >= 70 ? "var(--success-bg)" : "var(--danger-bg)", border: `1.5px solid ${pct >= 70 ? "var(--success-border)" : "var(--danger-border)"}`, fontSize: 18, fontWeight: 800, color: pct >= 70 ? "var(--success)" : "var(--danger)" }}>
                   {result.score}/{result.total} — {pct}%
                 </div>
               )}
             </div>
 
             {(quiz?.questions ?? []).map((q: any, qi: number) => (
-              <div key={qi} style={{ padding: 18, border: "1.5px solid var(--line)", borderRadius: 14, marginBottom: 12, background: "var(--surface)" }}>
+              <div key={qi} style={{ padding: 18, border: "1.5px solid var(--line)", borderRadius:"var(--r-lg)", marginBottom: 12, background: "var(--surface)" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, lineHeight: 1.55 }}>
                   <span style={{ fontSize: 10, color: "var(--muted)", marginRight: 8, fontWeight: 800 }}>Q{qi + 1}</span>
                   {q.question}
@@ -416,14 +414,14 @@ function QuizTab() {
                     const wrong   = submitted && sel && opt !== q.correctAnswer;
                     return (
                       <button key={opt} onClick={() => !submitted && setAnswers(p => ({ ...p, [qi]: opt }))}
-                        style={{ textAlign: "left", padding: "11px 16px", border: `2px solid ${correct ? "#10B981" : wrong ? "#DC2626" : sel ? "var(--indigo)" : "var(--line)"}`, borderRadius: 10, background: correct ? "#ECFDF5" : wrong ? "#FEF2F2" : sel ? "var(--indigo-soft)" : "var(--surface)", fontSize: 13, cursor: submitted ? "default" : "pointer", transition: "all .12s", fontWeight: sel || correct ? 700 : 400, color: correct ? "#059669" : wrong ? "#DC2626" : sel ? "var(--indigo)" : "var(--text)" }}>
+                        style={{ textAlign: "left", padding: "11px 16px", border: `2px solid ${correct ? "var(--success)" : wrong ? "var(--danger)" : sel ? "var(--indigo)" : "var(--line)"}`, borderRadius:"var(--r-md)", background: correct ? "var(--success-bg)" : wrong ? "var(--danger-bg)" : sel ? "var(--indigo-soft)" : "var(--surface)", fontSize: 13, cursor: submitted ? "default" : "pointer", transition: "all .12s", fontWeight: sel || correct ? 700 : 400, color: correct ? "var(--success)" : wrong ? "var(--danger)" : sel ? "var(--indigo)" : "var(--text)" }}>
                         {correct ? "✓ " : wrong ? "✗ " : ""}{opt}
                       </button>
                     );
                   })}
                 </div>
                 {submitted && answers[qi] !== q.correctAnswer && q.explanation && (
-                  <div style={{ marginTop: 12, fontSize: 12, color: "#1D4ED8", padding: "10px 14px", background: "#EFF6FF", borderRadius: 10, lineHeight: 1.6, border: "1px solid #BFDBFE" }}>
+                  <div style={{ marginTop: 12, fontSize: 12, color: "var(--info)", padding: "10px 14px", background: "var(--info-bg)", borderRadius: "var(--r-md)", lineHeight: 1.6, border: "1px solid var(--info-border)" }}>
                     💡 <b>Explanation:</b> {q.explanation}
                   </div>
                 )}
@@ -431,11 +429,11 @@ function QuizTab() {
             ))}
 
             {!submitted ? (
-              <button onClick={handleSubmit} style={{ width: "100%", height: 46, borderRadius: 12, border: "none", background: "var(--navy)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+              <button onClick={handleSubmit} className="login-submit-btn" style={{ fontSize: 14 }}>
                 Submit answers
               </button>
             ) : result && (
-              <div style={{ padding: 20, background: pct >= 70 ? "var(--success-bg)" : "var(--danger-bg)", borderRadius: 14, textAlign: "center", border: `1px solid ${pct >= 70 ? "var(--success-border)" : "var(--danger-border)"}` }}>
+              <div style={{ padding: 20, background: pct >= 70 ? "var(--success-bg)" : "var(--danger-bg)", borderRadius:"var(--r-lg)", textAlign: "center", border: `1px solid ${pct >= 70 ? "var(--success-border)" : "var(--danger-border)"}` }}>
                 <div style={{ fontSize: 28, fontWeight: 800, color: pct >= 70 ? "var(--success)" : "var(--danger)", marginBottom: 6 }}>{result.score}/{result.total} correct ({pct}%)</div>
                 <div style={{ fontSize: 13, color: "var(--muted)" }}>
                   {pct >= 80 ? "🎉 Excellent! You've mastered this topic." : pct >= 60 ? "👍 Good effort — review the explanations above." : "📚 Keep practising — review this topic and try again."}
@@ -476,23 +474,23 @@ function PredictionTab() {
         <div className="surface">
           <div className="surface-head">
             <div>
-              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><AlertTriangle size={15} style={{ color: "#D97706" }} />Early Warning System</h3>
+              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><AlertTriangle size={15} style={{ color: "var(--warning)" }} />Early Warning System</h3>
               <p>{earlyWarnings.length} student{earlyWarnings.length !== 1 ? "s" : ""} flagged by the AI for intervention</p>
             </div>
           </div>
           <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
             {earlyWarnings.map((w: any, i: number) => (
-              <div key={i} style={{ padding: "12px 16px", borderRadius: 12, background: RISK_BG[w.riskLevel] ?? "#FFFBEB", border: `1.5px solid ${RISK_COLOR[w.riskLevel] ?? "var(--warning)"}30`, display: "flex", alignItems: "center", gap: 12 }}>
+              <div key={i} style={{ padding: "12px 16px", borderRadius:"var(--r-lg)", background: RISK_BG[w.riskLevel] ?? "var(--warning-bg)", border: `1.5px solid ${RISK_COLOR[w.riskLevel] ?? "var(--warning)"}30`, display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 20 }}>{PRED_KINDS.find(p => p.value === w.kind)?.icon ?? "⚠️"}</span>
                 <div style={{ flex: 1 }}>
                   <b style={{ fontSize: 12 }}>{PRED_KINDS.find(p => p.value === w.kind)?.label ?? w.kind}</b>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
                     {(w.factors ?? []).map((f: string, fi: number) => (
-                      <span key={fi} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "rgba(0,0,0,.07)", color: "var(--text-2)" }}>{f}</span>
+                      <span key={fi} style={{ fontSize: 10, padding: "2px 8px", borderRadius:"var(--r-2xl)", background: "rgba(0,0,0,.07)", color: "var(--text-2)" }}>{f}</span>
                     ))}
                   </div>
                 </div>
-                <span style={{ padding: "4px 12px", borderRadius: 20, background: RISK_COLOR[w.riskLevel], color: "white", fontSize: 10, fontWeight: 800 }}>{w.riskLevel} Risk</span>
+                <span className={`risk-badge ${(w.riskLevel ?? "").toLowerCase()}`}>{w.riskLevel} Risk</span>
               </div>
             ))}
           </div>
@@ -509,7 +507,7 @@ function PredictionTab() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginBottom: 16 }}>
             {PRED_KINDS.map(p => (
               <button key={p.value} onClick={() => { setKind(p.value); setResult(null); }}
-                style={{ padding: "12px 14px", borderRadius: 12, border: `2px solid ${kind === p.value ? p.color : "var(--line)"}`, background: kind === p.value ? `${RISK_BG[""]}` : "var(--surface)", cursor: "pointer", textAlign: "left", transition: "all .14s" }}>
+                style={{ padding: "12px 14px", borderRadius:"var(--r-lg)", border: `2px solid ${kind === p.value ? p.color : "var(--line)"}`, background: kind === p.value ? `${RISK_BG[""]}` : "var(--surface)", cursor: "pointer", textAlign: "left", transition: "all .14s" }}>
                 <div style={{ fontSize: 18, marginBottom: 5 }}>{p.icon}</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: kind === p.value ? p.color : "var(--text)" }}>{p.label}</div>
                 <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{p.desc}</div>
@@ -521,40 +519,40 @@ function PredictionTab() {
             <label style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-2)" }}>Student ID (leave blank to use your own)</span>
               <input value={studentId} onChange={e => setStId(e.target.value)} placeholder="Student UUID"
-                style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }} />
+                style={{ height: 40, padding: "0 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }} />
             </label>
           )}
 
           <button onClick={run} disabled={predict.isPending}
-            style={{ height: 42, padding: "0 22px", borderRadius: 10, border: "none", background: predict.isPending ? "var(--surface-2)" : selectedKind?.color ?? "var(--indigo)", color: predict.isPending ? "var(--muted)" : "white", fontSize: 13, fontWeight: 700, cursor: predict.isPending ? "default" : "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+            style={{ height: 42, padding: "0 22px", borderRadius:"var(--r-md)", border: "none", background: predict.isPending ? "var(--surface-2)" : selectedKind?.color ?? "var(--indigo)", color: predict.isPending ? "var(--muted)" : "white", fontSize: 13, fontWeight: 700, cursor: predict.isPending ? "default" : "pointer", display: "flex", alignItems: "center", gap: 8 }}>
             {predict.isPending ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} />Analysing…</> : <><Zap size={14} />Run {selectedKind?.label} analysis</>}
           </button>
 
           {result && (
-            <div style={{ marginTop: 18, padding: "18px 20px", background: RISK_BG[result.riskLevel] ?? "#FFFBEB", border: `2px solid ${RISK_COLOR[result.riskLevel] ?? "#D97706"}`, borderRadius: 14 }}>
+            <div style={{ marginTop: 18, padding: "18px 20px", background: RISK_BG[result.riskLevel] ?? "var(--warning-bg)", border: `2px solid ${RISK_COLOR[result.riskLevel] ?? "var(--warning)"}`, borderRadius: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".8px", color: RISK_COLOR[result.riskLevel] }}>{selectedKind?.label}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: "var(--text)" }}>{result.outcome}</div>
                 </div>
-                <span style={{ padding: "6px 16px", borderRadius: 24, background: RISK_COLOR[result.riskLevel], color: "white", fontSize: 12, fontWeight: 800 }}>
+                <span className={`risk-badge ${(result.riskLevel ?? "").toLowerCase()}`}>
                   {result.riskLevel} Risk
                 </span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 16 }}>
                 {[["Risk score", `${Math.round((result.score ?? 0) * 100)}%`], ["Probability", `${Math.round((result.probability ?? 0) * 100)}%`], ["Confidence", `${Math.round((result.confidence ?? 0) * 100)}%`]].map(([l, v]) => (
-                  <div key={l} style={{ textAlign: "center", padding: "12px", background: "rgba(255,255,255,.7)", borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>{l}</div>
-                    <b style={{ fontSize: 22, color: RISK_COLOR[result.riskLevel] }}>{v}</b>
+                  <div key={l} className="pred-metric">
+                    <div className="pred-metric-lbl">{l}</div>
+                    <b className="pred-metric-val" style={{ color: RISK_COLOR[result.riskLevel] }}>{v}</b>
                   </div>
                 ))}
               </div>
               {result.factors?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".6px", color: "var(--muted)", marginBottom: 8 }}>Contributing factors</div>
+                  <div className="section-label" style={{ marginBottom: 8 }}>Contributing factors</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {result.factors.map((f: string, i: number) => (
-                      <span key={i} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 20, background: "rgba(0,0,0,.08)", color: "var(--text-2)", fontWeight: 500 }}>{f}</span>
+                      <span key={i} className="status-pill gray">{f}</span>
                     ))}
                   </div>
                 </div>
@@ -625,9 +623,9 @@ function KnowledgeTab() {
         <div style={{ padding: "0 20px 20px" }}>
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             <input value={colName} onChange={e => setColName(e.target.value)} placeholder="Collection name (e.g. School Policies, Fee Schedule)"
-              style={{ flex: 1, height: 40, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }} />
+              style={{ flex: 1, height: 40, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }} />
             <input value={colDesc} onChange={e => setColDesc(e.target.value)} placeholder="Description (optional)"
-              style={{ width: 200, height: 40, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", fontSize: 13 }} />
+              style={{ width: 200, height: 40, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", background: "var(--surface)", fontSize: 13 }} />
             <button className="primary" onClick={createCollection} disabled={!colName.trim() || createCol.isPending} style={{ height: 40, padding: "0 16px" }}>
               <Plus size={14} /> {createCol.isPending ? "Creating…" : "Create"}
             </button>
@@ -645,10 +643,10 @@ function KnowledgeTab() {
                 const meta = parseMeta(col.metadataJson);
                 const isSelected = selectedCol?.id === col.id;
                 return (
-                  <div key={col.id} style={{ border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--line)"}`, borderRadius: 14, overflow: "hidden", transition: "border-color .14s" }}>
+                  <div key={col.id} style={{ border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--line)"}`, borderRadius:"var(--r-lg)", overflow: "hidden", transition: "border-color .14s" }}>
                     {/* Collection header */}
                     <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, background: isSelected ? "var(--accent-soft)" : "var(--surface)" }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--indigo-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <div style={{ width: 38, height: 38, borderRadius:"var(--r-md)", background: "var(--indigo-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <BookMarked size={18} style={{ color: "var(--indigo)" }} />
                       </div>
                       <div style={{ flex: 1 }}>
@@ -659,10 +657,10 @@ function KnowledgeTab() {
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 7 }}>
-                        <button className="table-action" style={{ fontSize: 10 }} onClick={() => setSelCol(isSelected ? null : col)}>
+                        <button className="table-action" onClick={() => setSelCol(isSelected ? null : col)}>
                           {isSelected ? "Close" : "📤 Upload docs"}
                         </button>
-                        <button className="table-action" style={{ fontSize: 10 }} onClick={() => reindex(col)} disabled={reindexing === col.id}>
+                        <button className="table-action" onClick={() => reindex(col)} disabled={reindexing === col.id}>
                           {reindexing === col.id ? "Indexing…" : "↺ Re-index"}
                         </button>
                       </div>
@@ -673,7 +671,7 @@ function KnowledgeTab() {
                       <div style={{ padding: "14px 16px", background: "var(--surface-2)", borderTop: "1px solid var(--line)" }}>
                         <div
                           onClick={() => !uploading && fileRef.current?.click()}
-                          style={{ border: `2px dashed ${uploading ? "var(--success)" : "var(--line-2)"}`, borderRadius: 12, padding: "24px 20px", textAlign: "center", cursor: uploading ? "default" : "pointer", background: uploading ? "var(--success-bg)" : "var(--surface)", transition: "all .15s" }}
+                          style={{ border: `2px dashed ${uploading ? "var(--success)" : "var(--line-2)"}`, borderRadius:"var(--r-lg)", padding: "24px 20px", textAlign: "center", cursor: uploading ? "default" : "pointer", background: uploading ? "var(--success-bg)" : "var(--surface)", transition: "all .15s" }}
                           onDragOver={e => e.preventDefault()}
                           onDrop={e => { e.preventDefault(); if (e.dataTransfer.files.length) handleFileUpload(col, e.dataTransfer.files); }}>
                           {uploading ? (
@@ -697,11 +695,11 @@ function KnowledgeTab() {
                           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
                             <div style={{ fontSize: 10, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".6px", marginBottom: 2 }}>Recently indexed</div>
                             {uploadedFiles.slice(0, 5).map((f, i) => (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "var(--surface)", borderRadius: 8, border: "1px solid var(--line)" }}>
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "var(--surface)", borderRadius:"var(--r)", border: "1px solid var(--line)" }}>
                                 <FileText size={14} style={{ color: f.status === "INDEXED" ? "var(--success)" : "var(--danger)", flexShrink: 0 }} />
                                 <span style={{ flex: 1, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
                                 {f.status === "INDEXED" && <span style={{ fontSize: 10, color: "var(--muted)" }}>{f.chunks} chunks</span>}
-                                <span className={`status-pill ${f.status === "INDEXED" ? "success" : "danger"}`} style={{ fontSize: 9 }}>{f.status}</span>
+                                <span className={`status-pill ${f.status === "INDEXED" ? "success" : "danger"}`} >{f.status}</span>
                               </div>
                             ))}
                           </div>
@@ -732,7 +730,7 @@ function KnowledgeTab() {
                       <td style={{ fontSize: 11 }}>{m.provider ?? "—"}</td>
                       <td style={{ fontSize: 11 }}>{m.tokens ?? 0}</td>
                       <td style={{ fontSize: 11 }}>{m.ms ?? 0}ms</td>
-                      <td><span className={`status-pill ${m.status === "Success" ? "success" : "danger"}`} style={{ fontSize: 9 }}>{m.status ?? "—"}</span></td>
+                      <td><span className={`status-pill ${m.status === "Success" ? "success" : "danger"}`} >{m.status ?? "—"}</span></td>
                       <td style={{ fontSize: 10, color: "var(--muted)" }}>{m.at ? new Date(m.at).toLocaleString("en-PK") : "—"}</td>
                     </tr>
                   );
@@ -757,14 +755,14 @@ function AgentTab() {
   const ask = useAskAssistant();
 
   const TASKS = [
-    { label: "Analyse class performance and identify students at risk",              cat: "Academic",       color: "#4F46E5" },
-    { label: "Generate attendance report for last 30 days",                         cat: "Attendance",     color: "#059669" },
-    { label: "List students with outstanding fees and escalation status",           cat: "Finance",        color: "#D97706" },
-    { label: "Predict dropout risk for Grade 9 students this term",                cat: "Predictions",    color: "#7C3AED" },
-    { label: "Summarise assignment submission rates by class",                      cat: "Learning",       color: "#2563EB" },
-    { label: "Check document compliance gaps across all students",                 cat: "Documents",      color: "#0D9488" },
-    { label: "Recommend intervention plans for 5 flagged students",                cat: "Welfare",        color: "#DC2626" },
-    { label: "Generate monthly school performance executive summary",              cat: "Reports",        color: "#1D4ED8" },
+    { label: "Analyse class performance and identify students at risk",              cat: "Academic",       color: "var(--indigo)" },
+    { label: "Generate attendance report for last 30 days",                         cat: "Attendance",     color: "var(--success)" },
+    { label: "List students with outstanding fees and escalation status",           cat: "Finance",        color: "var(--warning)" },
+    { label: "Predict dropout risk for Grade 9 students this term",                cat: "Predictions",    color: "var(--purple)" },
+    { label: "Summarise assignment submission rates by class",                      cat: "Learning",       color: "var(--info)" },
+    { label: "Check document compliance gaps across all students",                 cat: "Documents",      color: "var(--teal)" },
+    { label: "Recommend intervention plans for 5 flagged students",                cat: "Welfare",        color: "var(--danger)" },
+    { label: "Generate monthly school performance executive summary",              cat: "Reports",        color: "var(--info)" },
   ];
 
   async function runTask(msg: string) {
@@ -783,7 +781,7 @@ function AgentTab() {
     <div className="surface" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 300px)", minHeight: 440 }}>
       <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}><Cpu size={15} style={{ color: "#059669" }} /> AI Agent</div>
+          <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}><Cpu size={15} style={{ color: "var(--success)" }} /> AI Agent</div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Autonomous multi-module school management tasks</div>
         </div>
         <button className="secondary" style={{ fontSize: 11, height: 30 }} onClick={() => setMessages(prev => [prev[0]])}>Clear</button>
@@ -796,7 +794,7 @@ function AgentTab() {
               <Cpu size={14} color="white" />
             </div>
             <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 8 }}>
-              Agent working<TypingDots color="#059669" />
+              Agent working<TypingDots color="var(--success)" />
             </div>
           </div>
         )}
@@ -808,10 +806,8 @@ function AgentTab() {
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto" }}>
             {TASKS.map(t => (
               <button key={t.label} onClick={() => runTask(t.label)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius: 10, background: "var(--surface)", cursor: "pointer", textAlign: "left", transition: "all .12s" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = t.color; e.currentTarget.style.background = "var(--surface-2)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--surface)"; }}>
-                <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 20, background: `${t.color}18`, color: t.color, fontWeight: 800, flexShrink: 0 }}>{t.cat}</span>
+                className="ai-prompt-card">
+                <span style={{ fontSize: 10, padding: "3px 9px", borderRadius:"var(--r-2xl)", background: `${t.color}18`, color: t.color, fontWeight: 800, flexShrink: 0 }}>{t.cat}</span>
                 <span style={{ fontSize: 12, flex: 1 }}>{t.label}</span>
                 <ChevronRight size={12} style={{ color: "var(--muted-2)", flexShrink: 0 }} />
               </button>
@@ -819,7 +815,7 @@ function AgentTab() {
           </div>
         </div>
       )}
-      <ChatInput onSend={runTask} loading={loading} placeholder="Describe a task for the AI agent…" accentColor="#059669" />
+      <ChatInput onSend={runTask} loading={loading} placeholder="Describe a task for the AI agent…" accentColor="var(--success)" />
     </div>
   );
 }

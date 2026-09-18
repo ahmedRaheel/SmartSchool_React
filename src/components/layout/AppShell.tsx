@@ -160,18 +160,11 @@ export function AppShell() {
     <div className="app">
       {/* ── Impersonation banner ── */}
       {isImpersonating && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, zIndex: 2000,
-          background: "#D97706", color: "#fff", padding: "8px 20px",
-          display: "flex", alignItems: "center", gap: 12, fontSize: 12, fontWeight: 500,
-        }}>
+        <div className="impersonation-banner">
           <ShieldAlert size={16}/>
           <span>Impersonation active — viewing as <b>{user.name}</b> ({user.role}). All actions are logged.</span>
           <div style={{ flex: 1 }}/>
-          <button
-            onClick={stopImpersonation}
-            style={{ background: "rgba(255,255,255,.25)", color: "#fff", border: "none", borderRadius: 6, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-          >
+          <button onClick={stopImpersonation} className="impersonation-banner-btn">
             Exit impersonation
           </button>
         </div>
@@ -211,25 +204,21 @@ export function AppShell() {
                 )}
               </button>
               {notifOpen && (
-                <div style={{
-                  position: "absolute", top: "calc(100% + 8px)", right: 0, width: 300,
-                  background: "var(--surface)", border: "1.5px solid var(--line)", borderRadius: 12,
-                  boxShadow: "var(--shadow-lg)", zIndex: 500, overflow: "hidden",
-                }}>
-                  <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--line)", fontWeight: 600, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
+                <div className="notif-dropdown">
+                  <div className="notif-head">
                     <span>Notifications</span>
                     {Number(unreadCount) > 0 && <span style={{ fontSize: 11, color: "var(--muted)" }}>{unreadCount} unread</span>}
                   </div>
-                  <div style={{ maxHeight: 260, overflowY: "auto" }}>
+                  <div className="notif-body">
                     {Number(unreadCount) === 0
-                      ? <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--muted)", fontSize: 12 }}>No new notifications</div>
+                      ? <div className="notif-empty">No new notifications</div>
                       : <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--muted)" }}>{unreadCount} notification{Number(unreadCount) !== 1 ? "s" : ""} — view in communication</div>
                     }
                   </div>
-                  <div style={{ padding: "8px 16px", borderTop: "1px solid var(--line)" }}>
+                  <div className="notif-footer">
                     <button
                       className="text-button"
-                      style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}
+                      style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}
                       onClick={() => handleNavigate("/communication")}
                     >
                       View all <ChevronRight size={12}/>
@@ -262,46 +251,29 @@ export function AppShell() {
                 <div className="profile-popover" style={{ zIndex: 600 }}>
                   {/* User summary */}
                   <div className="profile-summary">
-                    <div className="avatar large" style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", fontSize: 16, fontWeight: 800 }}>
+                    <div className="avatar large gradient">
                       {initials}
                     </div>
                     <div>
                       <b style={{ fontSize: 13 }}>{user.name}</b>
                       <small style={{ display: "block", color: "var(--muted)", fontSize: 11 }}>{user.email}</small>
-                      <span style={{ display: "inline-block", marginTop: 4, padding: "1px 8px", borderRadius: 20, background: "#EEF2FF", color: "#6366F1", fontSize: 10, fontWeight: 700 }}>
-                        {user.role}
-                      </span>
+                      <span className="role-badge">{user.role}</span>
                     </div>
                   </div>
 
                   <hr style={{ margin: "6px 0", border: "none", borderTop: "1px solid var(--line)" }}/>
 
-                  <button
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12, color: "var(--text)", borderRadius: 8, textAlign: "left" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-2)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                    onClick={() => handleNavigate("/profiles")}
-                  >
+                  <button className="popover-item" onClick={() => handleNavigate("/profiles")}>
                     <User size={14} style={{ color: "var(--muted)" }}/> My Profile
                   </button>
 
-                  <button
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12, color: "var(--text)", borderRadius: 8, textAlign: "left" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-2)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                    onClick={() => handleNavigate("/settings")}
-                  >
+                  <button className="popover-item" onClick={() => handleNavigate("/settings")}>
                     <Settings size={14} style={{ color: "var(--muted)" }}/> Settings
                   </button>
 
                   <hr style={{ margin: "6px 0", border: "none", borderTop: "1px solid var(--line)" }}/>
 
-                  <button
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12, color: "#DC2626", borderRadius: 8, textAlign: "left", fontWeight: 600 }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "#FFF0F1")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                    onClick={handleLogout}
-                  >
+                  <button className="popover-item danger" onClick={handleLogout}>
                     <LogOut size={14}/> Sign out
                   </button>
                 </div>
@@ -324,7 +296,7 @@ export function AppShell() {
       {/* ── Toast stack ── */}
       <div style={{ position: "fixed", bottom: 90, left: 20, display: "flex", flexDirection: "column-reverse", gap: 8, zIndex: 900, maxWidth: 320 }}>
         {toasts.map((t, i) => (
-          <div key={i} style={{ background: "var(--surface)", border: "1.5px solid var(--line)", borderRadius: 12, padding: "12px 16px", boxShadow: "var(--shadow-lg)", fontSize: 12 }}>
+          <div key={i} style={{ background: "var(--surface)", border: "1.5px solid var(--line)", borderRadius:"var(--r-lg)", padding: "12px 16px", boxShadow: "var(--shadow-lg)", fontSize: 12 }}>
             <div style={{ fontWeight: 600, marginBottom: 2 }}>{t.title}</div>
             <div style={{ color: "var(--muted)" }}>{t.message}</div>
           </div>
@@ -337,7 +309,7 @@ export function AppShell() {
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1500, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "14vh" }}
           onClick={e => { if (e.target === e.currentTarget) setSearch(false); }}
         >
-          <div style={{ background: "var(--surface)", borderRadius: 16, width: "min(560px,94vw)", overflow: "hidden", boxShadow: "var(--shadow-lg)" }}>
+          <div style={{ background: "var(--surface)", borderRadius:"var(--r-xl)", width: "min(560px,94vw)", overflow: "hidden", boxShadow: "var(--shadow-lg)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid var(--line)" }}>
               <Search size={16} style={{ color: "var(--muted)", flexShrink: 0 }}/>
               <input
@@ -353,9 +325,8 @@ export function AppShell() {
               {NAV_SHORTCUTS.map(s => (
                 <button key={s.path}
                   onClick={() => { navigate(s.path); setSearch(false); setSearchQ(""); }}
-                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: "var(--radius)", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, color: "var(--text)", textAlign: "left" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-2)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  className="popover-item"
+                  style={{ justifyContent: "space-between", fontSize: 13 }}
                 >
                   <span>{s.label}</span>
                   <ChevronRight size={14} style={{ color: "var(--muted)" }}/>

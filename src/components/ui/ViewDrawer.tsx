@@ -31,11 +31,7 @@ function CopyButton({ text }: { text: string }) {
     });
   }
   return (
-    <button
-      onClick={copy}
-      style={{ display:"flex", alignItems:"center", border:0, background:"transparent", cursor:"pointer", padding:"2px 4px", borderRadius:4, color:"var(--muted-2)", marginLeft:4 }}
-      title="Copy"
-    >
+    <button onClick={copy} className="copy-btn" title="Copy">
       {copied ? <Check size={11} style={{ color:"var(--success)" }}/> : <Copy size={11}/>}
     </button>
   );
@@ -60,8 +56,8 @@ export function ViewDrawer({ title, item, fields, onClose, onEdit, color = "var(
         {/* Header */}
         <div className="drawer-head">
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:36, height:36, borderRadius:10, background:"var(--indigo-soft)", display:"grid", placeItems:"center" }}>
-              <span style={{ fontSize:13, fontWeight:800, color }}>
+            <div className="drawer-avatar">
+              <span style={{ color }}>
                 {String(item.firstName ?? item.name ?? title)?.[0]?.toUpperCase() ?? "?"}
               </span>
             </div>

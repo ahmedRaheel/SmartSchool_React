@@ -164,7 +164,7 @@ export function PayrollPage() {
             <div className="human-form"><div className="human-form-grid">
               <label className="human-field"><span>Year *</span><input type="number" min="2000" max="2200" value={runForm.year} onChange={event => setRunForm(current => ({ ...current, year: event.target.value }))} /></label>
               <label className="human-field"><span>Month *</span><select value={runForm.month} onChange={event => setRunForm(current => ({ ...current, month: event.target.value }))}>{Array.from({ length: 12 }, (_, index) => index + 1).map(month => <option key={month} value={month}>{new Date(2026, month - 1, 1).toLocaleDateString("en-PK", { month: "long" })}</option>)}</select></label>
-              <div className="field-wide" style={{ padding: "12px 14px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--line)", fontSize: 12 }}>Configured employees: <b>{activeCompensations.length}</b> · Current gross basis: <b>{pkr(monthlyGross)}</b></div>
+              <div className="field-wide" style={{ padding: "12px 14px", borderRadius:"var(--r-md)", background: "var(--surface-2)", border: "1px solid var(--line)", fontSize: 12 }}>Configured employees: <b>{activeCompensations.length}</b> · Current gross basis: <b>{pkr(monthlyGross)}</b></div>
             </div></div>
             <div className="modal-actions"><button className="secondary" onClick={() => setRunModal(false)}>Cancel</button><button className="primary" disabled={activeCompensations.length === 0 || createRun.isPending} onClick={() => createRun.mutate()}>{createRun.isPending ? "Processing…" : "Create payroll run"}</button></div>
           </div>

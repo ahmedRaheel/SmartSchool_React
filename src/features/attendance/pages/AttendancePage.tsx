@@ -234,7 +234,7 @@ export function AttendancePage() {
                               disabled={!canMark}
                               onChange={event => setRows(current => ({ ...current, [student.studentId]: { ...state, remarks: event.target.value } }))}
                               placeholder="Optional note"
-                              style={{ width: "100%", border: "1px solid var(--line)", borderRadius: 8, padding: "7px 9px", background: "var(--surface)" }}
+                              style={{ width: "100%", border: "1px solid var(--line)", borderRadius:"var(--r)", padding: "7px 9px", background: "var(--surface)" }}
                             />
                           </td>
                           <td><small>{student.updatedAt ? new Date(student.updatedAt).toLocaleString() : "Not marked yet"}</small></td>

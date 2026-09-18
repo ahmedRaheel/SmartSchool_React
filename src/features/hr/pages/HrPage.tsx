@@ -165,9 +165,7 @@ export function HrPage() {
               style={{ display: "flex", alignItems: "center", gap: 6 }}>
               📅 Leave requests
               {pendingLeaves > 0 && (
-                <span style={{ background: "#EF4444", color: "white", borderRadius: 20, fontSize: 9, padding: "1px 6px", fontWeight: 800 }}>
-                  {pendingLeaves}
-                </span>
+                <span className="tab-badge">{pendingLeaves}</span>
               )}
             </button>
           )}
@@ -187,11 +185,10 @@ export function HrPage() {
           <div className="surface">
             <div className="surface-head">
               <h3>Leave requests</h3>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="filter-strip">
                 {(["ALL","PENDING","APPROVED","REJECTED"] as const).map(f => (
                   <button key={f} onClick={() => setLeaveFilter(f)}
-                    className={leaveFilter === f ? "primary" : "secondary"}
-                    style={{ height: 30, fontSize: 11, padding: "0 12px" }}>
+                    className={`filter-btn ${leaveFilter === f ? "active" : ""}`}>
                     {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
                     {f !== "ALL" && ` (${localLeaves.filter((l:any)=>l.status===f).length})`}
                   </button>
@@ -219,7 +216,7 @@ export function HrPage() {
                   {localLeaves
                     .filter((l:any) => leaveFilter === "ALL" || l.status === leaveFilter)
                     .length === 0 ? (
-                      <tr><td colSpan={perms.can("hr.leave.approve") ? 10 : 9} style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>
+                      <tr><td colSpan={perms.can("hr.leave.approve") ? 10 : 9} className="empty-cell">
                         No {leaveFilter === "ALL" ? "" : leaveFilter.toLowerCase()} leave requests.
                       </td></tr>
                     ) : localLeaves
@@ -232,7 +229,7 @@ export function HrPage() {
                           <tr key={leave.id} style={{ background: isPending ? "var(--warning-bg)" : "" }}>
                             <td>
                               <div className="person-cell">
-                                <div style={{ width: 32, height: 32, borderRadius: 9, background: "var(--indigo-soft)", color: "var(--indigo)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
+                                <div style={{ width: 32, height: 32, borderRadius:"var(--r-md)", background: "var(--indigo-soft)", color: "var(--indigo)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
                                   {leave.employeeName?.split(" ").map((n:string)=>n[0]).slice(0,2).join("")}
                                 </div>
                                 <div>
@@ -241,12 +238,12 @@ export function HrPage() {
                               </div>
                             </td>
                             <td>
-                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "var(--indigo-soft)", color: "var(--indigo)", fontWeight: 700 }}>
+                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius:"var(--r-2xl)", background: "var(--indigo-soft)", color: "var(--indigo)", fontWeight: 700 }}>
                                 {leave.staffType}
                               </span>
                             </td>
                             <td>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: leave.leaveType === "SICK" ? "#DC2626" : leave.leaveType === "EMERGENCY" ? "#7C3AED" : "#0369A1" }}>
+                              <span className={`status-pill ${leave.leaveType === "SICK" ? "danger" : leave.leaveType === "EMERGENCY" ? "purple" : "info"}`}>
                                 {leave.leaveType}
                               </span>
                             </td>
@@ -263,7 +260,7 @@ export function HrPage() {
                             </td>
                             <td>
                               <div>
-                                <span className={`status-pill ${isApproved ? "success" : isRejected ? "danger" : "warning"}`} style={{ fontSize: 9 }}>
+                                <span className={`status-pill ${isApproved ? "success" : isRejected ? "danger" : "warning"}`} >
                                   {leave.status}
                                 </span>
                                 {(isApproved || isRejected) && leave.approverNotes && (
@@ -312,7 +309,7 @@ export function HrPage() {
               <span>
                 {localLeaves.filter((l:any) => leaveFilter === "ALL" || l.status === leaveFilter).length} leave requests
                 {perms.can("hr.leave.approve") && pendingLeaves > 0 && (
-                  <span style={{ marginLeft: 10, color: "#D97706", fontWeight: 700 }}>· {pendingLeaves} pending your action</span>
+                  <span style={{ marginLeft: 10, color: "var(--warning)", fontWeight: 700 }}>· {pendingLeaves} pending your action</span>
                 )}
               </span>
             </div>
@@ -330,7 +327,7 @@ export function HrPage() {
                   <button className="icon-button" onClick={() => setRejectModal(null)}><X size={18}/></button>
                 </div>
                 <div className="human-form">
-                  <div style={{ padding: "10px 14px", background: "var(--surface-2)", borderRadius: 10, fontSize: 12 }}>
+                  <div style={{ padding: "10px 14px", background: "var(--surface-2)", borderRadius:"var(--r-md)", fontSize: 12 }}>
                     <b>Reason for leave:</b> {rejectModal.reason}
                   </div>
                   <label className="human-field field-wide">
@@ -339,14 +336,14 @@ export function HrPage() {
                       value={rejectReason}
                       onChange={e => setRejectReason(e.target.value)}
                       placeholder="e.g. Exam week — cannot grant leave. Please re-apply after exams."
-                      style={{ minHeight: 80, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius: 10, width: "100%", fontSize: 13, resize: "vertical" }}
+                      style={{ minHeight: 80, padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius:"var(--r-md)", width: "100%", fontSize: 13, resize: "vertical" }}
                     />
                   </label>
                 </div>
                 <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid var(--line)" }}>
                   <button className="secondary" onClick={() => setRejectModal(null)}>Cancel</button>
                   <button
-                    style={{ height: 36, padding: "0 16px", borderRadius: 9, border: "none", background: "var(--danger)", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                    className="danger-solid"
                     onClick={handleReject} disabled={rejectLeave.isPending}>
                     <XCircle size={13} /> {rejectLeave.isPending ? "Rejecting…" : "Confirm rejection"}
                   </button>
@@ -389,7 +386,7 @@ export function HrPage() {
                           </td>
                           <td><code style={{ fontSize:11 }}>{e.employeeNumber ?? "—"}</code></td>
                           <td>
-                            <span style={{ fontSize:10, padding:"2px 8px", borderRadius:20, background:"#EEF2FF", color:"#6366F1", fontWeight:700 }}>
+                            <span className="role-badge">
                               {e.staffType ?? "—"}
                             </span>
                           </td>
@@ -439,17 +436,17 @@ export function HrPage() {
       {tab === "new" && (
         <div style={{ maxWidth:760, margin:"0 auto" }}>
           {/* Step indicator */}
-          <div style={{ display:"flex", gap:0, marginBottom:20, border:"1px solid var(--line)", borderRadius:12, overflow:"hidden" }}>
+          <div className="wizard-stepper">
             {[
               { n:1, label:"Personal & Role info" },
               { n:2, label:"Upload required documents" },
               { n:3, label:"Review & confirm" },
-            ].map((s, i) => (
-              <div key={s.n} style={{ flex:1, padding:"12px 16px", background: step===s.n ? "#EEF2FF" : step>s.n ? "#ECFDF5" : "var(--surface)", borderRight: i<2 ? "1px solid var(--line)" : "none", textAlign:"center" }}>
-                <div style={{ fontSize:11, fontWeight:700, color: step===s.n ? "#6366F1" : step>s.n ? "#059669" : "var(--muted)" }}>
-                  {step > s.n ? "✓" : `Step ${s.n}`}
-                </div>
-                <div style={{ fontSize:12, marginTop:2, color: step>=s.n ? "var(--text)" : "var(--muted)" }}>{s.label}</div>
+            ].map(s => (
+              <div key={s.n} className={`wizard-stepper-item ${step === s.n ? "active" : step > s.n ? "done" : ""}`}>
+                <span className="wizard-stepper-label">
+                  {step > s.n ? "✓ Done" : `Step ${s.n}`}
+                </span>
+                <span className="wizard-stepper-title">{s.label}</span>
               </div>
             ))}
           </div>
@@ -459,7 +456,7 @@ export function HrPage() {
             <div className="surface">
               <div className="surface-head"><h3>Staff information</h3></div>
               <div className="human-form">
-                <div style={{ fontSize:11, fontWeight:700, color:"#94A3B8", textTransform:"uppercase", letterSpacing:.8, marginBottom:4 }}>Role & placement</div>
+                <div className="section-label">Role & placement</div>
                 <div className="human-form-grid">
                   <label className="human-field field-wide"><span>Campus *</span>
                     <select value={form.branchId} onChange={sf("branchId")}>
@@ -485,7 +482,7 @@ export function HrPage() {
                   </label>
                   <label className="human-field field-wide"><span>Job title</span><input value={form.jobTitle} onChange={sf("jobTitle")} placeholder="e.g. Senior Mathematics Teacher"/></label>
                 </div>
-                <div style={{ fontSize:11, fontWeight:700, color:"#94A3B8", textTransform:"uppercase", letterSpacing:.8, marginBottom:4, marginTop:10 }}>Personal details</div>
+                <div className="section-label" style={{ marginTop:10 }}>Personal details</div>
                 <div className="human-form-grid">
                   <label className="human-field"><span>First name *</span><input value={form.firstName} onChange={sf("firstName")}/></label>
                   <label className="human-field"><span>Last name</span><input value={form.lastName} onChange={sf("lastName")}/></label>
@@ -549,17 +546,17 @@ export function HrPage() {
               <div className="surface-head"><h3>Review & confirm</h3></div>
               <div style={{ padding:"0 20px 20px" }}>
                 {!docCompliant && (
-                  <div style={{ display:"flex", gap:10, padding:"12px 14px", background:"#FFFBEB", border:"1px solid #fde68a", borderRadius:10, marginBottom:14, fontSize:12 }}>
-                    <AlertCircle size={16} style={{ color:"#D97706", flexShrink:0 }}/>
+                  <div className="warn-callout" style={{ marginBottom: 14 }}>
+                    <AlertCircle size={15} style={{ flexShrink:0 }}/>
                     <span>Not all required documents have been uploaded. The employee will be saved as <b>PENDING_DOCUMENTS</b> and must upload remaining documents before approval.</span>
                   </div>
                 )}
                 {docCompliant && (
-                  <div style={{ padding:"12px 14px", background:"#ECFDF5", border:"1px solid #a7f3d0", borderRadius:10, marginBottom:14, fontSize:12, color:"#065f46" }}>
+                  <div className="success-callout" style={{ marginBottom: 14 }}>
                     ✅ All required documents uploaded. Employee is ready for approval.
                   </div>
                 )}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4 }}>
+                <div className="review-summary">
                   {[
                     ["Name", `${form.firstName} ${form.lastName}`],
                     ["Staff type", form.staffType],
@@ -570,8 +567,8 @@ export function HrPage() {
                     ["Campus", campuses.find((c:any)=>c.id===form.branchId)?.name ?? form.branchId],
                     ["Documents", docCompliant ? "✓ Complete" : "⚠ Incomplete"],
                   ].map(([l, v]) => (
-                    <div key={l} style={{ display:"flex", gap:8, padding:"8px 0", borderBottom:"1px solid var(--surface-2)", fontSize:12 }}>
-                      <span style={{ width:120, color:"var(--muted)", flexShrink:0 }}>{l}</span>
+                    <div key={l} className="review-row">
+                      <span className="review-row-label">{l}</span>
                       <b>{v}</b>
                     </div>
                   ))}

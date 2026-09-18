@@ -104,11 +104,7 @@ function KnowledgeTab() {
             const meta = parseMeta(c.metadataJson);
             return (
               <div key={c.id} onClick={() => setSelected(c)}
-                style={{
-                  padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid var(--line)",
-                  background: selected?.id===c.id ? "var(--indigo-soft)" : "",
-                  borderLeft: selected?.id===c.id ? "3px solid var(--indigo)" : "3px solid transparent",
-                }}>
+                className={`collection-item${selected?.id===c.id?" active":""}`}>
                 <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
                   <Database size={12} style={{ color:"var(--indigo)" }}/>
                   <b style={{ fontSize:12 }}>{c.name}</b>
@@ -171,7 +167,7 @@ function KnowledgeTab() {
                 </thead>
                 <tbody>
                   {docs.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>
+                    <tr><td colSpan={6} className="empty-cell">
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
                         <FileText size={32} style={{ opacity:.2 }}/>
                         <b>No documents yet</b>
@@ -297,7 +293,7 @@ function ModelsTab() {
             </thead>
             <tbody>
               {models.length===0 ? (
-                <tr><td colSpan={6} style={{ textAlign:"center", padding:40, color:"var(--muted)" }}>
+                <tr><td colSpan={6} className="empty-cell">
                   No models configured. Add an OpenAI or Azure connection.
                 </td></tr>
               ) : models.map((m:any) => {
@@ -388,7 +384,7 @@ function PersonasTab() {
       {CHATBOT_PERSONAS.map(p => (
         <div key={p.role} style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:20, padding:"16px 20px", borderBottom:"1px solid var(--surface-3)" }}>
           <div style={{ display:"flex", gap:12, flex:1, minWidth:0 }}>
-            <div style={{ width:36, height:36, borderRadius:10, background:"var(--indigo-soft)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <div style={{ width:36, height:36, borderRadius:"var(--r-md)", background:"var(--indigo-soft)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
               <Bot size={16} style={{ color:"var(--indigo)" }}/>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -474,14 +470,9 @@ function AiSettingsTab() {
             <b style={{ fontSize:13 }}>{t.label}</b>
             <p style={{ margin:"3px 0 0", fontSize:12, color:"var(--muted)" }}>{t.desc}</p>
           </div>
-          <button onClick={() => toggle(t.key)} style={{
-            width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", flexShrink:0,
-            background: get(t.key) ? "var(--success)" : "var(--line-2)", position:"relative", transition:"background .2s",
-          }}>
-            <div style={{
-              width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute",
-              top:3, left: get(t.key) ? 23 : 3, transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,.2)",
-            }}/>
+          <button onClick={() => toggle(t.key)}
+            className={`toggle-switch ${get(t.key) ? "on" : "off"}`}>
+            <div className="toggle-switch-thumb"/>
           </button>
         </div>
       ))}

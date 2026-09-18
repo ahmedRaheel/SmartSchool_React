@@ -32,13 +32,8 @@ const pct  = (a?: number, b?: number) => (!a || !b) ? "—" : `${Math.round((a/b
 function QuickLink({ label, path, icon }: { label:string; path:string; icon?:string }) {
   const nav = useNavigate();
   return (
-    <button onClick={() => nav(path)}
-      style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px",
-               border:"1px solid var(--line)", borderRadius:10, background:"var(--surface)",
-               cursor:"pointer", fontSize:12, fontWeight:500, color:"var(--text)", width:"100%", textAlign:"left" }}
-      onMouseEnter={e => (e.currentTarget.style.background="var(--surface-2)")}
-      onMouseLeave={e => (e.currentTarget.style.background="var(--surface)")}>
-      <span>{icon && <span style={{marginRight:8}}>{icon}</span>}{label}</span>
+    <button onClick={() => nav(path)} className="quick-link">
+      <span>{icon && <span className="quick-link-icon">{icon}</span>}{label}</span>
       <ChevronRight size={12} style={{color:"var(--muted)"}}/>
     </button>
   );
@@ -46,11 +41,8 @@ function QuickLink({ label, path, icon }: { label:string; path:string; icon?:str
 
 function AIAlert({ message, level="warning" }: { message: string; level?: "warning"|"danger" }) {
   return (
-    <div style={{ display:"flex", gap:12, padding:"12px 16px",
-                  background: level==="danger" ? "#FFF0F1" : "#FFFBEB",
-                  border: `1px solid ${level==="danger"?"#fecdd3":"#fde68a"}`,
-                  borderRadius:10, fontSize:12 }}>
-      <AlertTriangle size={16} style={{color:level==="danger"?"#EF4444":"#D97706",flexShrink:0,marginTop:1}}/>
+    <div className={level === "danger" ? "warn-callout" : "warn-callout"} style={level === "danger" ? {background:"var(--danger-bg)",borderColor:"var(--danger-border)",color:"var(--danger)"} : undefined}>
+      <AlertTriangle size={15} style={{flexShrink:0,marginTop:1}}/>
       <span>{message}</span>
     </div>
   );
@@ -89,11 +81,11 @@ function SuperAdminDashboard() {
                 {tenants.map(t=>(
                   <tr key={t.name}>
                     <td><b style={{fontSize:12}}>{t.name}</b><div style={{fontSize:10,color:"var(--muted)"}}>{t.city}</div></td>
-                    <td><span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:`${PLAN_COLOR[t.plan]}15`,color:PLAN_COLOR[t.plan]}}>{t.plan}</span></td>
+                    <td><span className="role-badge" style={{background:`${PLAN_COLOR[t.plan]}15`,color:PLAN_COLOR[t.plan],borderColor:`${PLAN_COLOR[t.plan]}30`}}>{t.plan}</span></td>
                     <td>{t.students.toLocaleString()}</td>
                     <td><b>${t.mrr}/mo</b></td>
                     <td><span className={`status-pill ${t.status==="ACTIVE"?"success":"warning"}`}>{t.status}</span></td>
-                    <td><button className="table-action" style={{fontSize:10}} onClick={()=>nav("/tenancy")}>Manage</button></td>
+                    <td><button className="table-action" onClick={()=>nav("/tenancy")}>Manage</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -150,7 +142,7 @@ function AdminDashboard({ role = "SchoolAdmin" }: { role?: string }) {
         <div className="surface">
           <div className="surface-head">
             <div>
-              <h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"#8B5CF6"}}/>AI Insights</h3>
+              <h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"var(--purple)"}}/>AI Insights</h3>
               <p>Predictions and alerts from the AI engine</p>
             </div>
             <button className="secondary" style={{fontSize:11}} onClick={()=>nav("/ai")}>View all →</button>
@@ -159,7 +151,7 @@ function AdminDashboard({ role = "SchoolAdmin" }: { role?: string }) {
             <AIAlert message="47 students flagged as high dropout risk this term — review AI Predictions for intervention plans." level="danger"/>
             <AIAlert message="Transport delay predicted on Route C tomorrow due to road works. Consider alternate route." level="warning"/>
             <AIAlert message="Fee collection rate is 89% — 12% above last month. 312 invoices still outstanding." level="warning"/>
-            <div style={{padding:"10px 14px",background:"#ECFDF5",border:"1px solid #a7f3d0",borderRadius:10,fontSize:12}}>
+            <div className="success-callout">
               ✅ 94% attendance rate this week — best in last 6 months
             </div>
           </div>
@@ -195,7 +187,7 @@ function AdminDashboard({ role = "SchoolAdmin" }: { role?: string }) {
             ].map(r=>(
               <div key={r.label} style={{display:"flex",justifyContent:"space-between",padding:"11px 0",borderBottom:"1px solid var(--surface-2)",fontSize:12}}>
                 <span style={{color:"var(--muted)"}}>{r.label}</span>
-                <b style={{color:r.good?"#10B981":r.warn?"#D97706":"var(--text)"}}>{r.value}</b>
+                <b style={{color:r.good?"var(--success)":r.warn?"var(--warning)":"var(--text)"}}>{r.value}</b>
               </div>
             ))}
             <button className="primary" style={{width:"100%",marginTop:12,fontSize:11}} onClick={()=>nav("/finance")}>
@@ -212,13 +204,13 @@ function AdminDashboard({ role = "SchoolAdmin" }: { role?: string }) {
               let meta: any = {};
               try { meta = JSON.parse(a.metadataJson??"{}"); } catch {}
               return (
-                <div key={a.id} style={{display:"flex",gap:10,padding:"10px 12px",border:"1px solid var(--line)",borderRadius:10,alignItems:"center"}}>
+                <div key={a.id} className="metric-card" style={{gap:10}}>
                   <span style={{fontSize:18}}>📅</span>
                   <div style={{flex:1}}>
                     <b style={{fontSize:12,display:"block"}}>{a.name}</b>
                     <span style={{fontSize:10,color:"var(--muted)"}}>{meta.date??"-"} · {meta.venue??"-"}</span>
                   </div>
-                  <span className="status-pill info" style={{fontSize:9}}>{meta.type??"Event"}</span>
+                  <span className="status-pill info">{meta.type??"Event"}</span>
                 </div>
               );
             })}
@@ -249,12 +241,12 @@ function TeacherDashboard() {
       <div className="grid-2" style={{marginBottom:16}}>
         <div className="surface">
           <div className="surface-head">
-            <div><h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"#8B5CF6"}}/>AI for Teachers</h3></div>
+            <div><h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"var(--purple)"}}/>AI for Teachers</h3></div>
           </div>
           <div style={{padding:"0 16px 16px",display:"flex",flexDirection:"column",gap:8}}>
-            <div style={{padding:"14px 16px",background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)",border:"1px solid #C7D2FE",borderRadius:12,fontSize:12}}>
-              <div style={{fontWeight:700,marginBottom:6,color:"#6366F1"}}>🧠 AI Teaching Assistant</div>
-              <p style={{margin:"0 0 10px",color:"#475569",lineHeight:1.6}}>Ask anything about your students, generate lesson plans, get quiz ideas or predict student performance.</p>
+            <div className="ai-promo-card">
+              <h4>🧠 AI Teaching Assistant</h4>
+              <p>Ask anything about your students, generate lesson plans, get quiz ideas or predict student performance.</p>
               <button className="primary" style={{fontSize:11,height:32}} onClick={()=>nav("/ai")}>Open AI assistant →</button>
             </div>
             <AIAlert message="3 students in your Grade 9-A class show declining attendance — see AI predictions." level="warning"/>
@@ -312,12 +304,12 @@ function StudentDashboard() {
       <div className="grid-2" style={{marginBottom:16}}>
         <div className="surface">
           <div className="surface-head">
-            <div><h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"#8B5CF6"}}/>AI Tutor</h3></div>
+            <div><h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"var(--purple)"}}/>AI Tutor</h3></div>
           </div>
           <div style={{padding:"0 16px 16px"}}>
-            <div style={{padding:"16px",background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)",border:"1px solid #C7D2FE",borderRadius:12,fontSize:12,marginBottom:12}}>
-              <div style={{fontWeight:700,marginBottom:6,color:"#6366F1"}}>🧠 Ask your AI tutor</div>
-              <p style={{margin:"0 0 10px",color:"#475569",lineHeight:1.6}}>Get instant help with any subject — explanations, practice problems, quizzes.</p>
+            <div className="ai-promo-card" style={{marginBottom:12}}>
+              <h4>🧠 Ask your AI tutor</h4>
+              <p>Get instant help with any subject — explanations, practice problems, quizzes.</p>
               <button className="primary" style={{fontSize:11,height:32}} onClick={()=>nav("/ai")}>Start learning →</button>
             </div>
           </div>
@@ -357,17 +349,17 @@ function ParentDashboard() {
 
       <div className="grid-2" style={{marginBottom:16}}>
         <div className="surface">
-          <div className="surface-head"><div><h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"#8B5CF6"}}/>Parent AI Assistant</h3><p>Ask about your children's performance, fees, transport</p></div></div>
+          <div className="surface-head"><div><h3 style={{display:"flex",alignItems:"center",gap:8}}><Bot size={16} style={{color:"var(--purple)"}}/>Parent AI Assistant</h3><p>Ask about your children's performance, fees, transport</p></div></div>
           <div style={{padding:"0 16px 16px"}}>
-            <div style={{padding:"16px",background:"linear-gradient(135deg,#FDF9C4,#FFFBEB)",border:"1px solid #FDE68A",borderRadius:12,fontSize:12,marginBottom:10}}>
-              <div style={{fontWeight:700,marginBottom:6,color:"#D97706"}}>💬 AI Parent Assistant</div>
-              <p style={{margin:"0 0 10px",color:"#92400E",lineHeight:1.6}}>Ask about fee dues, attendance summaries, results and more in natural language.</p>
-              <button className="primary" style={{fontSize:11,height:32,background:"#D97706"}} onClick={()=>nav("/ai")}>Ask now →</button>
+            <div className="ai-promo-card" style={{background:"linear-gradient(135deg,var(--warning-bg),#FFFDF0)",borderColor:"var(--warning-border)",marginBottom:10}}>
+              <h4 style={{color:"var(--warning)"}}>💬 AI Parent Assistant</h4>
+              <p style={{color:"var(--text-2)"}}>Ask about fee dues, attendance summaries, results and more in natural language.</p>
+              <button className="primary" style={{fontSize:11,height:32,background:"var(--warning)"}} onClick={()=>nav("/ai")}>Ask now →</button>
             </div>
             {d?.OutstandingInvoices ? (
               <AIAlert message={`${d.OutstandingInvoices} outstanding invoice${d.OutstandingInvoices>1?"s":""} — click to view fee details.`} level="warning"/>
             ) : (
-              <div style={{padding:"10px 14px",background:"#ECFDF5",border:"1px solid #a7f3d0",borderRadius:10,fontSize:12}}>✅ All fees are up to date.</div>
+              <div className="success-callout">✅ All fees are up to date.</div>
             )}
           </div>
         </div>

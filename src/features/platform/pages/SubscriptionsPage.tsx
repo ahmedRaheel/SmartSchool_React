@@ -10,9 +10,9 @@ export function SubscriptionsPage() {
 
   const PLANS: Record<string,{price:number;color:string;bg:string}> = {
     Starter:    { price:  99, color:"#6B7280", bg:"#F9FAFB" },
-    Pro:        { price: 249, color:"#2563EB", bg:"#EFF6FF" },
-    Enterprise: { price: 799, color:"#7C3AED", bg:"#F5F3FF" },
-    Trial:      { price:   0, color:"#D97706", bg:"#FFFBEB" },
+    Pro:        { price: 249, color:"var(--info)", bg:"var(--info-bg)" },
+    Enterprise: { price: 799, color:"var(--purple)", bg:"var(--purple-soft)" },
+    Trial:      { price:   0, color:"var(--warning)", bg:"var(--warning-bg)" },
   };
 
   const mrr = tenants.reduce((a:number, t:any) => {
@@ -37,8 +37,8 @@ export function SubscriptionsPage() {
           {Object.entries(PLANS).map(([plan, cfg]) => {
             const count = tenants.filter((t:any) => parseMeta(t.metadataJson).subscriptionPlan === plan).length;
             return (
-              <div key={plan} style={{ padding:"16px 18px", borderRadius:12, border:`1.5px solid ${cfg.color}30`, background:cfg.bg }}>
-                <div style={{ fontSize:11, color:cfg.color, fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:6 }}>{plan}</div>
+              <div key={plan} style={{ padding:"16px 18px", borderRadius:"var(--r-lg)", border:`1.5px solid ${cfg.color}30`, background:cfg.bg }}>
+                <div className="section-label" style={{ color:cfg.color, marginBottom:6 }}>{plan}</div>
                 <div style={{ fontSize:22, fontWeight:800, color:cfg.color }}>{count}<span style={{ fontSize:12, fontWeight:400, color:"var(--muted)" }}> schools</span></div>
                 <div style={{ fontSize:13, fontWeight:700, color:cfg.color, marginTop:4 }}>${cfg.price}<span style={{ fontSize:11, fontWeight:400 }}>/mo</span></div>
                 <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>MRR contribution: <b>${(cfg.price*count).toLocaleString()}</b></div>
@@ -61,7 +61,7 @@ export function SubscriptionsPage() {
                   return (
                     <tr key={t.id}>
                       <td><b>{t.name}</b><div style={{fontSize:10,color:"var(--muted)"}}>{meta.city}</div></td>
-                      <td><span style={{ padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:600, background:plan.bg, color:plan.color }}>{meta.subscriptionPlan ?? "Starter"}</span></td>
+                      <td><span className="role-badge" style={{ background:plan.bg, color:plan.color, borderColor:`${plan.color}30` }}>{meta.subscriptionPlan ?? "Starter"}</span></td>
                       <td>{meta.studentCount?.toLocaleString() ?? "—"}</td>
                       <td><b>${plan.price}/mo</b></td>
                       <td><span className={`status-pill ${meta.status==="ACTIVE"?"success":meta.status==="TRIAL"?"warning":"gray"}`}>{meta.status ?? "ACTIVE"}</span></td>

@@ -76,18 +76,12 @@ const SCHOOL_SETTINGS: Section[] = [
 
 function Toggle({ toggle, enabled, onChange }: { toggle: Toggle; enabled: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div style={{
-      display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20,
-      padding: "16px 20px", borderBottom: "1px solid var(--surface-3)", transition: "background .12s",
-    }}
-      onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
-      onMouseLeave={e => e.currentTarget.style.background = ""}
-    >
+    <div className="settings-row">
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <b style={{ fontSize: 13, color: "var(--text)" }}>{toggle.label}</b>
           {toggle.badge && (
-            <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 20, background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)", fontWeight: 700 }}>
+            <span style={{ fontSize: 9, padding: "2px 8px", borderRadius:"var(--r-2xl)", background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)", fontWeight: 700 }}>
               {toggle.badge}
             </span>
           )}
@@ -97,19 +91,10 @@ function Toggle({ toggle, enabled, onChange }: { toggle: Toggle; enabled: boolea
       <button
         onClick={() => onChange(!enabled)}
         aria-label={enabled ? "Disable" : "Enable"}
-        style={{
-          width: 46, height: 26, borderRadius: 13, border: "none", cursor: "pointer",
-          background: enabled ? "var(--success)" : "var(--line-2)",
-          position: "relative", transition: "background .2s", flexShrink: 0, marginTop: 2,
-        }}
+        className={`toggle-switch ${enabled ? "on" : "off"}`}
+        style={{ width: 46, height: 26, marginTop: 2 }}
       >
-        <div style={{
-          width: 20, height: 20, borderRadius: "50%", background: "#fff",
-          position: "absolute", top: 3,
-          left: enabled ? 23 : 3,
-          transition: "left .2s",
-          boxShadow: "0 1px 4px rgba(0,0,0,.2)",
-        }} />
+        <div className="toggle-switch-thumb" style={{ width: 20, height: 20 }}/>
       </button>
     </div>
   );
@@ -224,7 +209,7 @@ export function SettingsPage() {
               <select
                 value={selects[s.key] ?? s.default}
                 onChange={e => setSelects(p => ({...p, [s.key]: e.target.value}))}
-                style={{ height:34, padding:"0 12px", border:"1.5px solid var(--line)", borderRadius:9, background:"var(--surface)", fontSize:12, minWidth:200 }}
+                style={{ height:34, padding:"0 12px", border:"1.5px solid var(--line)", borderRadius:"var(--r-md)", background:"var(--surface)", fontSize:12, minWidth:200 }}
               >
                 {s.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>

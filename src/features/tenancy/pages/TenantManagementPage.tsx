@@ -13,9 +13,9 @@ import { parseMeta, toItems } from "../../../core/utils/dataHelpers";
 
 const PLANS: Record<string,{color:string;bg:string}> = {
   Starter:    { color:"#6B7280", bg:"#F9FAFB" },
-  Pro:        { color:"#2563EB", bg:"#EFF6FF" },
-  Enterprise: { color:"#7C3AED", bg:"#F5F3FF" },
-  Trial:      { color:"#D97706", bg:"#FFFBEB" },
+  Pro:        { color:"var(--info)", bg:"var(--info-bg)" },
+  Enterprise: { color:"var(--purple)", bg:"var(--purple-soft)" },
+  Trial:      { color:"var(--warning)", bg:"var(--warning-bg)" },
 };
 
 export function TenantManagementPage() {
@@ -134,29 +134,29 @@ export function TenantManagementPage() {
                       <td><b>{t.organizationName}</b><div style={{fontSize:10,color:"var(--muted)"}}>{meta.adminEmail}</div></td>
                       <td><code style={{fontSize:11}}>{t.code}</code></td>
                       <td>{meta.city??"-"}</td>
-                      <td><span style={{padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700,background:plan.bg,color:plan.color}}>{meta.plan??"Starter"}</span></td>
+                      <td><span className="role-badge" style={{background:plan.bg,color:plan.color,borderColor:`${plan.color}30`}}>{meta.plan??"Starter"}</span></td>
                       <td>{(meta.students??0).toLocaleString()}</td>
                       <td>{meta.branches??1}</td>
                       <td><span className={`status-pill ${meta.status==="ACTIVE"?"success":meta.status==="TRIAL"?"warning":"gray"}`}>{meta.status??"ACTIVE"}</span></td>
                       <td>
                         <div className="row-actions">
-                          <button className="table-action" style={{fontSize:10}} onClick={()=>doImpersonate(t.tenantId)}>
+                          <button className="table-action" onClick={()=>doImpersonate(t.tenantId)}>
                             🔐 Enter
                           </button>
                           {meta.status !== "ACTIVE" && (
-                            <button className="table-action approve" style={{fontSize:10}}
+                            <button className="table-action approve"
                               onClick={()=>setLocalTenants(p=>p.map((x:any)=>x.id===t.id?{...x,metadataJson:JSON.stringify({...parseMeta(x.metadataJson),status:"ACTIVE"})}:x))}>
                               ✓ Activate
                             </button>
                           )}
                           {meta.status === "ACTIVE" && (
-                            <button className="table-action hold" style={{fontSize:10}}
+                            <button className="table-action hold"
                               onClick={()=>setLocalTenants(p=>p.map((x:any)=>x.id===t.id?{...x,metadataJson:JSON.stringify({...parseMeta(x.metadataJson),status:"TRIAL"})}:x))}>
                               → Trial
                             </button>
                           )}
                           {meta.status !== "SUSPENDED" && (
-                            <button className="table-action reject" style={{fontSize:10}}
+                            <button className="table-action reject"
                               onClick={()=>setLocalTenants(p=>p.map((x:any)=>x.id===t.id?{...x,metadataJson:JSON.stringify({...parseMeta(x.metadataJson),status:"SUSPENDED"})}:x))}>
                               ✗ Suspend
                             </button>
@@ -188,7 +188,7 @@ export function TenantManagementPage() {
               <select
                 value={pageSize}
                 onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-                style={{padding:"6px 8px",border:"1px solid var(--line)",borderRadius:6}}
+                style={{padding:"6px 8px",border:"1px solid var(--line)",borderRadius:"var(--r-sm)"}}
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -212,13 +212,13 @@ export function TenantManagementPage() {
 
             {success ? (
               <div style={{padding:"24px 20px"}}>
-                <div style={{padding:"16px 18px",background:"#ECFDF5",border:"1px solid #a7f3d0",borderRadius:12,marginBottom:16}}>
-                  <b style={{display:"block",marginBottom:6,color:"#065f46"}}>✅ School onboarded successfully!</b>
-                  <div style={{fontSize:12,color:"#065f46"}}>Tenant ID: <code>{success.tenantId}</code></div>
+                <div className="success-callout" style={{flexDirection:"column",alignItems:"flex-start",marginBottom:16}}>
+                  <b style={{marginBottom:6}}>✅ School onboarded successfully!</b>
+                  <div style={{fontSize:12}}>Tenant ID: <code>{success.tenantId}</code></div>
                   {success.adminAccount && (
                     <>
-                      <div style={{fontSize:12,color:"#065f46",marginTop:4}}>Admin email: <code>{success.adminAccount.email}</code></div>
-                      <div style={{fontSize:12,color:"#065f46",marginTop:4}}>Temp password: <code>{success.adminAccount.temporaryPassword}</code></div>
+                      <div style={{fontSize:12,marginTop:4}}>Admin email: <code>{success.adminAccount.email}</code></div>
+                      <div style={{fontSize:12,color:"var(--success)",marginTop:4}}>Temp password: <code>{success.adminAccount.temporaryPassword}</code></div>
                     </>
                   )}
                 </div>
@@ -227,7 +227,7 @@ export function TenantManagementPage() {
             ) : (
               <>
                 <div className="human-form">
-                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>School info</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--muted-2)",textTransform:"uppercase",letterSpacing:.8,marginBottom:4}}>School info</div>
                   <div className="human-form-grid">
                     <label className={`${fcls("organizationName")} field-wide`}>
                       <span>School name <i className="required-mark">*</i></span>
@@ -236,7 +236,7 @@ export function TenantManagementPage() {
                     </label>
                   </div>
 
-                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Admin account</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--muted-2)",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Admin account</div>
                   <div className="human-form-grid">
                     <label className={fcls("adminFirstName")}>
                       <span>First name <i className="required-mark">*</i></span>
@@ -257,7 +257,7 @@ export function TenantManagementPage() {
                     />
                   </div>
 
-                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Contact info</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--muted-2)",textTransform:"uppercase",letterSpacing:.8,marginTop:8,marginBottom:4}}>Contact info</div>
                   <div className="human-form-grid">
                     <label className={fcls("contactName")}>
                       <span>Contact name <i className="required-mark">*</i></span>

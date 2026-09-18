@@ -58,7 +58,7 @@ export function AuditPage() {
                       <td style={{ fontSize:11 }}>{meta.entity ?? "—"}{meta.entityId && <span style={{ color:"var(--muted)" }}> ···{String(meta.entityId).slice(-6)}</span>}</td>
                       <td><code style={{ fontSize:10 }}>{meta.ipAddress ?? "—"}</code></td>
                       <td style={{ fontSize:10, color:"var(--muted)" }}>{meta.timestamp ? new Date(meta.timestamp).toLocaleString() : "—"}</td>
-                      <td><span className={`status-pill ${meta.status==="Success"?"success":"danger"}`} style={{ fontSize:9 }}>{meta.status ?? "—"}</span></td>
+                      <td><span className={`status-pill ${meta.status==="Success"?"success":"danger"}`}>{meta.status ?? "—"}</span></td>
                             <td style={{ textAlign: "right" }}>
                               <RowActions
                                 onView={() => setViewLog(meta)}

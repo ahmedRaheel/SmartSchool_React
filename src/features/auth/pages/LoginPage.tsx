@@ -4,17 +4,17 @@ import { useAuth } from "../auth";
 import { env } from "../../../config/env";
 
 const DEMO_ROLES = [
-  { role: "SuperAdmin",  email: "superadmin@smartschool.local",  label: "Super Admin",   icon: "🌐", color: "#6366F1", bg: "#EEF2FF" },
-  { role: "Tenant",      email: "owner@alnoor.edu.pk",           label: "School Owner",  icon: "🏫", color: "#0F2241", bg: "#E8EDF5" },
-  { role: "Principal",   email: "principal@alnoor.edu.pk",       label: "Principal",     icon: "👔", color: "#0369A1", bg: "#E0F2FE" },
-  { role: "Admin",       email: "admin@alnoor.edu.pk",           label: "Admin Officer", icon: "🗂️", color: "#059669", bg: "#ECFDF5" },
-  { role: "Teacher",     email: "teacher@alnoor.edu.pk",         label: "Teacher",       icon: "👩‍🏫", color: "#7C3AED", bg: "#F5F3FF" },
-  { role: "Student",     email: "student@alnoor.edu.pk",         label: "Student",       icon: "🎓", color: "#2563EB", bg: "#EFF6FF" },
-  { role: "Parent",      email: "parent@alnoor.edu.pk",          label: "Parent",        icon: "👨‍👩‍👧", color: "#D97706", bg: "#FFFBEB" },
-  { role: "Driver",      email: "driver@alnoor.edu.pk",          label: "Driver",        icon: "🚌", color: "#DC2626", bg: "#FFF0F1" },
-  { role: "Accountant",  email: "accountant@alnoor.edu.pk",      label: "Accountant",    icon: "💰", color: "#0891B2", bg: "#E0F7FA" },
-  { role: "HRManager",   email: "hrmanager@alnoor.edu.pk",       label: "HR Manager",    icon: "👥", color: "#65A30D", bg: "#F0FDF4" },
-  { role: "Examiner",    email: "examiner@alnoor.edu.pk",        label: "Examiner",      icon: "📋", color: "#C2410C", bg: "#FFF7ED" },
+  { role: "SuperAdmin",  email: "superadmin@smartschool.local",  label: "Super Admin",   icon: "🌐", color: "var(--indigo)", bg: "var(--indigo-soft)" },
+  { role: "Tenant",      email: "owner@alnoor.edu.pk",           label: "School Owner",  icon: "🏫", color: "var(--navy)",   bg: "var(--surface-3)" },
+  { role: "Principal",   email: "principal@alnoor.edu.pk",       label: "Principal",     icon: "👔", color: "var(--info)",   bg: "var(--info-bg)" },
+  { role: "Admin",       email: "admin@alnoor.edu.pk",           label: "Admin Officer", icon: "🗂️", color: "var(--success)", bg: "var(--success-bg)" },
+  { role: "Teacher",     email: "teacher@alnoor.edu.pk",         label: "Teacher",       icon: "👩‍🏫", color: "var(--purple)", bg: "var(--purple-soft)" },
+  { role: "Student",     email: "student@alnoor.edu.pk",         label: "Student",       icon: "🎓", color: "var(--indigo)", bg: "var(--indigo-soft)" },
+  { role: "Parent",      email: "parent@alnoor.edu.pk",          label: "Parent",        icon: "👨‍👩‍👧", color: "var(--warning)", bg: "var(--warning-bg)" },
+  { role: "Driver",      email: "driver@alnoor.edu.pk",          label: "Driver",        icon: "🚌", color: "var(--danger)",  bg: "var(--danger-bg)" },
+  { role: "Accountant",  email: "accountant@alnoor.edu.pk",      label: "Accountant",    icon: "💰", color: "var(--accent)",  bg: "var(--accent-soft)" },
+  { role: "HRManager",   email: "hrmanager@alnoor.edu.pk",       label: "HR Manager",    icon: "👥", color: "var(--teal)",    bg: "var(--teal-soft)" },
+  { role: "Examiner",    email: "examiner@alnoor.edu.pk",         label: "Examiner",      icon: "📋", color: "var(--warning)", bg: "var(--warning-bg)" },
 ];
 
 const FEATURES = [
@@ -35,16 +35,15 @@ export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail]       = useState(env.useMocks ? "superadmin@smartschool.local" : "");
-  const [password, setPassword] = useState(env.useMocks ? "demo" : "");
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [email, setEmail]           = useState(env.useMocks ? "superadmin@smartschool.local" : "");
+  const [password, setPassword]     = useState(env.useMocks ? "demo" : "");
+  const [error, setError]           = useState("");
+  const [loading, setLoading]       = useState(false);
   const [activeRole, setActiveRole] = useState("SuperAdmin");
 
-  // Parse query params for returnTo and reason
   const searchParams = new URLSearchParams(location.search);
   const returnTo = searchParams.get("returnTo");
-  const reason   = searchParams.get("reason"); // "expired" | null
+  const reason   = searchParams.get("reason");
 
   if (user) {
     const dest = returnTo ? decodeURIComponent(returnTo) : "/";
@@ -64,190 +63,154 @@ export function LoginPage() {
     const result = await login({ email, password });
     setLoading(false);
     if (!result.success) { setError(result.message ?? "Unable to sign in."); return; }
-    // Redirect to where the user was, or home
     const dest = returnTo ? decodeURIComponent(returnTo) : (location.state as any)?.from ?? "/";
     navigate(dest, { replace: true });
   }
 
   return (
-    <div style={{ display:"flex", minHeight:"100vh", fontFamily:"'Inter',system-ui,sans-serif" }}>
+    <div className="login-wrap">
 
-      {/* ── LEFT PANEL ────────────────────────────────────────────────────── */}
-      <div style={{
-        flex:"0 0 52%", background:"linear-gradient(145deg,#0F2241 0%,#1a3a6e 45%,#0d3460 100%)",
-        display:"flex", flexDirection:"column", justifyContent:"space-between",
-        padding:"48px 56px", position:"relative", overflow:"hidden",
-      }}>
+      {/* ── LEFT PANEL ─────────────────────────────────────────────── */}
+      <div className="login-left">
         {/* Decorative blobs */}
-        <div style={{ position:"absolute", top:-120, right:-120, width:400, height:400, borderRadius:"50%", background:"rgba(99,102,241,0.15)", pointerEvents:"none" }}/>
-        <div style={{ position:"absolute", bottom:-80, left:-80, width:300, height:300, borderRadius:"50%", background:"rgba(59,130,246,0.12)", pointerEvents:"none" }}/>
-        <div style={{ position:"absolute", top:"40%", left:"60%", width:200, height:200, borderRadius:"50%", background:"rgba(139,92,246,0.1)", pointerEvents:"none" }}/>
+        <div className="login-blob" style={{ top:-120, right:-120, width:400, height:400, background:"rgba(99,102,241,0.14)" }}/>
+        <div className="login-blob" style={{ bottom:-80, left:-80, width:300, height:300, background:"rgba(59,130,246,0.10)" }}/>
+        <div className="login-blob" style={{ top:"40%", left:"60%", width:200, height:200, background:"rgba(139,92,246,0.09)" }}/>
 
-        {/* Brand */}
         <div style={{ position:"relative", zIndex:1 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:56 }}>
-            <div style={{ width:44, height:44, borderRadius:14, background:"linear-gradient(135deg,#6366F1,#8B5CF6)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, boxShadow:"0 4px 16px rgba(99,102,241,.4)" }}>
-              🎓
-            </div>
+          <div className="login-brand">
+            <div className="login-brand-mark">🎓</div>
             <div>
-              <div style={{ color:"#fff", fontWeight:800, fontSize:18, letterSpacing:-.3 }}>Smart<span style={{ color:"#818CF8" }}>School</span> Aside</div>
-              <div style={{ color:"#93C5FD", fontSize:10, fontWeight:600, letterSpacing:1.2, textTransform:"uppercase" }}>AI-Powered School ERP</div>
+              <div className="login-brand-name">Smart<span style={{ color:"#38BDF8" }}>School</span></div>
+              <div className="login-brand-sub">AI-Powered School ERP</div>
             </div>
           </div>
 
-          <div style={{ marginBottom:48 }}>
-            <div style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"4px 12px", borderRadius:20, background:"rgba(99,102,241,0.25)", border:"1px solid rgba(99,102,241,0.4)", marginBottom:20 }}>
-              <span style={{ fontSize:10 }}>✨</span>
-              <span style={{ color:"#C7D2FE", fontSize:11, fontWeight:600, letterSpacing:.5 }}>Powered by Ollama · RAG · ML Predictions</span>
+          <div className="login-hero">
+            <div className="login-tag">
+              <span>✨</span>
+              <span>Powered by Ollama · RAG · ML Predictions</span>
             </div>
-            <h1 style={{ color:"#fff", fontSize:38, fontWeight:800, lineHeight:1.18, margin:"0 0 18px", letterSpacing:-.8 }}>
+            <h1 className="login-h1">
               One premium workspace<br/>
-              <span style={{ background:"linear-gradient(90deg,#818CF8,#C084FC)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
-                for your entire school.
-              </span>
+              <span className="login-h1-accent">for your entire school.</span>
             </h1>
-            <p style={{ color:"#94A3B8", fontSize:15, lineHeight:1.65, margin:0, maxWidth:440 }}>
+            <p className="login-sub">
               Academics, HR, Finance, Admissions, Transport, Library and AI-assisted student success — all from a single connected platform.
             </p>
-          </div>
 
-          {/* Feature list */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:48 }}>
-            {FEATURES.map(f => (
-              <div key={f.title} style={{ display:"flex", gap:12, alignItems:"flex-start", padding:"14px 16px", borderRadius:14, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", backdropFilter:"blur(8px)" }}>
-                <span style={{ fontSize:20, flexShrink:0, marginTop:1 }}>{f.icon}</span>
-                <div>
-                  <div style={{ color:"#E2E8F0", fontWeight:700, fontSize:12, marginBottom:2 }}>{f.title}</div>
-                  <div style={{ color:"#64748B", fontSize:11, lineHeight:1.5 }}>{f.desc}</div>
+            <div className="login-features">
+              {FEATURES.map(f => (
+                <div key={f.title} className="login-feature">
+                  <span style={{ fontSize:20, flexShrink:0, marginTop:1 }}>{f.icon}</span>
+                  <div>
+                    <div className="login-feature-title">{f.title}</div>
+                    <div className="login-feature-desc">{f.desc}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Stats bar */}
-        <div style={{ position:"relative", zIndex:1, display:"flex", gap:0, borderRadius:16, overflow:"hidden", border:"1px solid rgba(255,255,255,0.1)" }}>
+        <div className="login-stats">
           {STATS.map((s, i) => (
-            <div key={s.label} style={{ flex:1, textAlign:"center", padding:"16px 8px", background:"rgba(255,255,255,0.05)", borderRight: i < STATS.length-1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-              <div style={{ color:"#fff", fontWeight:800, fontSize:20, letterSpacing:-.4 }}>{s.value}</div>
-              <div style={{ color:"#64748B", fontSize:10, fontWeight:600, textTransform:"uppercase", letterSpacing:.8, marginTop:2 }}>{s.label}</div>
+            <div key={s.label} className="login-stat" style={{ borderRight: i < STATS.length-1 ? "1px solid rgba(255,255,255,.07)" : "none" }}>
+              <div className="login-stat-val">{s.value}</div>
+              <div className="login-stat-lbl">{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── RIGHT PANEL ───────────────────────────────────────────────────── */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"48px 40px", background:"#FAFBFC", overflowY:"auto" }}>
-        <div style={{ width:"100%", maxWidth:440 }}>
+      {/* ── RIGHT PANEL ────────────────────────────────────────────── */}
+      <div className="login-right">
+        <div className="login-form-wrap">
 
-          {/* Session-ended banners */}
+          {/* Session banners */}
           {reason === "expired" && (
-            <div style={{ padding:"12px 16px", background:"#FFFBEB", border:"1.5px solid #FDE68A", borderRadius:12, marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+            <div className="login-session-banner expired">
               <span style={{ fontSize:18, flexShrink:0 }}>⏱</span>
               <div>
-                <b style={{ fontSize:12, color:"#92400E", display:"block" }}>Your session has expired</b>
-                <span style={{ fontSize:12, color:"#78350F" }}>For your security, you were signed out after being inactive. Please sign in again to continue.</span>
+                <b style={{ fontSize:12, color:"var(--warning)" }}>Your session has expired</b>
+                <span style={{ fontSize:12, color:"var(--text-2)" }}>For your security, you were signed out after being inactive. Please sign in again to continue.</span>
               </div>
             </div>
           )}
           {!reason && returnTo && (
-            <div style={{ padding:"12px 16px", background:"#EFF6FF", border:"1.5px solid #BFDBFE", borderRadius:12, marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+            <div className="login-session-banner redirect">
               <span style={{ fontSize:18, flexShrink:0 }}>🔒</span>
               <div>
-                <b style={{ fontSize:12, color:"#1E40AF", display:"block" }}>Sign in required</b>
-                <span style={{ fontSize:12, color:"#1D4ED8" }}>Please sign in to access that page. You'll be redirected automatically.</span>
+                <b style={{ fontSize:12, color:"var(--info)" }}>Sign in required</b>
+                <span style={{ fontSize:12, color:"var(--text-2)" }}>Please sign in to access that page. You'll be redirected automatically.</span>
               </div>
             </div>
           )}
 
-          {/* Header */}
-          <div style={{ marginBottom:32 }}>
-            <h2 style={{ fontSize:26, fontWeight:800, color:"#0F2241", margin:"0 0 6px", letterSpacing:-.5 }}>Welcome back</h2>
-            <p style={{ color:"#64748B", fontSize:14, margin:0 }}>{env.useMocks ? "Sign in or pick a demo role below." : "Sign in with your SmartSchool account."}</p>
-          </div>
+          <h2 className="login-form-title">Welcome back</h2>
+          <p className="login-form-sub">{env.useMocks ? "Sign in or pick a demo role below." : "Sign in with your SmartSchool account."}</p>
 
           {env.useMocks && (
             <>
-              {/* Demo role grid — development/mock mode only. */}
               <div style={{ marginBottom:28 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:"#94A3B8", letterSpacing:1.2, textTransform:"uppercase", marginBottom:12 }}>Quick demo access</div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"var(--muted-2)", letterSpacing:1.2, textTransform:"uppercase", marginBottom:12 }}>Quick demo access</div>
+                <div className="demo-grid">
                   {DEMO_ROLES.map(r => {
                     const active = activeRole === r.role;
                     return (
-                      <button key={r.role} type="button" onClick={() => pickRole(r)}
-                        style={{
-                          display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                          padding:"14px 8px", border:`2px solid ${active ? r.color : "#E2E8F0"}`,
-                          borderRadius:14, background: active ? r.bg : "#fff",
-                          cursor:"pointer", transition:"all .15s", boxShadow: active ? `0 0 0 3px ${r.color}20` : "none",
-                        }}
-                        onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.borderColor = r.color; (e.currentTarget as HTMLElement).style.background = r.bg; } }}
-                        onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.borderColor = "#E2E8F0"; (e.currentTarget as HTMLElement).style.background = "#fff"; } }}>
-                        <span style={{ fontSize:22 }}>{r.icon}</span>
-                        <span style={{ fontSize:10, fontWeight:700, color: active ? r.color : "#475569", textAlign:"center", lineHeight:1.3 }}>{r.label}</span>
+                      <button
+                        key={r.role}
+                        type="button"
+                        onClick={() => pickRole(r)}
+                        className={`demo-role-btn ${active ? "active" : ""}`}
+                        style={active ? { borderColor: r.color } : undefined}
+                      >
+                        <span>{r.icon}</span>
+                        <b>{r.label}</b>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
-                <div style={{ flex:1, height:1, background:"#E2E8F0" }}/>
-                <span style={{ color:"#94A3B8", fontSize:11, fontWeight:600 }}>or sign in with credentials</span>
-                <div style={{ flex:1, height:1, background:"#E2E8F0" }}/>
+              <div className="login-divider">
+                <hr/><span>or sign in with credentials</span><hr/>
               </div>
             </>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            <div>
-              <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Email address</label>
+            <div className="human-field">
+              <span>Email address</span>
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email"
-                style={{ width:"100%", height:46, padding:"0 14px", border:"1.5px solid #D1D5DB", borderRadius:12, background:"#fff", fontSize:13, color:"#0F2241", boxSizing:"border-box", outline:"none", transition:"border-color .15s" }}
-                onFocus={e => e.target.style.borderColor="#6366F1"}
-                onBlur={e => e.target.style.borderColor="#D1D5DB"}
+                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                required autoComplete="email" placeholder="you@school.edu.pk"
               />
             </div>
-            <div>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:"#374151" }}>Password</label>
-                <Link to="/forgot-password" style={{ fontSize:11, color:"#6366F1", fontWeight:600, textDecoration:"none" }}>Forgot password?</Link>
+            <div className="human-field">
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                <span>Password</span>
+                <Link to="/forgot-password" style={{ fontSize:11, color:"var(--indigo)", fontWeight:600 }}>Forgot password?</Link>
               </div>
               <input
-                type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password"
-                style={{ width:"100%", height:46, padding:"0 14px", border:"1.5px solid #D1D5DB", borderRadius:12, background:"#fff", fontSize:13, color:"#0F2241", boxSizing:"border-box", outline:"none", transition:"border-color .15s" }}
-                onFocus={e => e.target.style.borderColor="#6366F1"}
-                onBlur={e => e.target.style.borderColor="#D1D5DB"}
+                type="password" value={password} onChange={e => setPassword(e.target.value)}
+                required autoComplete="current-password" placeholder="••••••••"
               />
             </div>
 
-            <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", userSelect:"none" }}>
-              <input type="checkbox" defaultChecked style={{ width:16, height:16, accentColor:"#6366F1", cursor:"pointer" }}/>
-              <span style={{ fontSize:12, color:"#6B7280" }}>Keep me signed in</span>
+            <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", userSelect:"none", fontSize:12.5, color:"var(--muted)" }}>
+              <input type="checkbox" defaultChecked style={{ width:15, height:15, accentColor:"var(--indigo)" }}/>
+              Keep me signed in
             </label>
 
             {error && (
-              <div style={{ padding:"10px 14px", background:"#FFF0F1", border:"1px solid #fecdd3", borderRadius:10, fontSize:12, color:"#B91C1C", fontWeight:500 }}>
-                ⚠️ {error}
-              </div>
+              <div className="form-error">⚠️ {error}</div>
             )}
 
-            <button type="submit" disabled={loading}
-              style={{
-                height:48, borderRadius:12, border:"none", cursor:"pointer",
-                background: loading ? "#94A3B8" : "linear-gradient(135deg,#0F2241,#1a3a6e)",
-                color:"#fff", fontSize:14, fontWeight:700, letterSpacing:.2,
-                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                boxShadow:"0 4px 16px rgba(15,34,65,.3)", transition:"all .2s",
-              }}
-              onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; }}>
+            <button type="submit" className="login-submit-btn" disabled={loading}>
               {loading ? (
                 <>
-                  <span style={{ width:16, height:16, border:"2px solid rgba(255,255,255,.3)", borderTopColor:"#fff", borderRadius:"50%", animation:"spin 1s linear infinite", display:"inline-block" }}/>
+                  <span className="spinner" style={{ width:16, height:16 }}/>
                   Signing in…
                 </>
               ) : "Sign in →"}
@@ -255,21 +218,17 @@ export function LoginPage() {
           </form>
 
           {(env.useMocks || (import.meta as any).env?.DEV) && (
-            <div style={{ marginTop:32, padding:"16px 18px", background:"#F1F5F9", borderRadius:12, border:"1px solid #E2E8F0" }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#475569", marginBottom:8, textTransform:"uppercase", letterSpacing:.8 }}>Development API mode</div>
-              <div style={{ fontSize:11, color:"#64748B", lineHeight:1.6 }}>
-                {env.useMocks ? "Mock data is enabled." : `API: ${env.apiBaseUrl}`}
-              </div>
+            <div className="login-dev-box">
+              <div style={{ fontWeight:700, color:"var(--text-2)", marginBottom:6, textTransform:"uppercase", fontSize:10, letterSpacing:.8 }}>Development API mode</div>
+              {env.useMocks ? "Mock data is enabled." : `API: ${env.apiBaseUrl}`}
             </div>
           )}
 
-          <p style={{ textAlign:"center", color:"#94A3B8", fontSize:11, marginTop:24 }}>
-            &copy; {new Date().getFullYear()} SmartSchool Aside · Enterprise School ERP
+          <p className="login-footer">
+            &copy; {new Date().getFullYear()} SmartSchool · Enterprise School ERP
           </p>
         </div>
       </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

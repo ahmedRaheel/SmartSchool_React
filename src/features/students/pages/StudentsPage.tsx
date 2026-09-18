@@ -207,7 +207,7 @@ export function StudentsPage() {
               renderCell={(col, row) => {
                 if (col.key === "name") return (
                   <div className="person-cell">
-                    <span className="row-avatar" style={{ background: "#EFF6FF", color: "#2563EB" }}>
+                    <span className="row-avatar" style={{ background: "var(--info-bg)", color: "var(--info)" }}>
                       {row.firstName?.[0]}{row.lastName?.[0] ?? ""}
                     </span>
                     <b>{row.firstName} {row.lastName ?? ""}</b>
@@ -250,21 +250,17 @@ export function StudentsPage() {
       {mode === "new" && (
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           {/* Step bar */}
-          <div style={{ display: "flex", marginBottom: 20, border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
+          <div className="wizard-stepper">
             {[
               { n: 1, label: "Student & enrollment info" },
               { n: 2, label: "Upload required documents"  },
               { n: 3, label: "Review & complete"          },
-            ].map((s, i) => (
-              <div key={s.n} style={{
-                flex: 1, padding: "12px 16px", textAlign: "center",
-                background: step === s.n ? "#EEF2FF" : step > s.n ? "#ECFDF5" : "var(--surface)",
-                borderRight: i < 2 ? "1px solid var(--line)" : "none",
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: step === s.n ? "#6366F1" : step > s.n ? "#059669" : "var(--muted)" }}>
-                  {step > s.n ? "✓" : `Step ${s.n}`}
-                </div>
-                <div style={{ fontSize: 12, marginTop: 2, color: step >= s.n ? "var(--text)" : "var(--muted)" }}>{s.label}</div>
+            ].map(s => (
+              <div key={s.n} className={`wizard-stepper-item ${step === s.n ? "active" : step > s.n ? "done" : ""}`}>
+                <span className="wizard-stepper-label">
+                  {step > s.n ? "✓ Done" : `Step ${s.n}`}
+                </span>
+                <span className="wizard-stepper-title">{s.label}</span>
               </div>
             ))}
           </div>
@@ -367,12 +363,12 @@ export function StudentsPage() {
               <div className="surface-head"><h3>Review & complete</h3></div>
               <div style={{ padding: "0 20px 20px" }}>
                 {!docComplete && (
-                  <div style={{ display: "flex", gap: 10, padding: "12px 14px", background: "#FFFBEB", border: "1px solid #fde68a", borderRadius: 10, marginBottom: 14, fontSize: 12 }}>
-                    <AlertCircle size={16} style={{ color: "#D97706", flexShrink: 0 }} />
+                  <div className="warn-callout" style={{ marginBottom: 14 }}>
+                    <AlertCircle size={15} style={{ flexShrink: 0 }} />
                     <span>Some required documents are missing. The student will be saved as <b>PENDING</b> until all documents are submitted.</span>
                   </div>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+                <div className="review-summary">
                   {[
                     ["Name",          `${form.firstName} ${form.lastName}`],
                     ["Campus",        campuses.find((c: any) => c.id === form.branchId)?.name ?? "—"],
@@ -380,8 +376,8 @@ export function StudentsPage() {
                     ["Academic year", years.find((y: any) => y.id === form.academicYearId)?.name ?? "—"],
                     ["Documents",     docComplete ? "✓ Complete" : "⚠ Incomplete"],
                   ].map(([l, v]) => (
-                    <div key={l} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--surface-2)", fontSize: 12 }}>
-                      <span style={{ width: 120, color: "var(--muted)", flexShrink: 0 }}>{l}</span>
+                    <div key={l} className="review-row">
+                      <span className="review-row-label">{l}</span>
                       <b>{v}</b>
                     </div>
                   ))}

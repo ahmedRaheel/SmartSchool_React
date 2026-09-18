@@ -107,12 +107,12 @@ export function InventoryPage() {
                 <tbody>
                   {filtered.length===0 ? <tr><td colSpan={8} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>No items in inventory.</td></tr>
                   : filtered.map((it:any) => { const m=parseMeta(it.metadataJson); const low=(m.quantity??0)<=(m.reorderLevel??5); return (
-                    <tr key={it.id} style={{background:low?"#FFF0F1":""}}>
+                    <tr key={it.id} style={{background:low?"var(--danger-bg)":""}}>
                       <td><b style={{fontSize:12}}>{it.name}</b></td>
-                      <td><code style={{fontSize:10}}>{it.code??"—"}</code></td>
+                      <td><code>{it.code??"—"}</code></td>
                       <td style={{fontSize:11}}>{m.category??"—"}</td>
                       <td style={{fontSize:11}}>{m.unit??"—"}</td>
-                      <td><b style={{color:low?"#EF4444":"var(--text)"}}>{m.quantity??0}</b></td>
+                      <td><b style={{color:low?"var(--danger)":"var(--text)"}}>{m.quantity??0}</b></td>
                       <td style={{fontSize:11,color:"var(--muted)"}}>{m.reorderLevel??5}</td>
                       <td style={{fontSize:11}}>{pkr(m.unitCost)}</td>
                       <td>{low?<span className="status-pill danger">Low stock</span>:<span className="status-pill success">OK</span>}</td>
@@ -197,7 +197,7 @@ export function InventoryPage() {
               <label className="human-field"><span>Unit cost (PKR)</span><input type="number" value={pForm.unitCost} onChange={pff("unitCost")}/></label>
               <label className="human-field field-wide"><span>Notes</span><input value={pForm.notes} onChange={pff("notes")}/></label>
             </div>
-            {pForm.quantity&&pForm.unitCost&&<div style={{padding:"10px 14px",background:"#ECFDF5",borderRadius:8,fontSize:12,fontWeight:700,color:"#059669"}}>Total: {pkr(Number(pForm.quantity)*Number(pForm.unitCost))}</div>}
+            {pForm.quantity&&pForm.unitCost&&<div className="success-callout">Total: {pkr(Number(pForm.quantity)*Number(pForm.unitCost))}</div>}
             {error&&<div style={{color:"var(--danger)",fontSize:12}}>{error}</div>}
             </div>
             <div className="modal-actions" style={{padding:"12px 20px",borderTop:"1px solid var(--line)"}}>

@@ -23,11 +23,11 @@ interface Msg {
 const MAX_CHARS = 500;
 
 const BOT_META: Record<BotType, { color: string; bg: string; label: string; icon: string }> = {
-  student:    { color: "#2563EB", bg: "#EFF6FF", label: "Student AI",    icon: "🎓" },
-  teacher:    { color: "#7C3AED", bg: "#F5F3FF", label: "Teacher AI",    icon: "📚" },
-  parent:     { color: "#059669", bg: "#ECFDF5", label: "Parent AI",     icon: "👨‍👩‍👧" },
-  admissions: { color: "#D97706", bg: "#FFFBEB", label: "Admissions AI", icon: "🏫" },
-  admin:      { color: "#0F172A", bg: "#F8FAFC", label: "Admin AI",      icon: "⚙️" },
+  student:    { color: "var(--info)", bg: "var(--info-bg)", label: "Student AI",    icon: "🎓" },
+  teacher:    { color: "var(--purple)", bg: "var(--purple-soft)", label: "Teacher AI",    icon: "📚" },
+  parent:     { color: "var(--success)", bg: "var(--success-bg)", label: "Parent AI",     icon: "👨‍👩‍👧" },
+  admissions: { color: "var(--warning)", bg: "var(--warning-bg)", label: "Admissions AI", icon: "🏫" },
+  admin:      { color: "var(--text)", bg: "var(--surface-2)", label: "Admin AI",      icon: "⚙️" },
 };
 
 const QUICK: Record<BotType, string[]> = {
@@ -183,8 +183,6 @@ export function FloatingAiChatbot() {
           transition: "all .2s cubic-bezier(.16,1,.3,1)",
           transform: open ? "scale(1.05)" : "scale(1)",
         }}
-        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"}
-        onMouseLeave={e => e.currentTarget.style.transform = open ? "scale(1.05)" : "scale(1)"}
       >
         {open ? <X size={20}/> : <Bot size={22}/>}
         {/* Pulse ring */}
@@ -208,7 +206,7 @@ export function FloatingAiChatbot() {
             height: minimized ? 56 : "min(560px, calc(100vh - 120px))",
             background: "var(--surface)",
             border: "1.5px solid var(--line)",
-            borderRadius: 20,
+            borderRadius:"var(--r-2xl)",
             boxShadow: "0 20px 60px rgba(0,0,0,.18), 0 4px 16px rgba(0,0,0,.08)",
             display: "flex", flexDirection: "column",
             zIndex: 1100,
@@ -226,7 +224,7 @@ export function FloatingAiChatbot() {
           }}>
             {/* Avatar */}
             <div style={{
-              width: 36, height: 36, borderRadius: 11,
+              width: 36, height: 36, borderRadius:"var(--r-md)",
               background: "rgba(255,255,255,.18)",
               display: "grid", placeItems: "center",
               flexShrink: 0, fontSize: 18,
@@ -237,7 +235,7 @@ export function FloatingAiChatbot() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <b style={{ fontSize: 13, color: "#fff", display: "block" }}>{meta.label}</b>
               <span style={{ fontSize: 10, color: "rgba(255,255,255,.75)", display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ADE80", display: "inline-block", boxShadow: "0 0 6px #4ADE80" }}/>
+                <span className="status-dot" style={{ background: "#4ADE80", boxShadow: "0 0 6px #4ADE80" }}/>
                 Online · School knowledge base
               </span>
             </div>
@@ -246,27 +244,21 @@ export function FloatingAiChatbot() {
               <button
                 onClick={clearChat}
                 title="Clear chat"
-                style={{ width: 28, height: 28, border: 0, borderRadius: 8, background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.8)", cursor: "pointer", display: "grid", placeItems: "center", transition: "background .12s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.22)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,.12)"}
+                className="floating-ctrl-btn"
               >
                 <Trash2 size={13}/>
               </button>
               <button
                 onClick={() => setMinimized(m => !m)}
                 title={minimized ? "Expand" : "Minimize"}
-                style={{ width: 28, height: 28, border: 0, borderRadius: 8, background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.8)", cursor: "pointer", display: "grid", placeItems: "center", transition: "background .12s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.22)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,.12)"}
+                className="floating-ctrl-btn"
               >
                 <Minimize2 size={13}/>
               </button>
               <button
                 onClick={() => setOpen(false)}
                 title="Close"
-                style={{ width: 28, height: 28, border: 0, borderRadius: 8, background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.8)", cursor: "pointer", display: "grid", placeItems: "center", transition: "background .12s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.22)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,.12)"}
+                className="floating-ctrl-btn"
               >
                 <X size={14}/>
               </button>
@@ -296,7 +288,7 @@ export function FloatingAiChatbot() {
                     {/* AI avatar */}
                     {m.role === "ai" && (
                       <div style={{
-                        width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+                        width: 26, height: 26, borderRadius:"var(--r)", flexShrink: 0,
                         background: meta.bg, color: meta.color,
                         display: "grid", placeItems: "center", fontSize: 13,
                         border: `1px solid ${meta.color}33`,
@@ -334,7 +326,7 @@ export function FloatingAiChatbot() {
                 {loading && (
                   <div className="ai-msg" style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
                     <div style={{
-                      width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+                      width: 26, height: 26, borderRadius:"var(--r)", flexShrink: 0,
                       background: meta.bg, color: meta.color,
                       display: "grid", placeItems: "center", fontSize: 13,
                       border: `1px solid ${meta.color}33`,
@@ -357,15 +349,7 @@ export function FloatingAiChatbot() {
                       <button
                         key={q}
                         onClick={() => void send(q)}
-                        style={{
-                          padding: "8px 12px", textAlign: "left",
-                          border: "1.5px solid var(--line)", borderRadius: 10,
-                          background: "var(--surface)", fontSize: 11.5,
-                          color: "var(--text)", cursor: "pointer",
-                          transition: "all .12s", fontWeight: 500,
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; e.currentTarget.style.background = meta.bg; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--surface)"; }}
+                        className="ai-role-btn"
                       >
                         {q}
                       </button>
@@ -413,7 +397,7 @@ export function FloatingAiChatbot() {
                       flex: 1, resize: "none", minHeight: 38, maxHeight: 120,
                       padding: "9px 11px",
                       border: `1.5px solid ${overLimit ? "var(--danger)" : input.length > 0 ? meta.color : "var(--line)"}`,
-                      borderRadius: 11,
+                      borderRadius:"var(--r-md)",
                       background: "var(--surface-2)", color: "var(--text)",
                       fontSize: 12.5, lineHeight: 1.5,
                       transition: "border-color .15s, box-shadow .15s",
@@ -429,7 +413,7 @@ export function FloatingAiChatbot() {
                     title="Send (Enter)"
                     style={{
                       width: 38, height: 38,
-                      border: "none", borderRadius: 11,
+                      border: "none", borderRadius:"var(--r-md)",
                       background: canSend ? `linear-gradient(135deg, ${meta.color}, ${meta.color}CC)` : "var(--surface-3)",
                       color: canSend ? "#fff" : "var(--muted-2)",
                       cursor: canSend ? "pointer" : "not-allowed",

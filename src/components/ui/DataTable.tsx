@@ -99,7 +99,7 @@ export function DataTable<T extends Record<string, any>>({
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={colCount} style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>
+              <td colSpan={colCount} className="empty-cell">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                   <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid var(--indigo)", borderTopColor: "transparent", animation: "spin .6s linear infinite" }}/>
                   Loading…

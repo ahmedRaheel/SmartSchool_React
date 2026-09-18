@@ -77,17 +77,7 @@ function NotificationsPanel() {
                 navigate(notification.actionUrl);
               }
             }}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              padding: "12px 16px",
-              border: "1px solid var(--line)",
-              borderRadius: 12,
-              background: notification.isRead ? "var(--surface)" : "var(--surface-2)",
-              cursor: "pointer",
-              display: "flex",
-              gap: 12,
-            }}
+            className={`notif-item${notification.isRead ? "" : " unread"}`}
           >
             <span style={{ fontSize: 20 }}>{NOTIFICATION_ICON[notification.type] ?? "🔔"}</span>
             <span style={{ flex: 1 }}>
@@ -228,10 +218,10 @@ function MessagesPanel() {
   }
 
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 340px)", minHeight: 500, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "var(--surface)" }}>
+    <div style={{ display: "flex", height: "calc(100vh - 340px)", minHeight: 500, border: "1px solid var(--line)", borderRadius: "var(--r-lg)", overflow: "hidden", background: "var(--surface)" }}>
       <aside style={{ width: 300, borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: 12, display: "flex", gap: 8 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, border: "1px solid var(--line)", borderRadius: 8, padding: "0 10px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, border: "1px solid var(--line)", borderRadius: "var(--r)", padding: "0 10px" }}>
             <Search size={13} />
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search conversations" style={{ flex: 1, border: 0, outline: 0, background: "transparent", height: 32 }} />
           </label>
@@ -244,15 +234,7 @@ function MessagesPanel() {
             <button
               key={conversation.conversationId}
               onClick={() => setActiveConversationId(conversation.conversationId)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                border: 0,
-                borderBottom: "1px solid var(--line)",
-                padding: "12px 14px",
-                cursor: "pointer",
-                background: activeConversationId === conversation.conversationId ? "var(--surface-2)" : "transparent",
-              }}
+              className={`convo-item${activeConversationId === conversation.conversationId ? " active" : ""}`}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                 <b style={{ fontSize: 12 }}>{conversation.title}</b>
@@ -280,7 +262,7 @@ function MessagesPanel() {
                 <div key={item.messageId} style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
                   <div style={{ maxWidth: "72%" }}>
                     {!mine && <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>{item.senderDisplayName}{item.senderRole ? ` · ${item.senderRole}` : ""}</div>}
-                    <div style={{ padding: "9px 13px", borderRadius: mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: mine ? "var(--navy)" : "var(--surface-2)", color: mine ? "white" : "var(--text)", fontSize: 12 }}>{item.message}</div>
+                    <div style={{ padding: "9px 13px", borderRadius: mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: mine ? "var(--navy)" : "var(--surface-2)", color: mine ? "#fff" : "var(--text)", fontSize: 12 }}>{item.message}</div>
                     <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 2, textAlign: mine ? "right" : "left" }}>{item.sentAt ? new Date(item.sentAt).toLocaleTimeString() : ""}</div>
                   </div>
                 </div>
@@ -299,7 +281,7 @@ function MessagesPanel() {
                 }
               }}
               placeholder="Type a message…"
-              style={{ flex: 1, height: 38, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius: 20, background: "var(--surface-2)" }}
+              style={{ flex: 1, height: 38, padding: "0 14px", border: "1.5px solid var(--line)", borderRadius:"var(--r-2xl)", background: "var(--surface-2)" }}
             />
             <button className="primary" onClick={() => void send()} disabled={!message.trim() || sendMessage.isPending}><Send size={14} /></button>
           </div>
@@ -316,7 +298,7 @@ function MessagesPanel() {
               <label className="human-field field-wide"><span>Type</span><select value={conversationType} onChange={event => setConversationType(event.target.value as any)}><option value="DIRECT">Direct</option><option value="GROUP">Group</option><option value="BROADCAST">Broadcast</option></select></label>
               <div className="field-wide">
                 <span style={{ fontSize: 11, fontWeight: 700 }}>Participants</span>
-                <div style={{ maxHeight: 240, overflowY: "auto", border: "1px solid var(--line)", borderRadius: 10, marginTop: 6 }}>
+                <div style={{ maxHeight: 240, overflowY: "auto", border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginTop: 6 }}>
                   {directory.length === 0 ? <div style={{ padding: 16, color: "var(--muted)" }}>No tenant users available.</div> : directory.map((entry: any) => (
                     <label key={entry.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderBottom: "1px solid var(--line)", cursor: "pointer" }}>
                       <input type="checkbox" checked={participantIds.includes(entry.id)} onChange={() => toggleParticipant(entry.id)} />

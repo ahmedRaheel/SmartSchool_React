@@ -88,9 +88,9 @@ export function CertificateOperationsPanel() {
   return (
     <div className="page-stack">
       <div className="metric-grid cols-3">
-        <div className="metric-card"><span className="metric-icon" style={{ color: "#2563EB", background: "#EFF6FF" }}><FileBadge2 size={18} /></span><div><small>Templates</small><strong>{templates.length}</strong><p>versioned document designs</p></div></div>
-        <div className="metric-card"><span className="metric-icon" style={{ color: "#059669", background: "#ECFDF5" }}><BadgeCheck size={18} /></span><div><small>Issued</small><strong>{issued.filter(item => item.status.toUpperCase() === "ISSUED").length}</strong><p>verified documents</p></div></div>
-        <div className="metric-card"><span className="metric-icon" style={{ color: pending ? "#D97706" : "#059669", background: pending ? "#FFFBEB" : "#ECFDF5" }}><ShieldCheck size={18} /></span><div><small>Pending approval</small><strong>{pending}</strong><p>{pending ? "requires review" : "all clear"}</p></div></div>
+        <div className="metric-card"><span className="metric-icon" style={{ color: "var(--info)", background: "var(--info-bg)" }}><FileBadge2 size={18} /></span><div><small>Templates</small><strong>{templates.length}</strong><p>versioned document designs</p></div></div>
+        <div className="metric-card"><span className="metric-icon" style={{ color: "var(--success)", background: "var(--success-bg)" }}><BadgeCheck size={18} /></span><div><small>Issued</small><strong>{issued.filter(item => item.status.toUpperCase() === "ISSUED").length}</strong><p>verified documents</p></div></div>
+        <div className="metric-card"><span className="metric-icon" style={{ color: pending ? "var(--warning)" : "var(--success)", background: pending ? "var(--warning-bg)" : "var(--success-bg)" }}><ShieldCheck size={18} /></span><div><small>Pending approval</small><strong>{pending}</strong><p>{pending ? "requires review" : "all clear"}</p></div></div>
       </div>
 
       <div className="section-tabs">
