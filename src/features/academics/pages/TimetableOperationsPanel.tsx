@@ -139,8 +139,8 @@ export function TimetableOperationsPanel() {
         <div className="surface-head">
           <div className="surface-head-left"><h3>Timetable authoring</h3><p>Create reusable periods, a timetable header, then place teaching allocations into the weekly grid.</p></div>
           <div className="surface-head-actions" style={{ flexWrap: "wrap" }}>
-            {!user?.branchId && <select value={campusId} onChange={event => { setCampusId(event.target.value); setSelectedTimetableId(""); }}><option value="">Select campus</option>{campuses.map((campus: any) => <option key={campus.id} value={campus.id}>{campus.name}</option>)}</select>}
-            <select value={selectedTimetableId} onChange={event => setSelectedTimetableId(event.target.value)}><option value="">All timetables</option>{timetables.map(item => <option key={item.timetableId} value={item.timetableId}>{item.name}</option>)}</select>
+            {!user?.branchId && <select className="filter-select" value={campusId} onChange={event => { setCampusId(event.target.value); setSelectedTimetableId(""); }}><option value="">Select campus</option>{campuses.map((campus: any) => <option key={campus.id} value={campus.id}>{campus.name}</option>)}</select>}
+            <select className="filter-select" value={selectedTimetableId} onChange={event => setSelectedTimetableId(event.target.value)}><option value="">All timetables</option>{timetables.map(item => <option key={item.timetableId} value={item.timetableId}>{item.name}</option>)}</select>
             <button className="secondary" disabled={!campusId} onClick={() => setPeriodModal(true)}><Plus size={13} /> Period</button>
             <button className="secondary" disabled={!campusId} onClick={() => setTimetableModal(true)}><Plus size={13} /> Timetable</button>
             <button className="primary" disabled={!selectedTimetableId || periods.length === 0} onClick={() => setEntryModal(true)}><Plus size={13} /> Add entry</button>
